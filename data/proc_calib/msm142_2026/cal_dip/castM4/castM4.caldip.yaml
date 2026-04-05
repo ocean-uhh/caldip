@@ -1,0 +1,30 @@
+name: castM4
+year: 2026
+waterdepth: .nan
+longitude: -048 27.21
+latitude: 59 27.84
+deployment_time: '2026-04-03T03:05:36'
+deployment_latitude: 59 27.84 N
+deployment_longitude: 048 27.21 W
+recovery_time: '2026-04-03T05:08:24'
+ship: FS MSMerian
+cruise: msm142
+directory: 'data/proc_calib/msm142_2026/cal_dip/castM4/'
+ctd_file: 'msm_142_1_032_1sec.cnv'
+ctd_sensors: 2
+instruments:
+- position: '1'
+  serial: 013874
+  label: 'TR1050'
+  instrument: rbr
+  file_type: 'rbr-matlab-legacy'
+  filename: '013874_20260403_1302.mat'
+  depth: 0
+  clock_offset: 2599175 # 7175
+- position: '2'
+  serial: 13840
+  label: 'SBE37'
+  instrument: sbe
+  file_type: 'sbe-cnv'
+  filename: '13840_cal_dip_data_time.cnv'
+  depth: 0

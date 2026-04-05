@@ -1,0 +1,19 @@
+# Core scientific computing
+numpy>=1.23
+pandas>=2.0
+xarray>=2023.12.0
+netcdf4>=1.6
+scipy>=1.10
+
+# Configuration files
+pyyaml>=6.0
+
+# Interactive plotting
+plotly>=5.0
+
+# Oceanographic instrument data
+seabirdscientific>=1.2.0
+
+# Optional: Universal instrument data loading
+seasenselib
+

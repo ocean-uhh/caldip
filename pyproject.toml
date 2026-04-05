@@ -1,0 +1,40 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools>=42",
+  "wheel",
+]
+
+[project]
+name = "caldip"
+description = "Calibration dip analysis for oceanographic instruments"
+readme = "README.md"
+license = { file = "LICENSE" }
+maintainers = [
+  { name = "Eleanor Frajka-Williams", email = "eleanorfrajka@gmail.com" },
+]
+requires-python = ">=3.9"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+version = "0.1.0"
+dynamic = [
+  "dependencies",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["caldip"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = [
+  "requirements.txt",
+] }
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
