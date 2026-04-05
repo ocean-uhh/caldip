@@ -170,3 +170,4 @@ cython_debug/
 plots/
 output/
 temp/
+.claude/settings.local.json

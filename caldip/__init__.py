@@ -1,21 +1,15 @@
 """
-Oceanarray: Tools for processing oceanographic mooring data.
+Caldip: Calibration dip analysis for oceanographic instruments.
 
-This package provides functions for processing, quality control, and analysis
-of oceanographic time series data from moorings and instruments.
+This package provides tools for processing, analyzing, and visualizing data from
+calibration dips performed with CTD profiles and multiple instrument types including
+MicroCATs and RBR thermistors.
 """
 
 __all__ = [
-    "caldip",
-    "clock_offset", 
-    "find_deployment",
-    "plotters",
+    "caldip_functions",
     "readers",
-    "stage1",
-    "stage2",
-    "time_gridding",
+    "plotters",
     "tools",
-    "transports", 
-    "utilities",
     "writers",
 ]

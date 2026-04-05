@@ -35,9 +35,10 @@ caldip/
 ├── caldip/                     # Python package
 │   ├── __init__.py            # Package initialization
 │   ├── caldip_functions.py    # Core processing algorithms
-│   ├── data_loader.py         # Universal data loading
-│   ├── plotting.py            # Interactive visualization
-│   └── tools.py               # Shared utilities
+│   ├── readers.py             # Universal data loading
+│   ├── plotters.py            # Interactive visualization
+│   ├── tools.py               # Shared utilities
+│   └── writers.py             # Output formatting
 ├── caldip_plot_all.py         # Universal plotting script
 ├── caldip_check_all.py        # Universal statistics script
 ├── generate_all_caldip_plots.sh  # Batch processing script
@@ -149,6 +150,7 @@ The core algorithm for detecting bottle stops in CTD data (`caldip_functions.py:
 - **CTD Sensor Selection**: Supports primary/secondary CTD sensor analysis
 - **Automatic Detection**: No manual bottle stop timing required
 - **Reproducible Analysis**: YAML configuration files ensure repeatable processing
+- **Modular Architecture**: Clean separation of concerns across specialized modules
 
 ## 🛠️ Dependencies
 
@@ -162,7 +164,7 @@ The core algorithm for detecting bottle stops in CTD data (`caldip_functions.py:
 ### Step 1: Get CTD Timing
 ```bash
 python -c "
-from caldip.data_loader import load_ctd_data
+from caldip.readers import load_ctd_data
 import pandas as pd
 ds = load_ctd_data('path/to/your_ctd_file.cnv')
 start = pd.to_datetime(ds.time.values[0])
