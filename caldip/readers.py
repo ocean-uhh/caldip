@@ -8,6 +8,8 @@ Currently Used Functions:
 - find_config_file() -> Path
   Find caldip configuration file in directory or use provided file
 - load_caldip_config() -> Dict
+- generate_stub_yaml() -> Dict
+  Generate stub YAML configuration from caldip directory structure
   Load YAML configuration files for caldip processing
 - load_instruments_from_config() -> Dict[str, Dict]
   Load all instruments specified in a caldip configuration
@@ -28,10 +30,11 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from pathlib import Path
-from typing import Dict, Union, Optional
+from typing import Dict, Union, Optional, List
 import yaml
 from datetime import datetime, timedelta
 import warnings
+import re
 
 try:
     import seasenselib as sl
@@ -51,6 +54,9 @@ except ImportError:
 
 # Import tools for shared utilities
 from caldip.tools import instrument_data_to_xarray
+
+# Import SBE hex readers
+from sbe_hex_reader import sbe37_hex_reader
 
 
 def find_config_file(path):
@@ -127,7 +133,7 @@ def load_instrument_data(
         raise FileNotFoundError(f"Data file not found: {file_path}")
 
     # Route to appropriate loader based on file_type
-    if file_type in ["sbe-cnv", "sbe-asc"]:
+    if file_type in ["sbe-cnv", "sbe-asc", "sbe-hex"]:
         return load_microcat_data(file_path, **kwargs)
 
     elif file_type == "rbr-rsk":
@@ -305,7 +311,7 @@ def load_ctd_data(file_path: Union[str, Path]) -> xr.Dataset:
             )
             # Fallback to basic approach if available
             if SEABIRD_AVAILABLE:
-                ds = _load_hex_basic(file_path)
+                ds = sbe911_hex_reader(file_path)
             else:
                 raise ImportError("No suitable hex parser available")
 
@@ -358,30 +364,6 @@ def load_ctd_data(file_path: Union[str, Path]) -> xr.Dataset:
     ds.attrs["filename"] = str(file_path)
 
     return ds
-
-
-def _load_hex_basic(file_path: Path) -> xr.Dataset:
-    """Basic hex file loading with minimal sensor configuration."""
-    # Try with basic SBE911Plus configuration
-    basic_sensors = [
-        id.Sensors.Temperature,
-        id.Sensors.Conductivity,
-        id.Sensors.Pressure,
-        id.Sensors.SystemTime,
-    ]
-
-    try:
-        df = id.read_hex_file(
-            str(file_path),
-            id.InstrumentType.SBE911Plus,
-            enabled_sensors=basic_sensors,
-            moored_mode=False,
-            is_shallow=False,
-        )
-        # Convert to xarray Dataset
-        return df.to_xarray()
-    except Exception as e:
-        raise ValueError(f"Could not load hex file {file_path}: {e}")
 
 
 def load_microcat_data(file_path: Union[str, Path]) -> xr.Dataset:
@@ -437,8 +419,8 @@ def load_microcat_data(file_path: Union[str, Path]) -> xr.Dataset:
             ds.attrs["time_corrected"] = "Using actual timestamps from timeJV2"
 
     elif file_path.suffix.lower() == ".hex":
-        # Parse MicroCAT hex files using proper timestamp extraction
-        ds = _parse_microcat_hex(file_path)
+        # Parse MicroCAT hex files using calibration data from hex header
+        ds = sbe37_hex_reader(file_path)
 
     elif file_path.suffix.lower() == ".asc":
         # Parse ASCII files manually
@@ -608,128 +590,674 @@ def _parse_microcat_ascii(file_path: Path) -> xr.Dataset:
     return ds
 
 
-def _parse_microcat_hex(file_path: Path) -> xr.Dataset:
+def generate_stub_yaml(directory: str, print_only: bool = False) -> Dict:
     """
-    Parse MicroCAT hex files with actual timestamps.
-
-    This handles SBE37 MicroCAT hex format with ODO sensor and timestamps.
-    Format: 6 bytes temp + 6 bytes cond + 6 bytes pressure +
-            4 bytes temp comp + 6 bytes ODO phase + 6 bytes ODO temp + 8 bytes time
-    Total: 42 hex characters per line
+    Generate a stub YAML configuration for a caldip directory.
+    
+    Parameters
+    ----------
+    directory : str
+        Path to caldip directory (e.g., 'data/proc_calib/cruise123/cal_dip/castM3')
+    print_only : bool
+        If True, print to stdout instead of writing file
+        
+    Returns
+    -------
+    Dict
+        Configuration dictionary
     """
-    from datetime import datetime
-
-    # Constants from seabirdscientific
-    SECONDS_BETWEEN_EPOCH_AND_2000 = 946684800
-
-    with open(file_path, "r") as f:
-        lines = f.readlines()
-
-    # Extract metadata from header
-    metadata = {}
-    serial_number = None
-
-    for line in lines:
-        if line.startswith("*"):
-            if "Temperature SN" in line:
-                serial_number = line.split("=")[-1].strip()
-                metadata["serial_number"] = serial_number
-            elif "System UpLoad Time" in line:
-                upload_time_str = line.split("=")[-1].strip()
-                try:
-                    metadata["upload_time"] = datetime.strptime(
-                        upload_time_str, "%b %d %Y %H:%M:%S"
-                    )
-                except:
-                    pass
-
-    # Parse data lines
-    timestamps = []
-    temperature_counts = []
-    conductivity_counts = []
-    pressure_counts = []
-    temp_comp_counts = []
-
-    for line in lines:
-        line = line.strip()
-
-        # Skip header and empty lines
-        if line.startswith("*") or line.startswith("#") or not line:
+    
+    dir_path = Path(directory)
+    
+    if not dir_path.exists():
+        raise FileNotFoundError(f"Directory not found: {directory}")
+    
+    # Extract information from directory structure
+    cast_name = dir_path.name  # e.g., 'castM3'
+    
+    # Try to extract cruise name from path structure
+    path_parts = dir_path.parts
+    cruise_name = ''
+    for part in reversed(path_parts):
+        if 'cal_dip' in part.lower():
             continue
+        if any(x in part.lower() for x in ['cruise', 'msm', 'expedition']):
+            cruise_name = part
+            break
+    
+    # Extract year from cast name or directory
+    year_match = re.search(r'20\d{2}', str(dir_path))
+    year = int(year_match.group()) if year_match else 2024
+    
+    # Find CTD file and extract metadata
+    ctd_file = _find_ctd_file(dir_path)
+    if not ctd_file:
+        raise FileNotFoundError(f"No *_1sec.cnv file found in {directory}")
+    
+    ctd_metadata = _extract_ctd_metadata(ctd_file)
+    
+    # Detect instruments
+    instruments = _detect_instruments(dir_path)
+    
+    # Build the configuration
+    config = {
+        'name': cast_name,
+        'year': year,
+        'waterdepth': '.nan',
+        'cruise': cruise_name,
+        'directory': f'{directory}/',
+        'ctd_file': ctd_file.name,
+        'ctd_sensors': 2,  # Default assumption
+        'instruments': instruments
+    }
+    
+    # Add optional fields if available
+    if ctd_metadata['start_time']:
+        config['deployment_time'] = ctd_metadata['start_time']
+    if ctd_metadata['end_time']:
+        config['recovery_time'] = ctd_metadata['end_time']
+    if ctd_metadata['latitude']:
+        config['deployment_latitude'] = ctd_metadata['latitude']
+        # Extract the number with proper sign
+        lat_parts = ctd_metadata['latitude'].split()
+        lat_value = float(lat_parts[0])
+        if len(lat_parts) > 1 and lat_parts[1] == 'S':
+            lat_value = -lat_value
+        config['latitude'] = lat_value
+    if ctd_metadata['longitude']:
+        config['deployment_longitude'] = ctd_metadata['longitude'] 
+        # Extract the number with proper sign
+        lon_parts = ctd_metadata['longitude'].split()
+        lon_value = float(lon_parts[0])
+        if len(lon_parts) > 1 and lon_parts[1] == 'W':
+            lon_value = -lon_value
+        config['longitude'] = lon_value
+    if ctd_metadata['ship']:
+        config['ship'] = ctd_metadata['ship']
+    
+    # Handle output
+    if print_only:
+        import yaml
+        print(yaml.dump(config, default_flow_style=False, sort_keys=False, indent=2))
+        return config
+    
+    # Determine output filename
+    output_file = dir_path / f"{cast_name}.caldip.yaml"
+    
+    # Check if file exists and find next available name
+    if output_file.exists():
+        counter = 1
+        while True:
+            new_name = dir_path / f"{cast_name}.caldip-{counter}.yaml"
+            if not new_name.exists():
+                output_file = new_name
+                break
+            counter += 1
+    
+    # Write YAML file
+    import yaml
+    with open(output_file, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False, indent=2)
+    
+    print(f"Generated stub YAML: {output_file}")
+    print(f"Found {len(config['instruments'])} instruments")
+    
+    return config
 
-        # Parse hex data (42 chars for ODO-enabled MicroCAT)
-        if len(line) == 42:
-            try:
-                # Extract raw counts
-                temp_hex = line[0:6]
-                cond_hex = line[6:12]
-                press_hex = line[12:18]
-                temp_comp_hex = line[18:22]
-                # Skip ODO data at positions 22:34
-                time_hex = line[34:42]
 
-                # Convert to integers
-                temp_count = int(temp_hex, 16)
-                cond_count = int(cond_hex, 16)
-                press_count = int(press_hex, 16) if press_hex != "000000" else 0
-                temp_comp_count = int(temp_comp_hex, 16)
+def _find_ctd_file(directory: Path) -> Optional[Path]:
+    """Find the main CTD file (*_1sec.cnv) in the directory."""
+    files = list(directory.glob("*_1sec.cnv"))
+    if files:
+        return files[0]
+    return None
 
-                # Parse timestamp (seconds since 2000)
-                seconds_since_2000 = int(time_hex, 16)
-                timestamp = datetime(1970, 1, 1) + timedelta(
-                    seconds=seconds_since_2000 + SECONDS_BETWEEN_EPOCH_AND_2000
-                )
 
-                timestamps.append(timestamp)
-                temperature_counts.append(temp_count)
-                conductivity_counts.append(
-                    cond_count / 256
-                )  # Conductivity needs division by 256
-                pressure_counts.append(press_count)
-                temp_comp_counts.append(temp_comp_count)
-
-            except Exception:
-                continue
-
-    if not timestamps:
-        raise ValueError(f"No valid data found in hex file {file_path}")
-
-    # Convert counts to engineering units
-    # Note: These conversions need calibration coefficients from the .xmlcon file
-    # For now, using the raw counts which will be converted by the CNV processor
-
-    # Create xarray dataset
-    time_index = pd.to_datetime(timestamps)
-
-    ds = xr.Dataset(
-        {
-            "temperature_counts": (["time"], temperature_counts),
-            "conductivity_counts": (["time"], conductivity_counts),
-            "pressure_counts": (["time"], pressure_counts),
-            "temperature_compensation_counts": (["time"], temp_comp_counts),
-        },
-        coords={"time": time_index},
-        attrs=metadata,
-    )
-
-    # Add note that these are raw counts needing calibration
-    ds.attrs["data_type"] = "raw_counts"
-    ds.attrs["note"] = (
-        "Raw counts from hex file - requires calibration coefficients for conversion to physical units"
-    )
-
-    # Try to load calibration from xmlcon file if available
-    xmlcon_path = file_path.with_suffix(".xmlcon")
-    if xmlcon_path.exists():
+def _extract_ctd_metadata(ctd_file: Path) -> Dict:
+    """Extract metadata from CTD .cnv file header."""
+    metadata = {
+        'start_time': None,
+        'end_time': None,
+        'latitude': None,
+        'longitude': None,
+        'ship': None,
+        'nvalues': None,
+        'interval': None
+    }
+    
+    try:
+        with open(ctd_file, 'r', encoding='latin1') as f:
+            # Read header lines (typically first 100 lines contain metadata)
+            for i, line in enumerate(f):
+                if i > 200:  # Stop reading after header
+                    break
+                    
+                line = line.strip()
+                
+                # Extract start time
+                if 'start_time' in line.lower() or 'start time' in line.lower():
+                    # Look for format like "Apr 04 2026 15:19:06"
+                    time_match = re.search(r'(\w{3})\s+(\d{1,2})\s+(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})', line)
+                    if time_match:
+                        month_abbr = time_match.group(1)
+                        day = int(time_match.group(2))
+                        year = int(time_match.group(3))
+                        hour = int(time_match.group(4))
+                        minute = int(time_match.group(5))
+                        second = int(time_match.group(6))
+                        
+                        # Convert month abbreviation to number
+                        months = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+                                 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
+                        month = months.get(month_abbr, 1)
+                        
+                        # Format as ISO datetime
+                        metadata['start_time'] = f"{year:04d}-{month:02d}-{day:02d}T{hour:02d}:{minute:02d}:{second:02d}"
+                    else:
+                        # Fallback to existing ISO format
+                        match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})', line)
+                        if match:
+                            metadata['start_time'] = match.group(1)
+                
+                # Extract ship name
+                if line.startswith('# ship:') or line.startswith('# Ship:'):
+                    ship = line.split(':', 1)[1].strip()
+                    if ship and ship != 'unknown':
+                        metadata['ship'] = ship
+                
+                # Extract NMEA latitude: "* NMEA Latitude = 58 01.63 N"
+                if 'nmea latitude' in line.lower():
+                    lat_match = re.search(r'(\d+)\s+(\d+\.?\d*)\s+([NS])', line)
+                    if lat_match:
+                        deg = float(lat_match.group(1))
+                        mins = float(lat_match.group(2))
+                        hemisphere = lat_match.group(3)
+                        decimal_deg = deg + mins/60.0
+                        metadata['latitude'] = f"{decimal_deg:.4f} {hemisphere}"
+                
+                # Extract NMEA longitude: "* NMEA Longitude = 048 49.71 W"
+                if 'nmea longitude' in line.lower():
+                    lon_match = re.search(r'(\d+)\s+(\d+\.?\d*)\s+([EW])', line)
+                    if lon_match:
+                        deg = float(lon_match.group(1))
+                        mins = float(lon_match.group(2))
+                        hemisphere = lon_match.group(3)
+                        decimal_deg = deg + mins/60.0
+                        metadata['longitude'] = f"{decimal_deg:.4f} {hemisphere}"
+                
+                # Fallback: Extract latitude from generic latitude lines  
+                if 'latitude' in line.lower() and not metadata['latitude']:
+                    # Look for patterns like "59 27.84" (degrees minutes) or "59.4640" (decimal degrees)
+                    lat_match = re.search(r'(-?\d+)\s+(\d+\.?\d*)', line)
+                    if lat_match:
+                        # Degrees minutes format
+                        deg = float(lat_match.group(1))
+                        mins = float(lat_match.group(2))
+                        decimal_deg = abs(deg) + mins/60.0
+                        metadata['latitude'] = f"{decimal_deg:.4f} {'N' if deg >= 0 else 'S'}"
+                    else:
+                        # Try decimal degrees format
+                        lat_match = re.search(r'(-?\d+\.?\d*)', line)
+                        if lat_match:
+                            deg = float(lat_match.group(1))
+                            metadata['latitude'] = f"{abs(deg):.4f} {'N' if deg >= 0 else 'S'}"
+                
+                # Fallback: Extract longitude from generic longitude lines
+                if 'longitude' in line.lower() and not metadata['longitude']:
+                    # Look for patterns like "-048 27.21" (degrees minutes) or "-48.4535" (decimal degrees)
+                    lon_match = re.search(r'(-?\d+)\s+(\d+\.?\d*)', line)
+                    if lon_match:
+                        # Degrees minutes format
+                        deg = float(lon_match.group(1))
+                        mins = float(lon_match.group(2))
+                        decimal_deg = abs(deg) + mins/60.0
+                        metadata['longitude'] = f"{decimal_deg:.4f} {'E' if deg >= 0 else 'W'}"
+                    else:
+                        # Try decimal degrees format
+                        lon_match = re.search(r'(-?\d+\.?\d*)', line)
+                        if lon_match:
+                            deg = float(lon_match.group(1))
+                            metadata['longitude'] = f"{abs(deg):.4f} {'E' if deg >= 0 else 'W'}"
+                
+                # Extract nvalues
+                if 'nvalues' in line.lower():
+                    nval_match = re.search(r'nvalues\s*=\s*(\d+)', line)
+                    if nval_match:
+                        metadata['nvalues'] = int(nval_match.group(1))
+                
+                # Extract interval
+                if 'interval' in line.lower():
+                    interval_match = re.search(r'interval\s*=\s*seconds:\s*(\d+(?:\.\d+)?)', line)
+                    if interval_match:
+                        metadata['interval'] = float(interval_match.group(1))
+                        
+    except Exception as e:
+        print(f"Warning: Could not extract metadata from {ctd_file}: {e}")
+    
+    # Calculate recovery time if we have all the data
+    if metadata['start_time'] and metadata['nvalues'] and metadata['interval']:
         try:
-            # For now, just note that calibration is available
-            ds.attrs["calibration_file"] = str(xmlcon_path)
+            from datetime import datetime, timedelta
+            start_dt = datetime.fromisoformat(metadata['start_time'])
+            duration_seconds = metadata['nvalues'] * metadata['interval']
+            end_dt = start_dt + timedelta(seconds=duration_seconds)
+            metadata['end_time'] = end_dt.strftime('%Y-%m-%dT%H:%M:%S')
+        except Exception as e:
+            print(f"Warning: Could not calculate end time: {e}")
+    
+    return metadata
 
-            # TODO: Parse xmlcon and apply calibrations
-            # This would involve extracting calibration coefficients and applying
-            # the proper conversion formulas for each sensor
 
-        except Exception:
-            pass
+def _prioritize_files(files: List[Path]) -> List[Path]:
+    """Select the best file based on extension priority."""
+    # Group files by base name (without extension)
+    by_basename = {}
+    for f in files:
+        basename = f.stem
+        # Handle cases like file.12345.cnv -> use just file.12345
+        if '.' in basename:
+            basename = '.'.join(basename.split('.')[:-1]) if basename.count('.') > 1 else basename
+        
+        if basename not in by_basename:
+            by_basename[basename] = []
+        by_basename[basename].append(f)
+    
+    # For each basename, pick the best file
+    selected = []
+    for basename, file_list in by_basename.items():
+        # Priority: .cnv > .mat > .rsk > .hex
+        cnv_files = [f for f in file_list if f.suffix.lower() == '.cnv']
+        mat_files = [f for f in file_list if f.suffix.lower() == '.mat']
+        rsk_files = [f for f in file_list if f.suffix.lower() == '.rsk']
+        hex_files = [f for f in file_list if f.suffix.lower() == '.hex']
+        
+        if cnv_files:
+            selected.append(cnv_files[0])
+        elif mat_files:
+            selected.append(mat_files[0])
+        elif rsk_files:
+            selected.append(rsk_files[0])
+        elif hex_files:
+            selected.append(hex_files[0])
+        elif file_list:  # fallback
+            selected.append(file_list[0])
+    
+    return selected
 
+
+def _detect_instruments(directory: Path) -> List[Dict]:
+    """Detect instruments based on files in directory."""
+    instruments = []
+    
+    # Find all potential instrument files
+    all_files = list(directory.glob("*"))
+    
+    # Filter out unwanted files
+    instrument_files = []
+    ignored_extensions = {'.xml', '.xmlcon', '.cap', '.txt', '.log', '.yaml', '.yml'}
+    
+    for f in all_files:
+        if f.is_file() and f.suffix.lower() not in ignored_extensions:
+            # Skip the main CTD file
+            if '_1sec.cnv' in f.name:
+                continue
+            instrument_files.append(f)
+    
+    # Prioritize files
+    selected_files = _prioritize_files(instrument_files)
+    
+    # Create instrument entries
+    for i, file in enumerate(selected_files, 1):
+        # Try to extract serial number from filename
+        serial = ''
+        
+        # Handle SBE37SMP-RS232 pattern: SBE37SMP-RS232_037#####_20*.*
+        sbe_match = re.match(r'SBE37SMP-RS232_037(\d{5})_20', file.name)
+        if sbe_match:
+            serial = sbe_match.group(1)
+        
+        instrument = {
+            'position': str(i),
+            'serial': serial,
+            'label': '',
+            'filename': file.name,
+            'depth': 0
+        }
+        
+        # Determine instrument type and file_type based on extension
+        ext = file.suffix.lower()
+        if ext == '.cnv':
+            instrument['instrument'] = 'sbe'
+            instrument['file_type'] = 'sbe-cnv'
+        elif ext == '.mat':
+            instrument['instrument'] = 'rbr'  # Common for RBR files
+            instrument['file_type'] = 'rbr-matlab-legacy'
+        elif ext == '.rsk':
+            instrument['instrument'] = 'rbr'
+            instrument['file_type'] = 'rbr-rsk'
+        elif ext == '.hex':
+            instrument['instrument'] = 'sbe'  # SBE hex files
+            instrument['file_type'] = 'sbe-hex'
+        else:
+            # Unknown file type - leave instrument and file_type blank
+            instrument['instrument'] = ''
+            instrument['file_type'] = ''
+        
+        instruments.append(instrument)
+    
+    return instruments
+
+
+def sbe37_xmlcon_reader(xmlcon_file: Union[str, Path]) -> Dict:
+    """
+    DEPRECATED
+    Parse SBE37 xmlcon file to extract sensor configuration and calibration coefficients.
+    
+    Parameters
+    ----------
+    xmlcon_file : Union[str, Path]
+        Path to .xmlcon file
+        
+    Returns
+    -------
+    Dict
+        Dictionary containing sensor configurations and coefficient objects
+    """
+    import xml.etree.ElementTree as ET
+    
+    xmlcon_path = Path(xmlcon_file)
+    if not xmlcon_path.exists():
+        raise FileNotFoundError(f"XMLCON file not found: {xmlcon_path}")
+    
+    # Parse XML
+    tree = ET.parse(xmlcon_path)
+    root = tree.getroot()
+    
+    sensors = {}
+    enabled_sensors = []
+    
+    # Find all sensors by index
+    for sensor_elem in root.findall('.//Sensor'):
+        index = sensor_elem.get('index')
+        if index is None:
+            continue
+            
+        index = int(index)
+        
+        # Check what type of sensor this is
+        temp_sensor = sensor_elem.find('TemperatureSensor')
+        cond_sensor = sensor_elem.find('ConductivitySensor') 
+        press_sensor = sensor_elem.find('PressureSensor')
+        
+        if temp_sensor is not None:
+            sensors[index] = _parse_coefficients(temp_sensor, 'temperature', index)
+            enabled_sensors.append('temperature')
+            
+        elif cond_sensor is not None:
+            sensors[index] = _parse_coefficients(cond_sensor, 'conductivity', index)
+            enabled_sensors.append('conductivity')
+            
+        elif press_sensor is not None:
+            sensors[index] = _parse_coefficients(press_sensor, 'pressure', index)
+            enabled_sensors.append('pressure')
+    
+    return {
+        'sensors': sensors,
+        'enabled_sensors': enabled_sensors,
+        'xmlcon_path': xmlcon_path
+    }
+
+
+def _parse_coefficients(sensor_elem, sensor_type: str, sensor_index: int) -> Dict:
+    """
+    Generic function to parse sensor coefficients from XML element.
+    
+    Parameters
+    ----------
+    sensor_elem : xml.etree.ElementTree.Element
+        XML element containing sensor data
+    sensor_type : str
+        Type of sensor ('temperature', 'conductivity', 'pressure')
+    sensor_index : int
+        Sensor index from xmlcon
+        
+    Returns
+    -------
+    Dict
+        Sensor information with coefficients
+    """
+    # Extract common fields
+    serial_num = sensor_elem.find('SerialNumber').text
+    cal_date = sensor_elem.find('CalibrationDate').text
+    
+    # Parse all coefficient elements to lowercase keys
+    coef_dict = {}
+    
+    if sensor_type == 'conductivity':
+        # Special handling for conductivity - check UseG_J flag
+        use_g_j_elem = sensor_elem.find('UseG_J')
+        use_g_j = use_g_j_elem is not None and use_g_j_elem.text == '1'
+        
+        if use_g_j:
+            # Look for equation="1" coefficients which contain G,H,I,J
+            for coeffs_elem in sensor_elem.findall('Coefficients'):
+                equation_attr = coeffs_elem.get('equation')
+                if equation_attr == '1':
+                    for child in coeffs_elem:
+                        if child.text:
+                            coef_dict[child.tag.lower()] = float(child.text)
+                    break
+        else:
+            # Use equation="0" with A,B,C,D coefficients  
+            for coeffs_elem in sensor_elem.findall('Coefficients'):
+                equation_attr = coeffs_elem.get('equation')
+                if equation_attr == '0':
+                    for child in coeffs_elem:
+                        if child.text:
+                            coef_dict[child.tag.lower()] = float(child.text)
+                    break
+        
+        # Also parse direct children (slope, offset, etc.)
+        for child in sensor_elem:
+            if child.tag.lower() in ['slope', 'offset']:
+                if child.text:
+                    coef_dict[child.tag.lower()] = float(child.text)
+    
+    else:
+        # For temperature and pressure, parse all numeric child elements
+        for child in sensor_elem:
+            if child.text and child.tag not in ['SerialNumber', 'CalibrationDate']:
+                try:
+                    coef_dict[child.tag.lower()] = float(child.text)
+                except ValueError:
+                    # Skip non-numeric elements
+                    continue
+    
+    # Separate seabirdscientific calibration coefficients from slope/offset
+    cal_coeffs = {}
+    metadata = {}
+    
+    # Define expected coefficient names for each sensor type
+    if sensor_type == 'temperature':
+        expected_coeffs = ['a0', 'a1', 'a2', 'a3']
+    elif sensor_type == 'conductivity':
+        expected_coeffs = ['g', 'h', 'i', 'j', 'cpcor', 'ctcor', 'wbotc']
+    elif sensor_type == 'pressure':
+        expected_coeffs = ['pa0', 'pa1', 'pa2', 'ptca0', 'ptca1', 'ptca2', 
+                          'ptcb0', 'ptcb1', 'ptcb2', 'ptempa0', 'ptempa1', 'ptempa2']
+    else:
+        expected_coeffs = []
+    
+    # Split coefficients
+    for key, value in coef_dict.items():
+        if key in expected_coeffs:
+            cal_coeffs[key] = value
+        else:
+            metadata[key] = value
+    
+    return {
+        'type': sensor_type,
+        'serial_number': serial_num,
+        'calibration_date': cal_date,
+        'coefficients': cal_coeffs,
+        'metadata': metadata,
+        'index': sensor_index
+    }
+
+
+def sbe37_hex_reader(hex_file: Union[str, Path]) -> xr.Dataset:
+    """
+    Read SBE37 hex file using seabirdscientific library.
+    
+    Parameters
+    ----------
+    hex_file : Union[str, Path]
+        Path to .hex file
+        
+    Returns
+    -------
+    xr.Dataset
+        Dataset containing temperature, conductivity, and/or pressure data
+    """
+    hex_path = Path(hex_file)
+    if not hex_path.exists():
+        raise FileNotFoundError(f"Hex file not found: {hex_path}")
+    
+    # Look for corresponding xmlcon file
+    xmlcon_path = hex_path.with_suffix('.xmlcon')
+    if not xmlcon_path.exists():
+        # Try without hex extension
+        xmlcon_path = hex_path.parent / f"{hex_path.stem}.xmlcon"
+        
+    if not xmlcon_path.exists():
+        raise FileNotFoundError(f"No corresponding xmlcon file found for {hex_path}")
+    
+    # Parse xmlcon to determine sensor configuration
+    xmlcon_info = sbe37_xmlcon_reader(xmlcon_path)
+    
+    try:
+        import seabirdscientific.instrument_data as id
+    except ImportError:
+        raise ImportError("seabirdscientific package required for SBE37 hex file reading")
+    
+    # Map our sensor types to seabirdscientific sensor types
+    sensor_mapping = {
+        'temperature': id.Sensors.Temperature,
+        'conductivity': id.Sensors.Conductivity, 
+        'pressure': id.Sensors.Pressure
+    }
+    
+    enabled_sensors = [sensor_mapping[s] for s in xmlcon_info['enabled_sensors'] 
+                      if s in sensor_mapping]
+    
+    # Read the hex file
+    raw_data = id.read_hex_file(
+        filepath=str(hex_path),
+        instrument_type=id.InstrumentType.SBE37SM,  # Assuming SBE37SM
+        enabled_sensors=enabled_sensors,
+    )
+    
+    # Import conversion functions and coefficient classes
+    try:
+        import seabirdscientific.conversion as conv
+        from seabirdscientific.cal_coefficients import (
+            TemperatureCoefficients,
+            ConductivityCoefficients,
+            PressureCoefficients,
+        )
+    except ImportError:
+        raise ImportError("seabirdscientific conversion module required for calibration")
+    
+    # Convert to xarray Dataset
+    data_vars = {}
+    
+    # Extract time coordinate from raw data
+    times = pd.to_datetime(raw_data["date time"])
+    n_samples = len(times)
+    
+    # Process each sensor type and apply calibrations
+    for sensor_info in xmlcon_info['sensors'].values():
+        sensor_type = sensor_info['type']
+        coeffs = sensor_info['coefficients']
+        
+        if sensor_type == 'temperature' and 'temperature' in raw_data.columns:
+            # Create temperature coefficients object
+            temp_coefs = TemperatureCoefficients(**coeffs)
+            
+            # Convert raw counts to calibrated temperature
+            temperature = conv.convert_temperature(
+                temperature_counts_in=raw_data["temperature"].values,
+                coefs=temp_coefs,
+                standard="ITS90",
+                units="C",
+                use_mv_r=False,
+            )
+            data_vars['temp'] = ('time', temperature)
+            
+        elif sensor_type == 'conductivity' and 'conductivity' in raw_data.columns:
+            # Create conductivity coefficients object
+            cond_coefs = ConductivityCoefficients(**coeffs)
+            
+            # Convert raw counts to calibrated conductivity
+            # Note: This requires temperature for full conversion
+            temp_values = data_vars.get('temp', (None, np.zeros(n_samples)))[1]
+            pressure_values = np.zeros(n_samples)  # Will be updated if pressure is available
+            
+            conductivity = conv.convert_conductivity(
+                conductivity_count=raw_data["conductivity"].values,
+                temperature=temp_values,
+                pressure=pressure_values,
+                coefs=cond_coefs,
+            )
+            # Convert from S/m to mS/cm (multiply by 10)
+            conductivity_mScm = conductivity * 10.0
+            data_vars['cond'] = ('time', conductivity_mScm)
+            
+        elif sensor_type == 'pressure' and 'pressure' in raw_data.columns:
+            # Create pressure coefficients object
+            press_coefs = PressureCoefficients(**coeffs)
+            
+            # Convert raw counts to calibrated pressure
+            # For SBE37, use temperature compensation if available
+            temp_comp_values = raw_data.get("temperature compensation", np.zeros(n_samples))
+            if hasattr(temp_comp_values, 'values'):
+                temp_comp_values = temp_comp_values.values
+            
+            pressure = conv.convert_pressure(
+                pressure_count=raw_data["pressure"].values,
+                compensation_voltage=temp_comp_values,
+                coefs=press_coefs,
+                units="dbar"
+            )
+            data_vars['press'] = ('time', pressure)
+    
+    # Create dataset
+    ds = xr.Dataset(data_vars, coords={'time': times})
+    
+    # Add units as variable attributes
+    if 'temp' in data_vars:
+        ds['temp'].attrs['units'] = 'degrees_C'
+        ds['temp'].attrs['long_name'] = 'Temperature'
+    if 'cond' in data_vars:
+        ds['cond'].attrs['units'] = 'mS/cm'
+        ds['cond'].attrs['long_name'] = 'Conductivity'
+    if 'press' in data_vars:
+        ds['press'].attrs['units'] = 'dbar'
+        ds['press'].attrs['long_name'] = 'Pressure'
+    
+    # Add metadata
+    ds.attrs['source_file'] = str(hex_path)
+    ds.attrs['xmlcon_file'] = str(xmlcon_path)
+    ds.attrs['instrument_type'] = 'SBE37'
+    ds.attrs['data_type'] = 'calibrated'
+    
+    # Add sensor information as attributes
+    for sensor_info in xmlcon_info['sensors'].values():
+        sensor_type = sensor_info['type']
+        serial = sensor_info['serial_number']
+        cal_date = sensor_info['calibration_date']
+        
+        ds.attrs[f'{sensor_type}_serial'] = serial
+        ds.attrs[f'{sensor_type}_calibration_date'] = cal_date
+    
     return ds

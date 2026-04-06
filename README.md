@@ -21,7 +21,7 @@ pip install -e .
 # Generate interactive plots
 python caldip_plot_all.py data/proc_calib/msm142_2026/cal_dip/castM4/ --output castM4_plot.html
 
-# Generate statistics
+# Generate statistics (compared to CTD secondary sensors)
 python caldip_check_all.py data/proc_calib/msm142_2026/cal_dip/castM4/ --output castM4_stats.csv --ctd-sensor 2
 
 # Batch processing
@@ -89,6 +89,8 @@ instruments:
   filename: '13840_cal_dip_data_time.cnv'
 ```
 
+Note that microCAT and CTD data need to be in `*.cnv` (or for microCAT, `*.asc`) format.  `*.hex` is not supported and needs to be converted to `*.cnv` using SBEDataProcessing.  For RBR data, `*.rsk` is supported, but the older `*.hex` needs to be converted to legacy `*.mat` format using Ruskin.
+
 ### 3. Processing
 Run analysis and generate outputs:
 
@@ -115,9 +117,9 @@ The core algorithm for detecting bottle stops in CTD data (`caldip_functions.py:
 
 ### Current Support
 - **Sea-Bird CTD**: CNV format (`.cnv`)
-- **Sea-Bird MicroCAT (SBE37)**: CNV, ASCII, and hex formats (`.cnv`, `.asc`, `.hex`)
+- **Sea-Bird MicroCAT (SBE37)**: CNV, ASCII, and hex formats (`.cnv`, `.asc`)
 - **RBR Instruments**: RSK and MATLAB formats (`.rsk`, `.mat`)
-- **Universal support**: Through seasenselib integration
+- **Planned: Universal support**: Through `seasenselib` integration
 
 ### File Type Mapping
 - `.cnv` files → `file_type: 'sbe-cnv'` or `'ctd-cnv'`
@@ -129,9 +131,8 @@ The core algorithm for detecting bottle stops in CTD data (`caldip_functions.py:
 ## 📊 Features
 
 ### Interactive Visualization (`caldip_plot_all.py`)
-- **3 synchronized subplots**: Pressure, Temperature, Conductivity
+- **3 subplots**: Pressure, Temperature, Conductivity
 - **Interactive zooming**: Click and drag on any plot, all sync on x-axis
-- **Smart y-axis ranges**: Automatically calculated to show variations
 - **Color coding**: Different colors for each instrument, black/gray for CTD
 - **Bottle stop markers**:
   - Blue vertical lines: Start of bottle stop
@@ -145,19 +146,17 @@ The core algorithm for detecting bottle stops in CTD data (`caldip_functions.py:
 - **CSV output**: Formatted tables for further analysis
 
 ### Key Features
-- **Universal Instrument Support**: Handles CTD, MicroCAT, and RBR instruments through unified interface
 - **Clock Offset Correction**: Applies time corrections specified in YAML configuration
 - **CTD Sensor Selection**: Supports primary/secondary CTD sensor analysis
 - **Automatic Detection**: No manual bottle stop timing required
 - **Reproducible Analysis**: YAML configuration files ensure repeatable processing
-- **Modular Architecture**: Clean separation of concerns across specialized modules
 
 ## 🛠️ Dependencies
 
 **Core Scientific**: numpy, pandas, xarray, scipy, netcdf4  
 **Configuration**: pyyaml  
 **Visualization**: plotly  
-**Oceanographic Data**: seabirdscientific, seasenselib (optional)
+**Oceanographic Data**: seabirdscientific, seasenselib
 
 ## 📋 Configuration File Setup
 
@@ -175,7 +174,7 @@ print(f'recovery_time: {end.strftime(\"%Y-%m-%dT%H:%M:%S\")}')
 ```
 
 ### Step 2: List Your Instruments
-For each instrument file in your directory, add an entry to the YAML configuration with the appropriate `file_type` and any necessary `clock_offset`.
+For each instrument file in your directory, add an entry to the YAML configuration with the appropriate `file_type` and any necessary `clock_offset`.  Start with `clock_offset` zero or omit this line if your clocks are good.  Note that this only shifts the instrument clock but does not de-drift it.
 
 ## 🔧 Advanced Usage
 
@@ -197,20 +196,6 @@ python caldip_check_all.py config.yaml --ctd-sensor 1
 python caldip_check_all.py config.yaml --ctd-sensor 2
 ```
 
-## 📖 Example Output
-
-### Interactive Plots
-- Synchronized time series plots showing all instruments vs CTD reference
-- Automatic bottle stop detection and marking
-- Responsive design with hover information and zoom capabilities
-
-### Statistical Tables
-CSV files with detailed comparison metrics:
-- Mean temperature/conductivity/pressure differences
-- Standard deviations during stable periods
-- Quality assessment flags
-- Sample counts and timing information
-
 ---
 
-The package is designed for oceanographic researchers performing instrument calibrations and requires familiarity with CTD operations and oceanographic data formats.
+The package is designed for oceanographic researchers performing instrument calibration checks and requires familiarity with CTD operations and oceanographic data formats.
