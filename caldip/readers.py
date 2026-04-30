@@ -43,6 +43,9 @@ try:
 except ImportError:
     SEASENSELIB_AVAILABLE = False
 
+# Note: AQD binary files are supported via CSV export from AquaPro software
+# Use nortek-csv file type for exported CSV data
+
 # Import seabirdscientific if available
 try:
     import seabirdscientific.instrument_data as id
@@ -56,7 +59,7 @@ except ImportError:
 from caldip.tools import instrument_data_to_xarray
 
 # Import SBE hex readers
-from sbe_hex_reader import sbe37_hex_reader
+from .sbe_hex_reader import sbe37_hex_reader
 
 
 def find_config_file(path):
@@ -143,9 +146,13 @@ def load_instrument_data(
 
     elif file_type == "ctd-cnv":
         return load_ctd_data(file_path, **kwargs)
+        
+    elif file_type == "nortek-csv":
+        return load_nortek_csv_data(file_path, **kwargs)
 
     else:
-        return sl.read(file_path, file_format=file_type)
+        # For all other file types, pass to seasenselib with any additional kwargs
+        return sl.read(file_path, file_format=file_type, **kwargs)
     #    raise ValueError(f"Unsupported file_type: {file_type}")
 
 
@@ -186,6 +193,9 @@ def load_instruments_from_config(
         filename = instrument["filename"]
         file_type = instrument["file_type"]
 
+        # DEBUG: Print raw YAML serial vs processed serial
+        print(f"DEBUG: YAML serial '{instrument['serial']}' → processed serial '{serial}'")
+
         # Construct full file path
         file_path = data_dir / filename
 
@@ -194,8 +204,14 @@ def load_instruments_from_config(
         )
 
         try:
-            # Load the data
-            dataset = load_instrument_data(file_path, file_type)
+            # Load the data - pass along any header_file if specified
+            load_kwargs = {}
+            if "header_file" in instrument:
+                # Construct full path to header file
+                header_file_path = data_dir / instrument["header_file"]
+                load_kwargs["header_file"] = str(header_file_path)
+            
+            dataset = load_instrument_data(file_path, file_type, **load_kwargs)
 
             # Apply clock offset if specified (positive offset = add time, negative = subtract time)
             if "clock_offset" in instrument and instrument["clock_offset"] != 0:
@@ -205,6 +221,18 @@ def load_instruments_from_config(
                     time=dataset.time + pd.Timedelta(seconds=clock_offset)
                 )
 
+            # DEBUG: Check if serial from dataset differs from YAML
+            dataset_serial = None
+            if hasattr(dataset, 'attrs') and 'raw_metadata' in dataset.attrs:
+                import json
+                try:
+                    raw_meta = json.loads(dataset.attrs['raw_metadata'])
+                    if 'blocks' in raw_meta and 'other' in raw_meta['blocks']:
+                        global_attrs = raw_meta['blocks']['other'].get('global_attributes', {})
+                        dataset_serial = global_attrs.get('rbr_serial_number')
+                except:
+                    pass
+            
             instruments[serial] = {
                 "data": dataset,
                 "config": instrument,
@@ -212,7 +240,19 @@ def load_instruments_from_config(
                 "file": str(file_path),
             }
 
-            print(f"  ✅ Loaded: {len(dataset.time)} samples")
+            # DEBUG: Print start/end times for troubleshooting
+            if len(dataset.time) > 0:
+                start_time = pd.to_datetime(dataset.time.values[0])
+                end_time = pd.to_datetime(dataset.time.values[-1])
+                duration_hours = (end_time - start_time).total_seconds() / 3600
+                print(f"  ✅ Loaded: {len(dataset.time)} samples")
+                print(f"     📅 Start: {start_time}")
+                print(f"     📅 End:   {end_time}")
+                print(f"     ⏱️  Duration: {duration_hours:.1f} hours")
+                if dataset_serial and dataset_serial != serial:
+                    print(f"     ⚠️  YAML serial {serial} != Dataset serial {dataset_serial}")
+            else:
+                print(f"  ✅ Loaded: {len(dataset.time)} samples (no data)")
 
         except Exception as e:
             print(f"  ❌ Failed to load {serial}: {e}")
@@ -948,6 +988,154 @@ def _detect_instruments(directory: Path) -> List[Dict]:
     return instruments
 
 
+
+def _parse_nortek_csv_columns(df: pd.DataFrame) -> Dict:
+    """
+    Extract data variables from Nortek CSV DataFrame.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame with Nortek CSV data
+        
+    Returns
+    -------
+    Dict
+        Dictionary of data variables for xarray Dataset
+    """
+    data_vars = {}
+    
+    # Environmental data
+    for csv_col, var_name in [
+        ('temperature', 'temperature'),
+        ('pressure', 'pressure'), 
+        ('heading', 'heading'),
+        ('pitch', 'pitch'),
+        ('roll', 'roll'),
+        ('speedOfSound', 'speed_of_sound'),
+        ('batteryVoltage', 'battery_voltage')
+    ]:
+        if csv_col in df.columns:
+            data_vars[var_name] = (['time'], df[csv_col].values)
+    
+    # Velocity, amplitude, correlation data for 3 beams
+    for i in [1, 2, 3]:
+        for data_type, prefix in [('vel', 'velocity'), ('amp', 'amplitude'), ('corr', 'correlation')]:
+            csv_col = f'{data_type}Beam{i}#1'
+            var_name = f'{prefix}_beam{i}'
+            if csv_col in df.columns:
+                data_vars[var_name] = (['time'], df[csv_col].values)
+    
+    return data_vars
+
+
+def _add_nortek_variable_attributes(ds: xr.Dataset) -> xr.Dataset:
+    """
+    Add units and metadata attributes to Nortek dataset variables.
+    
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset to add attributes to
+        
+    Returns
+    -------
+    xr.Dataset
+        Dataset with variable attributes added
+    """
+    # Environmental variable attributes
+    attr_map = {
+        'temperature': {'units': 'degrees_C', 'long_name': 'Water Temperature'},
+        'pressure': {'units': 'dbar', 'long_name': 'Pressure'},
+        'heading': {'units': 'degrees', 'long_name': 'Heading'},
+        'pitch': {'units': 'degrees', 'long_name': 'Pitch'},
+        'roll': {'units': 'degrees', 'long_name': 'Roll'},
+        'speed_of_sound': {'units': 'm/s', 'long_name': 'Speed of Sound'},
+        'battery_voltage': {'units': 'V', 'long_name': 'Battery Voltage'}
+    }
+    
+    for var_name, attrs in attr_map.items():
+        if var_name in ds.data_vars:
+            ds[var_name].attrs.update(attrs)
+    
+    # Beam data attributes
+    for i in [1, 2, 3]:
+        vel_var = f'velocity_beam{i}'
+        amp_var = f'amplitude_beam{i}'
+        corr_var = f'correlation_beam{i}'
+        
+        if vel_var in ds.data_vars:
+            ds[vel_var].attrs.update({
+                'units': 'm/s', 
+                'long_name': f'Velocity Beam {i}', 
+                'coordinate_system': 'BEAM'
+            })
+        if amp_var in ds.data_vars:
+            ds[amp_var].attrs.update({
+                'units': 'counts', 
+                'long_name': f'Amplitude Beam {i}'
+            })
+        if corr_var in ds.data_vars:
+            ds[corr_var].attrs.update({
+                'units': '%', 
+                'long_name': f'Correlation Beam {i}'
+            })
+    
+    return ds
+
+
+def load_nortek_csv_data(file_path: Union[str, Path], header_file: Optional[str] = None) -> xr.Dataset:
+    """
+    Load Nortek CSV data exported from AquaPro software.
+    
+    Parameters
+    ----------
+    file_path : str or Path
+        Path to the CSV data file (e.g., "Average Velocity DF3.csv")
+    header_file : str, optional
+        Path to Units.csv file for metadata (optional)
+        
+    Returns
+    -------
+    xr.Dataset
+        Dataset with Nortek CSV data
+    """
+    file_path = Path(file_path)
+    
+    if not file_path.exists():
+        raise FileNotFoundError(f"CSV file not found: {file_path}")
+    
+    # Read CSV and parse time
+    df = pd.read_csv(file_path, delimiter=';')
+    df['datetime'] = pd.to_datetime(df['dateTime'])
+    times = df['datetime'].values
+    
+    # Extract data variables
+    data_vars = _parse_nortek_csv_columns(df)
+    
+    # Create dataset
+    ds = xr.Dataset(data_vars, coords={'time': times})
+    
+    # Add global metadata
+    ds.attrs.update({
+        'instrument_type': 'Nortek_Aquadopp',
+        'filename': str(file_path),
+        'data_format': 'Nortek_CSV_Export',
+        'coordinate_system': 'BEAM'
+    })
+    
+    # Extract serial number
+    if 'serialNumber' in df.columns:
+        ds.attrs['serial_number'] = str(df['serialNumber'].iloc[0])
+    
+    # Add variable attributes
+    ds = _add_nortek_variable_attributes(ds)
+    
+    print(f"  ✅ Nortek CSV: loaded {len(times)} samples from {file_path.name}")
+    
+    return ds
+
+
 def sbe37_xmlcon_reader(xmlcon_file: Union[str, Path]) -> Dict:
     """
     DEPRECATED
@@ -1105,159 +1293,4 @@ def _parse_coefficients(sensor_elem, sensor_type: str, sensor_index: int) -> Dic
     }
 
 
-def sbe37_hex_reader(hex_file: Union[str, Path]) -> xr.Dataset:
-    """
-    Read SBE37 hex file using seabirdscientific library.
-    
-    Parameters
-    ----------
-    hex_file : Union[str, Path]
-        Path to .hex file
-        
-    Returns
-    -------
-    xr.Dataset
-        Dataset containing temperature, conductivity, and/or pressure data
-    """
-    hex_path = Path(hex_file)
-    if not hex_path.exists():
-        raise FileNotFoundError(f"Hex file not found: {hex_path}")
-    
-    # Look for corresponding xmlcon file
-    xmlcon_path = hex_path.with_suffix('.xmlcon')
-    if not xmlcon_path.exists():
-        # Try without hex extension
-        xmlcon_path = hex_path.parent / f"{hex_path.stem}.xmlcon"
-        
-    if not xmlcon_path.exists():
-        raise FileNotFoundError(f"No corresponding xmlcon file found for {hex_path}")
-    
-    # Parse xmlcon to determine sensor configuration
-    xmlcon_info = sbe37_xmlcon_reader(xmlcon_path)
-    
-    try:
-        import seabirdscientific.instrument_data as id
-    except ImportError:
-        raise ImportError("seabirdscientific package required for SBE37 hex file reading")
-    
-    # Map our sensor types to seabirdscientific sensor types
-    sensor_mapping = {
-        'temperature': id.Sensors.Temperature,
-        'conductivity': id.Sensors.Conductivity, 
-        'pressure': id.Sensors.Pressure
-    }
-    
-    enabled_sensors = [sensor_mapping[s] for s in xmlcon_info['enabled_sensors'] 
-                      if s in sensor_mapping]
-    
-    # Read the hex file
-    raw_data = id.read_hex_file(
-        filepath=str(hex_path),
-        instrument_type=id.InstrumentType.SBE37SM,  # Assuming SBE37SM
-        enabled_sensors=enabled_sensors,
-    )
-    
-    # Import conversion functions and coefficient classes
-    try:
-        import seabirdscientific.conversion as conv
-        from seabirdscientific.cal_coefficients import (
-            TemperatureCoefficients,
-            ConductivityCoefficients,
-            PressureCoefficients,
-        )
-    except ImportError:
-        raise ImportError("seabirdscientific conversion module required for calibration")
-    
-    # Convert to xarray Dataset
-    data_vars = {}
-    
-    # Extract time coordinate from raw data
-    times = pd.to_datetime(raw_data["date time"])
-    n_samples = len(times)
-    
-    # Process each sensor type and apply calibrations
-    for sensor_info in xmlcon_info['sensors'].values():
-        sensor_type = sensor_info['type']
-        coeffs = sensor_info['coefficients']
-        
-        if sensor_type == 'temperature' and 'temperature' in raw_data.columns:
-            # Create temperature coefficients object
-            temp_coefs = TemperatureCoefficients(**coeffs)
-            
-            # Convert raw counts to calibrated temperature
-            temperature = conv.convert_temperature(
-                temperature_counts_in=raw_data["temperature"].values,
-                coefs=temp_coefs,
-                standard="ITS90",
-                units="C",
-                use_mv_r=False,
-            )
-            data_vars['temp'] = ('time', temperature)
-            
-        elif sensor_type == 'conductivity' and 'conductivity' in raw_data.columns:
-            # Create conductivity coefficients object
-            cond_coefs = ConductivityCoefficients(**coeffs)
-            
-            # Convert raw counts to calibrated conductivity
-            # Note: This requires temperature for full conversion
-            temp_values = data_vars.get('temp', (None, np.zeros(n_samples)))[1]
-            pressure_values = np.zeros(n_samples)  # Will be updated if pressure is available
-            
-            conductivity = conv.convert_conductivity(
-                conductivity_count=raw_data["conductivity"].values,
-                temperature=temp_values,
-                pressure=pressure_values,
-                coefs=cond_coefs,
-            )
-            # Convert from S/m to mS/cm (multiply by 10)
-            conductivity_mScm = conductivity * 10.0
-            data_vars['cond'] = ('time', conductivity_mScm)
-            
-        elif sensor_type == 'pressure' and 'pressure' in raw_data.columns:
-            # Create pressure coefficients object
-            press_coefs = PressureCoefficients(**coeffs)
-            
-            # Convert raw counts to calibrated pressure
-            # For SBE37, use temperature compensation if available
-            temp_comp_values = raw_data.get("temperature compensation", np.zeros(n_samples))
-            if hasattr(temp_comp_values, 'values'):
-                temp_comp_values = temp_comp_values.values
-            
-            pressure = conv.convert_pressure(
-                pressure_count=raw_data["pressure"].values,
-                compensation_voltage=temp_comp_values,
-                coefs=press_coefs,
-                units="dbar"
-            )
-            data_vars['press'] = ('time', pressure)
-    
-    # Create dataset
-    ds = xr.Dataset(data_vars, coords={'time': times})
-    
-    # Add units as variable attributes
-    if 'temp' in data_vars:
-        ds['temp'].attrs['units'] = 'degrees_C'
-        ds['temp'].attrs['long_name'] = 'Temperature'
-    if 'cond' in data_vars:
-        ds['cond'].attrs['units'] = 'mS/cm'
-        ds['cond'].attrs['long_name'] = 'Conductivity'
-    if 'press' in data_vars:
-        ds['press'].attrs['units'] = 'dbar'
-        ds['press'].attrs['long_name'] = 'Pressure'
-    
-    # Add metadata
-    ds.attrs['source_file'] = str(hex_path)
-    ds.attrs['xmlcon_file'] = str(xmlcon_path)
-    ds.attrs['instrument_type'] = 'SBE37'
-    ds.attrs['data_type'] = 'calibrated'
-    
-    # Add sensor information as attributes
-    for sensor_info in xmlcon_info['sensors'].values():
-        sensor_type = sensor_info['type']
-        serial = sensor_info['serial_number']
-        cal_date = sensor_info['calibration_date']
-        
-        ds.attrs[f'{sensor_type}_serial'] = serial
-        ds.attrs[f'{sensor_type}_calibration_date'] = cal_date
-    
-    return ds
+# Removed duplicate sbe37_hex_reader function - using import from .sbe_hex_reader instead

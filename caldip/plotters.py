@@ -68,6 +68,7 @@ def create_universal_caldip_plot(
     PRESSURE_ROW = 1
     TEMPERATURE_ROW = 2
     CONDUCTIVITY_ROW = 3
+    OXYGEN_ROW = 4
 
     if not PLOTLY_AVAILABLE:
         print("Plotly not available - cannot create interactive plot")
@@ -84,10 +85,12 @@ def create_universal_caldip_plot(
     pressure_values = []
     temperature_values = []
     conductivity_values = []
+    oxygen_values = []
 
     # Determine if we have pressure data from instruments (vs temperature-only)
     has_instrument_pressure = False
     has_conductivity = False
+    has_oxygen = False
 
     # Collect instrument values and determine plot structure
     for serial, info in instrument_data.items():
@@ -118,6 +121,17 @@ def create_universal_caldip_plot(
                     conductivity_values.extend(cond_data)
                     has_conductivity = True
                 break
+        
+        # Check for oxygen variables - SBE37-ODO sensors
+        oxygen_vars = ["oxygen_phase", "oxygen_temp", "oxygen", "OXYGEN"]
+        for var in oxygen_vars:
+            if var in ds.data_vars:
+                # Only count oxygen if it has actual values (not just NaN)
+                oxygen_data = ds[var].values[~np.isnan(ds[var].values)]
+                if len(oxygen_data) > 0:
+                    oxygen_values.extend(oxygen_data)
+                    has_oxygen = True
+                break
 
     # Collect reference data values
     for name, info in reference_data.items():
@@ -141,6 +155,14 @@ def create_universal_caldip_plot(
                     conductivity_values.extend(
                         ds[cond_var].values[~np.isnan(ds[cond_var].values)]
                     )
+        
+        # CTD oxygen - only collect values if instruments have oxygen
+        if has_oxygen:
+            for oxy_var in ["sbeox0Mm/L", "sbeox1Mm/L", "oxygen", "oxy_primary", "oxy_secondary"]:
+                if oxy_var in ds.data_vars:
+                    oxygen_values.extend(
+                        ds[oxy_var].values[~np.isnan(ds[oxy_var].values)]
+                    )
 
     def smart_range(values, padding=0.05):
         if not values:
@@ -153,8 +175,9 @@ def create_universal_caldip_plot(
     pressure_range = smart_range(pressure_values)
     temperature_range = smart_range(temperature_values)
     conductivity_range = smart_range(conductivity_values)
+    oxygen_range = smart_range(oxygen_values)
 
-    # Hardcoded subplot structure - always 2-3 subplots
+    # Dynamic subplot structure - 2-4 subplots
     subplot_titles = []
     row_heights = []
 
@@ -171,6 +194,11 @@ def create_universal_caldip_plot(
 
     # Subplot 3: Conductivity if any instruments have it (no title)
     if has_conductivity:
+        subplot_titles.append("")
+        row_heights.append(1)
+    
+    # Subplot 4: Oxygen if any instruments have it (no title)
+    if has_oxygen:
         subplot_titles.append("")
         row_heights.append(1)
 
@@ -289,6 +317,28 @@ def create_universal_caldip_plot(
                         col=1,
                     )
                     break
+        
+        # Oxygen subplot (if oxygen subplot exists)
+        if has_oxygen:
+            # Plot oxygen phase (primary oxygen measurement for SBE37-ODO)
+            oxygen_vars = ["oxygen_phase", "oxygen", "OXYGEN"]
+            for var in oxygen_vars:
+                if var in ds.data_vars:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=ds.time.values,
+                            y=ds[var].values,
+                            mode="lines",
+                            name=legend_name,
+                            line=dict(color=color, width=2, dash=line_dash),
+                            hoverinfo="skip",
+                            legendgroup=serial,
+                            showlegend=False,
+                        ),
+                        row=OXYGEN_ROW,
+                        col=1,
+                    )
+                    break
 
     # Plot reference data
     ref_colors = ["black", "gray", "darkred", "darkblue"]
@@ -366,6 +416,32 @@ def create_universal_caldip_plot(
                     row=CONDUCTIVITY_ROW,
                     col=1,
                 )
+        
+        # CTD Oxygen sensors
+        if has_oxygen:
+            oxy_vars = ["sbeox0Mm/L", "sbeox1Mm/L", "oxygen", "oxy_primary", "oxy_secondary"]
+            oxy_sensors = [var for var in oxy_vars if var in ds.data_vars]
+
+            for j, oxy_var in enumerate(
+                oxy_sensors[:2]
+            ):  # Max 2 oxygen sensors
+                sensor_color = "black" if j == 0 else "gray"
+                sensor_name = "CTD O2-1" if j == 0 else "CTD O2-2"
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=ds.time.values,
+                        y=ds[oxy_var].values,
+                        mode="lines",
+                        name=sensor_name,
+                        line=dict(color=sensor_color, width=3),
+                        hoverinfo="skip",
+                        legendgroup=f"ctd_o{j+1}",
+                        showlegend=False,  # Don't repeat CTD in legend for oxygen
+                    ),
+                    row=OXYGEN_ROW,
+                    col=1,
+                )
 
     # Update y-axis labels and ranges
     fig.update_yaxes(
@@ -383,6 +459,14 @@ def create_universal_caldip_plot(
             range=conductivity_range,
             title_text="Conductivity (mS/cm)",
             row=CONDUCTIVITY_ROW,
+            col=1,
+        )
+    
+    if has_oxygen:
+        fig.update_yaxes(
+            range=oxygen_range,
+            title_text="Oxygen (μmol/L | phase°)",
+            row=OXYGEN_ROW,
             col=1,
         )
 
@@ -444,6 +528,8 @@ def create_universal_caldip_plot(
                         y_range = temperature_range
                     elif row == CONDUCTIVITY_ROW:
                         y_range = conductivity_range
+                    elif row == OXYGEN_ROW:
+                        y_range = oxygen_range
                     else:
                         y_range = temperature_range  # Default
 
