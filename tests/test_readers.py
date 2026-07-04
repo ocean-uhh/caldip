@@ -69,14 +69,13 @@ def test_load_instruments_from_config_empty():
 
 
 def test_load_instruments_from_config_missing_file(tmp_path):
-    """Test loading instruments when file doesn't exist."""
-    config = {"instruments": [{"serial": "12345", "filename": "nonexistent.cnv"}]}
+    """Per-instrument failures are caught internally; function returns an empty dict."""
+    config = {
+        "instruments": [
+            {"serial": "12345", "filename": "nonexistent.cnv", "file_type": "sbe-cnv"}
+        ]
+    }
 
-    # Should not crash, but may skip instruments that can't be loaded
-    try:
-        instruments = readers.load_instruments_from_config(config, tmp_path)
-        # Either empty dict or may have partial results
-        assert isinstance(instruments, dict)
-    except Exception:
-        # It's okay if it raises an exception for missing files
-        pass
+    instruments = readers.load_instruments_from_config(config, tmp_path)
+    assert isinstance(instruments, dict)
+    assert len(instruments) == 0

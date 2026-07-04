@@ -35,6 +35,7 @@ import yaml
 from datetime import datetime
 import warnings
 import re
+import json
 
 try:
     import seasenselib as sl
@@ -193,11 +194,6 @@ def load_instruments_from_config(
         filename = instrument["filename"]
         file_type = instrument["file_type"]
 
-        # DEBUG: Print raw YAML serial vs processed serial
-        print(
-            f"DEBUG: YAML serial '{instrument['serial']}' → processed serial '{serial}'"
-        )
-
         # Construct full file path
         file_path = data_dir / filename
 
@@ -223,11 +219,9 @@ def load_instruments_from_config(
                     time=dataset.time + pd.Timedelta(seconds=clock_offset)
                 )
 
-            # DEBUG: Check if serial from dataset differs from YAML
+            # Warn if the serial number embedded in the dataset differs from the YAML
             dataset_serial = None
             if hasattr(dataset, "attrs") and "raw_metadata" in dataset.attrs:
-                import json
-
                 try:
                     raw_meta = json.loads(dataset.attrs["raw_metadata"])
                     if "blocks" in raw_meta and "other" in raw_meta["blocks"]:
@@ -235,7 +229,7 @@ def load_instruments_from_config(
                             "global_attributes", {}
                         )
                         dataset_serial = global_attrs.get("rbr_serial_number")
-                except:
+                except (json.JSONDecodeError, TypeError, ValueError):
                     pass
 
             instruments[serial] = {
@@ -245,7 +239,6 @@ def load_instruments_from_config(
                 "file": str(file_path),
             }
 
-            # DEBUG: Print start/end times for troubleshooting
             if len(dataset.time) > 0:
                 start_time = pd.to_datetime(dataset.time.values[0])
                 end_time = pd.to_datetime(dataset.time.values[-1])
