@@ -121,7 +121,7 @@ def create_universal_caldip_plot(
                     conductivity_values.extend(cond_data)
                     has_conductivity = True
                 break
-        
+
         # Check for oxygen variables - SBE37-ODO sensors
         oxygen_vars = ["oxygen_phase", "oxygen_temp", "oxygen", "OXYGEN"]
         for var in oxygen_vars:
@@ -155,10 +155,16 @@ def create_universal_caldip_plot(
                     conductivity_values.extend(
                         ds[cond_var].values[~np.isnan(ds[cond_var].values)]
                     )
-        
+
         # CTD oxygen - only collect values if instruments have oxygen
         if has_oxygen:
-            for oxy_var in ["sbeox0Mm/L", "sbeox1Mm/L", "oxygen", "oxy_primary", "oxy_secondary"]:
+            for oxy_var in [
+                "sbeox0Mm/L",
+                "sbeox1Mm/L",
+                "oxygen",
+                "oxy_primary",
+                "oxy_secondary",
+            ]:
                 if oxy_var in ds.data_vars:
                     oxygen_values.extend(
                         ds[oxy_var].values[~np.isnan(ds[oxy_var].values)]
@@ -196,7 +202,7 @@ def create_universal_caldip_plot(
     if has_conductivity:
         subplot_titles.append("")
         row_heights.append(1)
-    
+
     # Subplot 4: Oxygen if any instruments have it (no title)
     if has_oxygen:
         subplot_titles.append("")
@@ -317,7 +323,7 @@ def create_universal_caldip_plot(
                         col=1,
                     )
                     break
-        
+
         # Oxygen subplot (if oxygen subplot exists)
         if has_oxygen:
             # Plot oxygen phase (primary oxygen measurement for SBE37-ODO)
@@ -416,15 +422,19 @@ def create_universal_caldip_plot(
                     row=CONDUCTIVITY_ROW,
                     col=1,
                 )
-        
+
         # CTD Oxygen sensors
         if has_oxygen:
-            oxy_vars = ["sbeox0Mm/L", "sbeox1Mm/L", "oxygen", "oxy_primary", "oxy_secondary"]
+            oxy_vars = [
+                "sbeox0Mm/L",
+                "sbeox1Mm/L",
+                "oxygen",
+                "oxy_primary",
+                "oxy_secondary",
+            ]
             oxy_sensors = [var for var in oxy_vars if var in ds.data_vars]
 
-            for j, oxy_var in enumerate(
-                oxy_sensors[:2]
-            ):  # Max 2 oxygen sensors
+            for j, oxy_var in enumerate(oxy_sensors[:2]):  # Max 2 oxygen sensors
                 sensor_color = "black" if j == 0 else "gray"
                 sensor_name = "CTD O2-1" if j == 0 else "CTD O2-2"
 
@@ -461,7 +471,7 @@ def create_universal_caldip_plot(
             row=CONDUCTIVITY_ROW,
             col=1,
         )
-    
+
     if has_oxygen:
         fig.update_yaxes(
             range=oxygen_range,

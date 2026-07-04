@@ -32,7 +32,7 @@ import xarray as xr
 from pathlib import Path
 from typing import Dict, Union, Optional, List
 import yaml
-from datetime import datetime, timedelta
+from datetime import datetime
 import warnings
 import re
 
@@ -146,7 +146,7 @@ def load_instrument_data(
 
     elif file_type == "ctd-cnv":
         return load_ctd_data(file_path, **kwargs)
-        
+
     elif file_type == "nortek-csv":
         return load_nortek_csv_data(file_path, **kwargs)
 
@@ -194,7 +194,9 @@ def load_instruments_from_config(
         file_type = instrument["file_type"]
 
         # DEBUG: Print raw YAML serial vs processed serial
-        print(f"DEBUG: YAML serial '{instrument['serial']}' → processed serial '{serial}'")
+        print(
+            f"DEBUG: YAML serial '{instrument['serial']}' → processed serial '{serial}'"
+        )
 
         # Construct full file path
         file_path = data_dir / filename
@@ -210,7 +212,7 @@ def load_instruments_from_config(
                 # Construct full path to header file
                 header_file_path = data_dir / instrument["header_file"]
                 load_kwargs["header_file"] = str(header_file_path)
-            
+
             dataset = load_instrument_data(file_path, file_type, **load_kwargs)
 
             # Apply clock offset if specified (positive offset = add time, negative = subtract time)
@@ -223,16 +225,19 @@ def load_instruments_from_config(
 
             # DEBUG: Check if serial from dataset differs from YAML
             dataset_serial = None
-            if hasattr(dataset, 'attrs') and 'raw_metadata' in dataset.attrs:
+            if hasattr(dataset, "attrs") and "raw_metadata" in dataset.attrs:
                 import json
+
                 try:
-                    raw_meta = json.loads(dataset.attrs['raw_metadata'])
-                    if 'blocks' in raw_meta and 'other' in raw_meta['blocks']:
-                        global_attrs = raw_meta['blocks']['other'].get('global_attributes', {})
-                        dataset_serial = global_attrs.get('rbr_serial_number')
+                    raw_meta = json.loads(dataset.attrs["raw_metadata"])
+                    if "blocks" in raw_meta and "other" in raw_meta["blocks"]:
+                        global_attrs = raw_meta["blocks"]["other"].get(
+                            "global_attributes", {}
+                        )
+                        dataset_serial = global_attrs.get("rbr_serial_number")
                 except:
                     pass
-            
+
             instruments[serial] = {
                 "data": dataset,
                 "config": instrument,
@@ -250,7 +255,9 @@ def load_instruments_from_config(
                 print(f"     📅 End:   {end_time}")
                 print(f"     ⏱️  Duration: {duration_hours:.1f} hours")
                 if dataset_serial and dataset_serial != serial:
-                    print(f"     ⚠️  YAML serial {serial} != Dataset serial {dataset_serial}")
+                    print(
+                        f"     ⚠️  YAML serial {serial} != Dataset serial {dataset_serial}"
+                    )
             else:
                 print(f"  ✅ Loaded: {len(dataset.time)} samples (no data)")
 
@@ -633,97 +640,98 @@ def _parse_microcat_ascii(file_path: Path) -> xr.Dataset:
 def generate_stub_yaml(directory: str, print_only: bool = False) -> Dict:
     """
     Generate a stub YAML configuration for a caldip directory.
-    
+
     Parameters
     ----------
     directory : str
         Path to caldip directory (e.g., 'data/proc_calib/cruise123/cal_dip/castM3')
     print_only : bool
         If True, print to stdout instead of writing file
-        
+
     Returns
     -------
     Dict
         Configuration dictionary
     """
-    
+
     dir_path = Path(directory)
-    
+
     if not dir_path.exists():
         raise FileNotFoundError(f"Directory not found: {directory}")
-    
+
     # Extract information from directory structure
     cast_name = dir_path.name  # e.g., 'castM3'
-    
+
     # Try to extract cruise name from path structure
     path_parts = dir_path.parts
-    cruise_name = ''
+    cruise_name = ""
     for part in reversed(path_parts):
-        if 'cal_dip' in part.lower():
+        if "cal_dip" in part.lower():
             continue
-        if any(x in part.lower() for x in ['cruise', 'msm', 'expedition']):
+        if any(x in part.lower() for x in ["cruise", "msm", "expedition"]):
             cruise_name = part
             break
-    
+
     # Extract year from cast name or directory
-    year_match = re.search(r'20\d{2}', str(dir_path))
+    year_match = re.search(r"20\d{2}", str(dir_path))
     year = int(year_match.group()) if year_match else 2024
-    
+
     # Find CTD file and extract metadata
     ctd_file = _find_ctd_file(dir_path)
     if not ctd_file:
         raise FileNotFoundError(f"No *_1sec.cnv file found in {directory}")
-    
+
     ctd_metadata = _extract_ctd_metadata(ctd_file)
-    
+
     # Detect instruments
     instruments = _detect_instruments(dir_path)
-    
+
     # Build the configuration
     config = {
-        'name': cast_name,
-        'year': year,
-        'waterdepth': '.nan',
-        'cruise': cruise_name,
-        'directory': f'{directory}/',
-        'ctd_file': ctd_file.name,
-        'ctd_sensors': 2,  # Default assumption
-        'instruments': instruments
+        "name": cast_name,
+        "year": year,
+        "waterdepth": ".nan",
+        "cruise": cruise_name,
+        "directory": f"{directory}/",
+        "ctd_file": ctd_file.name,
+        "ctd_sensors": 2,  # Default assumption
+        "instruments": instruments,
     }
-    
+
     # Add optional fields if available
-    if ctd_metadata['start_time']:
-        config['deployment_time'] = ctd_metadata['start_time']
-    if ctd_metadata['end_time']:
-        config['recovery_time'] = ctd_metadata['end_time']
-    if ctd_metadata['latitude']:
-        config['deployment_latitude'] = ctd_metadata['latitude']
+    if ctd_metadata["start_time"]:
+        config["deployment_time"] = ctd_metadata["start_time"]
+    if ctd_metadata["end_time"]:
+        config["recovery_time"] = ctd_metadata["end_time"]
+    if ctd_metadata["latitude"]:
+        config["deployment_latitude"] = ctd_metadata["latitude"]
         # Extract the number with proper sign
-        lat_parts = ctd_metadata['latitude'].split()
+        lat_parts = ctd_metadata["latitude"].split()
         lat_value = float(lat_parts[0])
-        if len(lat_parts) > 1 and lat_parts[1] == 'S':
+        if len(lat_parts) > 1 and lat_parts[1] == "S":
             lat_value = -lat_value
-        config['latitude'] = lat_value
-    if ctd_metadata['longitude']:
-        config['deployment_longitude'] = ctd_metadata['longitude'] 
+        config["latitude"] = lat_value
+    if ctd_metadata["longitude"]:
+        config["deployment_longitude"] = ctd_metadata["longitude"]
         # Extract the number with proper sign
-        lon_parts = ctd_metadata['longitude'].split()
+        lon_parts = ctd_metadata["longitude"].split()
         lon_value = float(lon_parts[0])
-        if len(lon_parts) > 1 and lon_parts[1] == 'W':
+        if len(lon_parts) > 1 and lon_parts[1] == "W":
             lon_value = -lon_value
-        config['longitude'] = lon_value
-    if ctd_metadata['ship']:
-        config['ship'] = ctd_metadata['ship']
-    
+        config["longitude"] = lon_value
+    if ctd_metadata["ship"]:
+        config["ship"] = ctd_metadata["ship"]
+
     # Handle output
     if print_only:
         import yaml
+
         print(yaml.dump(config, default_flow_style=False, sort_keys=False, indent=2))
         return config
-    
+
     # Determine output filename
     output_file = dir_path / f"{cast_name}.caldip.yaml"
-    
+
     # Check if file exists and find next available name
     if output_file.exists():
         counter = 1
@@ -733,15 +741,16 @@ def generate_stub_yaml(directory: str, print_only: bool = False) -> Dict:
                 output_file = new_name
                 break
             counter += 1
-    
+
     # Write YAML file
     import yaml
-    with open(output_file, 'w') as f:
+
+    with open(output_file, "w") as f:
         yaml.dump(config, f, default_flow_style=False, sort_keys=False, indent=2)
-    
+
     print(f"Generated stub YAML: {output_file}")
     print(f"Found {len(config['instruments'])} instruments")
-    
+
     return config
 
 
@@ -756,28 +765,31 @@ def _find_ctd_file(directory: Path) -> Optional[Path]:
 def _extract_ctd_metadata(ctd_file: Path) -> Dict:
     """Extract metadata from CTD .cnv file header."""
     metadata = {
-        'start_time': None,
-        'end_time': None,
-        'latitude': None,
-        'longitude': None,
-        'ship': None,
-        'nvalues': None,
-        'interval': None
+        "start_time": None,
+        "end_time": None,
+        "latitude": None,
+        "longitude": None,
+        "ship": None,
+        "nvalues": None,
+        "interval": None,
     }
-    
+
     try:
-        with open(ctd_file, 'r', encoding='latin1') as f:
+        with open(ctd_file, "r", encoding="latin1") as f:
             # Read header lines (typically first 100 lines contain metadata)
             for i, line in enumerate(f):
                 if i > 200:  # Stop reading after header
                     break
-                    
+
                 line = line.strip()
-                
+
                 # Extract start time
-                if 'start_time' in line.lower() or 'start time' in line.lower():
+                if "start_time" in line.lower() or "start time" in line.lower():
                     # Look for format like "Apr 04 2026 15:19:06"
-                    time_match = re.search(r'(\w{3})\s+(\d{1,2})\s+(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})', line)
+                    time_match = re.search(
+                        r"(\w{3})\s+(\d{1,2})\s+(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})",
+                        line,
+                    )
                     if time_match:
                         month_abbr = time_match.group(1)
                         day = int(time_match.group(2))
@@ -785,106 +797,133 @@ def _extract_ctd_metadata(ctd_file: Path) -> Dict:
                         hour = int(time_match.group(4))
                         minute = int(time_match.group(5))
                         second = int(time_match.group(6))
-                        
+
                         # Convert month abbreviation to number
-                        months = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
-                                 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
+                        months = {
+                            "Jan": 1,
+                            "Feb": 2,
+                            "Mar": 3,
+                            "Apr": 4,
+                            "May": 5,
+                            "Jun": 6,
+                            "Jul": 7,
+                            "Aug": 8,
+                            "Sep": 9,
+                            "Oct": 10,
+                            "Nov": 11,
+                            "Dec": 12,
+                        }
                         month = months.get(month_abbr, 1)
-                        
+
                         # Format as ISO datetime
-                        metadata['start_time'] = f"{year:04d}-{month:02d}-{day:02d}T{hour:02d}:{minute:02d}:{second:02d}"
+                        metadata["start_time"] = (
+                            f"{year:04d}-{month:02d}-{day:02d}T{hour:02d}:{minute:02d}:{second:02d}"
+                        )
                     else:
                         # Fallback to existing ISO format
-                        match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})', line)
+                        match = re.search(
+                            r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})", line
+                        )
                         if match:
-                            metadata['start_time'] = match.group(1)
-                
+                            metadata["start_time"] = match.group(1)
+
                 # Extract ship name
-                if line.startswith('# ship:') or line.startswith('# Ship:'):
-                    ship = line.split(':', 1)[1].strip()
-                    if ship and ship != 'unknown':
-                        metadata['ship'] = ship
-                
+                if line.startswith("# ship:") or line.startswith("# Ship:"):
+                    ship = line.split(":", 1)[1].strip()
+                    if ship and ship != "unknown":
+                        metadata["ship"] = ship
+
                 # Extract NMEA latitude: "* NMEA Latitude = 58 01.63 N"
-                if 'nmea latitude' in line.lower():
-                    lat_match = re.search(r'(\d+)\s+(\d+\.?\d*)\s+([NS])', line)
+                if "nmea latitude" in line.lower():
+                    lat_match = re.search(r"(\d+)\s+(\d+\.?\d*)\s+([NS])", line)
                     if lat_match:
                         deg = float(lat_match.group(1))
                         mins = float(lat_match.group(2))
                         hemisphere = lat_match.group(3)
-                        decimal_deg = deg + mins/60.0
-                        metadata['latitude'] = f"{decimal_deg:.4f} {hemisphere}"
-                
+                        decimal_deg = deg + mins / 60.0
+                        metadata["latitude"] = f"{decimal_deg:.4f} {hemisphere}"
+
                 # Extract NMEA longitude: "* NMEA Longitude = 048 49.71 W"
-                if 'nmea longitude' in line.lower():
-                    lon_match = re.search(r'(\d+)\s+(\d+\.?\d*)\s+([EW])', line)
+                if "nmea longitude" in line.lower():
+                    lon_match = re.search(r"(\d+)\s+(\d+\.?\d*)\s+([EW])", line)
                     if lon_match:
                         deg = float(lon_match.group(1))
                         mins = float(lon_match.group(2))
                         hemisphere = lon_match.group(3)
-                        decimal_deg = deg + mins/60.0
-                        metadata['longitude'] = f"{decimal_deg:.4f} {hemisphere}"
-                
-                # Fallback: Extract latitude from generic latitude lines  
-                if 'latitude' in line.lower() and not metadata['latitude']:
+                        decimal_deg = deg + mins / 60.0
+                        metadata["longitude"] = f"{decimal_deg:.4f} {hemisphere}"
+
+                # Fallback: Extract latitude from generic latitude lines
+                if "latitude" in line.lower() and not metadata["latitude"]:
                     # Look for patterns like "59 27.84" (degrees minutes) or "59.4640" (decimal degrees)
-                    lat_match = re.search(r'(-?\d+)\s+(\d+\.?\d*)', line)
+                    lat_match = re.search(r"(-?\d+)\s+(\d+\.?\d*)", line)
                     if lat_match:
                         # Degrees minutes format
                         deg = float(lat_match.group(1))
                         mins = float(lat_match.group(2))
-                        decimal_deg = abs(deg) + mins/60.0
-                        metadata['latitude'] = f"{decimal_deg:.4f} {'N' if deg >= 0 else 'S'}"
+                        decimal_deg = abs(deg) + mins / 60.0
+                        metadata["latitude"] = (
+                            f"{decimal_deg:.4f} {'N' if deg >= 0 else 'S'}"
+                        )
                     else:
                         # Try decimal degrees format
-                        lat_match = re.search(r'(-?\d+\.?\d*)', line)
+                        lat_match = re.search(r"(-?\d+\.?\d*)", line)
                         if lat_match:
                             deg = float(lat_match.group(1))
-                            metadata['latitude'] = f"{abs(deg):.4f} {'N' if deg >= 0 else 'S'}"
-                
+                            metadata["latitude"] = (
+                                f"{abs(deg):.4f} {'N' if deg >= 0 else 'S'}"
+                            )
+
                 # Fallback: Extract longitude from generic longitude lines
-                if 'longitude' in line.lower() and not metadata['longitude']:
+                if "longitude" in line.lower() and not metadata["longitude"]:
                     # Look for patterns like "-048 27.21" (degrees minutes) or "-48.4535" (decimal degrees)
-                    lon_match = re.search(r'(-?\d+)\s+(\d+\.?\d*)', line)
+                    lon_match = re.search(r"(-?\d+)\s+(\d+\.?\d*)", line)
                     if lon_match:
                         # Degrees minutes format
                         deg = float(lon_match.group(1))
                         mins = float(lon_match.group(2))
-                        decimal_deg = abs(deg) + mins/60.0
-                        metadata['longitude'] = f"{decimal_deg:.4f} {'E' if deg >= 0 else 'W'}"
+                        decimal_deg = abs(deg) + mins / 60.0
+                        metadata["longitude"] = (
+                            f"{decimal_deg:.4f} {'E' if deg >= 0 else 'W'}"
+                        )
                     else:
                         # Try decimal degrees format
-                        lon_match = re.search(r'(-?\d+\.?\d*)', line)
+                        lon_match = re.search(r"(-?\d+\.?\d*)", line)
                         if lon_match:
                             deg = float(lon_match.group(1))
-                            metadata['longitude'] = f"{abs(deg):.4f} {'E' if deg >= 0 else 'W'}"
-                
+                            metadata["longitude"] = (
+                                f"{abs(deg):.4f} {'E' if deg >= 0 else 'W'}"
+                            )
+
                 # Extract nvalues
-                if 'nvalues' in line.lower():
-                    nval_match = re.search(r'nvalues\s*=\s*(\d+)', line)
+                if "nvalues" in line.lower():
+                    nval_match = re.search(r"nvalues\s*=\s*(\d+)", line)
                     if nval_match:
-                        metadata['nvalues'] = int(nval_match.group(1))
-                
+                        metadata["nvalues"] = int(nval_match.group(1))
+
                 # Extract interval
-                if 'interval' in line.lower():
-                    interval_match = re.search(r'interval\s*=\s*seconds:\s*(\d+(?:\.\d+)?)', line)
+                if "interval" in line.lower():
+                    interval_match = re.search(
+                        r"interval\s*=\s*seconds:\s*(\d+(?:\.\d+)?)", line
+                    )
                     if interval_match:
-                        metadata['interval'] = float(interval_match.group(1))
-                        
+                        metadata["interval"] = float(interval_match.group(1))
+
     except Exception as e:
         print(f"Warning: Could not extract metadata from {ctd_file}: {e}")
-    
+
     # Calculate recovery time if we have all the data
-    if metadata['start_time'] and metadata['nvalues'] and metadata['interval']:
+    if metadata["start_time"] and metadata["nvalues"] and metadata["interval"]:
         try:
             from datetime import datetime, timedelta
-            start_dt = datetime.fromisoformat(metadata['start_time'])
-            duration_seconds = metadata['nvalues'] * metadata['interval']
+
+            start_dt = datetime.fromisoformat(metadata["start_time"])
+            duration_seconds = metadata["nvalues"] * metadata["interval"]
             end_dt = start_dt + timedelta(seconds=duration_seconds)
-            metadata['end_time'] = end_dt.strftime('%Y-%m-%dT%H:%M:%S')
+            metadata["end_time"] = end_dt.strftime("%Y-%m-%dT%H:%M:%S")
         except Exception as e:
             print(f"Warning: Could not calculate end time: {e}")
-    
+
     return metadata
 
 
@@ -895,22 +934,26 @@ def _prioritize_files(files: List[Path]) -> List[Path]:
     for f in files:
         basename = f.stem
         # Handle cases like file.12345.cnv -> use just file.12345
-        if '.' in basename:
-            basename = '.'.join(basename.split('.')[:-1]) if basename.count('.') > 1 else basename
-        
+        if "." in basename:
+            basename = (
+                ".".join(basename.split(".")[:-1])
+                if basename.count(".") > 1
+                else basename
+            )
+
         if basename not in by_basename:
             by_basename[basename] = []
         by_basename[basename].append(f)
-    
+
     # For each basename, pick the best file
     selected = []
     for basename, file_list in by_basename.items():
         # Priority: .cnv > .mat > .rsk > .hex
-        cnv_files = [f for f in file_list if f.suffix.lower() == '.cnv']
-        mat_files = [f for f in file_list if f.suffix.lower() == '.mat']
-        rsk_files = [f for f in file_list if f.suffix.lower() == '.rsk']
-        hex_files = [f for f in file_list if f.suffix.lower() == '.hex']
-        
+        cnv_files = [f for f in file_list if f.suffix.lower() == ".cnv"]
+        mat_files = [f for f in file_list if f.suffix.lower() == ".mat"]
+        rsk_files = [f for f in file_list if f.suffix.lower() == ".rsk"]
+        hex_files = [f for f in file_list if f.suffix.lower() == ".hex"]
+
         if cnv_files:
             selected.append(cnv_files[0])
         elif mat_files:
@@ -921,123 +964,126 @@ def _prioritize_files(files: List[Path]) -> List[Path]:
             selected.append(hex_files[0])
         elif file_list:  # fallback
             selected.append(file_list[0])
-    
+
     return selected
 
 
 def _detect_instruments(directory: Path) -> List[Dict]:
     """Detect instruments based on files in directory."""
     instruments = []
-    
+
     # Find all potential instrument files
     all_files = list(directory.glob("*"))
-    
+
     # Filter out unwanted files
     instrument_files = []
-    ignored_extensions = {'.xml', '.xmlcon', '.cap', '.txt', '.log', '.yaml', '.yml'}
-    
+    ignored_extensions = {".xml", ".xmlcon", ".cap", ".txt", ".log", ".yaml", ".yml"}
+
     for f in all_files:
         if f.is_file() and f.suffix.lower() not in ignored_extensions:
             # Skip the main CTD file
-            if '_1sec.cnv' in f.name:
+            if "_1sec.cnv" in f.name:
                 continue
             instrument_files.append(f)
-    
+
     # Prioritize files
     selected_files = _prioritize_files(instrument_files)
-    
+
     # Create instrument entries
     for i, file in enumerate(selected_files, 1):
         # Try to extract serial number from filename
-        serial = ''
-        
+        serial = ""
+
         # Handle SBE37SMP-RS232 pattern: SBE37SMP-RS232_037#####_20*.*
-        sbe_match = re.match(r'SBE37SMP-RS232_037(\d{5})_20', file.name)
+        sbe_match = re.match(r"SBE37SMP-RS232_037(\d{5})_20", file.name)
         if sbe_match:
             serial = sbe_match.group(1)
-        
+
         instrument = {
-            'position': str(i),
-            'serial': serial,
-            'label': '',
-            'filename': file.name,
-            'depth': 0
+            "position": str(i),
+            "serial": serial,
+            "label": "",
+            "filename": file.name,
+            "depth": 0,
         }
-        
+
         # Determine instrument type and file_type based on extension
         ext = file.suffix.lower()
-        if ext == '.cnv':
-            instrument['instrument'] = 'sbe'
-            instrument['file_type'] = 'sbe-cnv'
-        elif ext == '.mat':
-            instrument['instrument'] = 'rbr'  # Common for RBR files
-            instrument['file_type'] = 'rbr-matlab-legacy'
-        elif ext == '.rsk':
-            instrument['instrument'] = 'rbr'
-            instrument['file_type'] = 'rbr-rsk'
-        elif ext == '.hex':
-            instrument['instrument'] = 'sbe'  # SBE hex files
-            instrument['file_type'] = 'sbe-hex'
+        if ext == ".cnv":
+            instrument["instrument"] = "sbe"
+            instrument["file_type"] = "sbe-cnv"
+        elif ext == ".mat":
+            instrument["instrument"] = "rbr"  # Common for RBR files
+            instrument["file_type"] = "rbr-matlab-legacy"
+        elif ext == ".rsk":
+            instrument["instrument"] = "rbr"
+            instrument["file_type"] = "rbr-rsk"
+        elif ext == ".hex":
+            instrument["instrument"] = "sbe"  # SBE hex files
+            instrument["file_type"] = "sbe-hex"
         else:
             # Unknown file type - leave instrument and file_type blank
-            instrument['instrument'] = ''
-            instrument['file_type'] = ''
-        
-        instruments.append(instrument)
-    
-    return instruments
+            instrument["instrument"] = ""
+            instrument["file_type"] = ""
 
+        instruments.append(instrument)
+
+    return instruments
 
 
 def _parse_nortek_csv_columns(df: pd.DataFrame) -> Dict:
     """
     Extract data variables from Nortek CSV DataFrame.
-    
+
     Parameters
     ----------
     df : pd.DataFrame
         DataFrame with Nortek CSV data
-        
+
     Returns
     -------
     Dict
         Dictionary of data variables for xarray Dataset
     """
     data_vars = {}
-    
+
     # Environmental data
     for csv_col, var_name in [
-        ('temperature', 'temperature'),
-        ('pressure', 'pressure'), 
-        ('heading', 'heading'),
-        ('pitch', 'pitch'),
-        ('roll', 'roll'),
-        ('speedOfSound', 'speed_of_sound'),
-        ('batteryVoltage', 'battery_voltage')
+        ("temperature", "temperature"),
+        ("pressure", "pressure"),
+        ("heading", "heading"),
+        ("pitch", "pitch"),
+        ("roll", "roll"),
+        ("speedOfSound", "speed_of_sound"),
+        ("batteryVoltage", "battery_voltage"),
     ]:
         if csv_col in df.columns:
-            data_vars[var_name] = (['time'], df[csv_col].values)
-    
+            data_vars[var_name] = (["time"], df[csv_col].values)
+
     # Velocity, amplitude, correlation data for 3 beams
     for i in [1, 2, 3]:
-        for data_type, prefix in [('vel', 'velocity'), ('amp', 'amplitude'), ('corr', 'correlation')]:
-            csv_col = f'{data_type}Beam{i}#1'
-            var_name = f'{prefix}_beam{i}'
+        for data_type, prefix in [
+            ("vel", "velocity"),
+            ("amp", "amplitude"),
+            ("corr", "correlation"),
+        ]:
+            csv_col = f"{data_type}Beam{i}#1"
+            var_name = f"{prefix}_beam{i}"
             if csv_col in df.columns:
-                data_vars[var_name] = (['time'], df[csv_col].values)
-    
+                data_vars[var_name] = (["time"], df[csv_col].values)
+
     return data_vars
 
 
 def _add_nortek_variable_attributes(ds: xr.Dataset) -> xr.Dataset:
     """
     Add units and metadata attributes to Nortek dataset variables.
-    
+
     Parameters
     ----------
     ds : xr.Dataset
         Dataset to add attributes to
-        
+
     Returns
     -------
     xr.Dataset
@@ -1045,94 +1091,98 @@ def _add_nortek_variable_attributes(ds: xr.Dataset) -> xr.Dataset:
     """
     # Environmental variable attributes
     attr_map = {
-        'temperature': {'units': 'degrees_C', 'long_name': 'Water Temperature'},
-        'pressure': {'units': 'dbar', 'long_name': 'Pressure'},
-        'heading': {'units': 'degrees', 'long_name': 'Heading'},
-        'pitch': {'units': 'degrees', 'long_name': 'Pitch'},
-        'roll': {'units': 'degrees', 'long_name': 'Roll'},
-        'speed_of_sound': {'units': 'm/s', 'long_name': 'Speed of Sound'},
-        'battery_voltage': {'units': 'V', 'long_name': 'Battery Voltage'}
+        "temperature": {"units": "degrees_C", "long_name": "Water Temperature"},
+        "pressure": {"units": "dbar", "long_name": "Pressure"},
+        "heading": {"units": "degrees", "long_name": "Heading"},
+        "pitch": {"units": "degrees", "long_name": "Pitch"},
+        "roll": {"units": "degrees", "long_name": "Roll"},
+        "speed_of_sound": {"units": "m/s", "long_name": "Speed of Sound"},
+        "battery_voltage": {"units": "V", "long_name": "Battery Voltage"},
     }
-    
+
     for var_name, attrs in attr_map.items():
         if var_name in ds.data_vars:
             ds[var_name].attrs.update(attrs)
-    
+
     # Beam data attributes
     for i in [1, 2, 3]:
-        vel_var = f'velocity_beam{i}'
-        amp_var = f'amplitude_beam{i}'
-        corr_var = f'correlation_beam{i}'
-        
+        vel_var = f"velocity_beam{i}"
+        amp_var = f"amplitude_beam{i}"
+        corr_var = f"correlation_beam{i}"
+
         if vel_var in ds.data_vars:
-            ds[vel_var].attrs.update({
-                'units': 'm/s', 
-                'long_name': f'Velocity Beam {i}', 
-                'coordinate_system': 'BEAM'
-            })
+            ds[vel_var].attrs.update(
+                {
+                    "units": "m/s",
+                    "long_name": f"Velocity Beam {i}",
+                    "coordinate_system": "BEAM",
+                }
+            )
         if amp_var in ds.data_vars:
-            ds[amp_var].attrs.update({
-                'units': 'counts', 
-                'long_name': f'Amplitude Beam {i}'
-            })
+            ds[amp_var].attrs.update(
+                {"units": "counts", "long_name": f"Amplitude Beam {i}"}
+            )
         if corr_var in ds.data_vars:
-            ds[corr_var].attrs.update({
-                'units': '%', 
-                'long_name': f'Correlation Beam {i}'
-            })
-    
+            ds[corr_var].attrs.update(
+                {"units": "%", "long_name": f"Correlation Beam {i}"}
+            )
+
     return ds
 
 
-def load_nortek_csv_data(file_path: Union[str, Path], header_file: Optional[str] = None) -> xr.Dataset:
+def load_nortek_csv_data(
+    file_path: Union[str, Path], header_file: Optional[str] = None
+) -> xr.Dataset:
     """
     Load Nortek CSV data exported from AquaPro software.
-    
+
     Parameters
     ----------
     file_path : str or Path
         Path to the CSV data file (e.g., "Average Velocity DF3.csv")
     header_file : str, optional
         Path to Units.csv file for metadata (optional)
-        
+
     Returns
     -------
     xr.Dataset
         Dataset with Nortek CSV data
     """
     file_path = Path(file_path)
-    
+
     if not file_path.exists():
         raise FileNotFoundError(f"CSV file not found: {file_path}")
-    
+
     # Read CSV and parse time
-    df = pd.read_csv(file_path, delimiter=';')
-    df['datetime'] = pd.to_datetime(df['dateTime'])
-    times = df['datetime'].values
-    
+    df = pd.read_csv(file_path, delimiter=";")
+    df["datetime"] = pd.to_datetime(df["dateTime"])
+    times = df["datetime"].values
+
     # Extract data variables
     data_vars = _parse_nortek_csv_columns(df)
-    
+
     # Create dataset
-    ds = xr.Dataset(data_vars, coords={'time': times})
-    
+    ds = xr.Dataset(data_vars, coords={"time": times})
+
     # Add global metadata
-    ds.attrs.update({
-        'instrument_type': 'Nortek_Aquadopp',
-        'filename': str(file_path),
-        'data_format': 'Nortek_CSV_Export',
-        'coordinate_system': 'BEAM'
-    })
-    
+    ds.attrs.update(
+        {
+            "instrument_type": "Nortek_Aquadopp",
+            "filename": str(file_path),
+            "data_format": "Nortek_CSV_Export",
+            "coordinate_system": "BEAM",
+        }
+    )
+
     # Extract serial number
-    if 'serialNumber' in df.columns:
-        ds.attrs['serial_number'] = str(df['serialNumber'].iloc[0])
-    
+    if "serialNumber" in df.columns:
+        ds.attrs["serial_number"] = str(df["serialNumber"].iloc[0])
+
     # Add variable attributes
     ds = _add_nortek_variable_attributes(ds)
-    
+
     print(f"  ✅ Nortek CSV: loaded {len(times)} samples from {file_path.name}")
-    
+
     return ds
 
 
@@ -1140,66 +1190,66 @@ def sbe37_xmlcon_reader(xmlcon_file: Union[str, Path]) -> Dict:
     """
     DEPRECATED
     Parse SBE37 xmlcon file to extract sensor configuration and calibration coefficients.
-    
+
     Parameters
     ----------
     xmlcon_file : Union[str, Path]
         Path to .xmlcon file
-        
+
     Returns
     -------
     Dict
         Dictionary containing sensor configurations and coefficient objects
     """
     import xml.etree.ElementTree as ET
-    
+
     xmlcon_path = Path(xmlcon_file)
     if not xmlcon_path.exists():
         raise FileNotFoundError(f"XMLCON file not found: {xmlcon_path}")
-    
+
     # Parse XML
     tree = ET.parse(xmlcon_path)
     root = tree.getroot()
-    
+
     sensors = {}
     enabled_sensors = []
-    
+
     # Find all sensors by index
-    for sensor_elem in root.findall('.//Sensor'):
-        index = sensor_elem.get('index')
+    for sensor_elem in root.findall(".//Sensor"):
+        index = sensor_elem.get("index")
         if index is None:
             continue
-            
+
         index = int(index)
-        
+
         # Check what type of sensor this is
-        temp_sensor = sensor_elem.find('TemperatureSensor')
-        cond_sensor = sensor_elem.find('ConductivitySensor') 
-        press_sensor = sensor_elem.find('PressureSensor')
-        
+        temp_sensor = sensor_elem.find("TemperatureSensor")
+        cond_sensor = sensor_elem.find("ConductivitySensor")
+        press_sensor = sensor_elem.find("PressureSensor")
+
         if temp_sensor is not None:
-            sensors[index] = _parse_coefficients(temp_sensor, 'temperature', index)
-            enabled_sensors.append('temperature')
-            
+            sensors[index] = _parse_coefficients(temp_sensor, "temperature", index)
+            enabled_sensors.append("temperature")
+
         elif cond_sensor is not None:
-            sensors[index] = _parse_coefficients(cond_sensor, 'conductivity', index)
-            enabled_sensors.append('conductivity')
-            
+            sensors[index] = _parse_coefficients(cond_sensor, "conductivity", index)
+            enabled_sensors.append("conductivity")
+
         elif press_sensor is not None:
-            sensors[index] = _parse_coefficients(press_sensor, 'pressure', index)
-            enabled_sensors.append('pressure')
-    
+            sensors[index] = _parse_coefficients(press_sensor, "pressure", index)
+            enabled_sensors.append("pressure")
+
     return {
-        'sensors': sensors,
-        'enabled_sensors': enabled_sensors,
-        'xmlcon_path': xmlcon_path
+        "sensors": sensors,
+        "enabled_sensors": enabled_sensors,
+        "xmlcon_path": xmlcon_path,
     }
 
 
 def _parse_coefficients(sensor_elem, sensor_type: str, sensor_index: int) -> Dict:
     """
     Generic function to parse sensor coefficients from XML element.
-    
+
     Parameters
     ----------
     sensor_elem : xml.etree.ElementTree.Element
@@ -1208,88 +1258,100 @@ def _parse_coefficients(sensor_elem, sensor_type: str, sensor_index: int) -> Dic
         Type of sensor ('temperature', 'conductivity', 'pressure')
     sensor_index : int
         Sensor index from xmlcon
-        
+
     Returns
     -------
     Dict
         Sensor information with coefficients
     """
     # Extract common fields
-    serial_num = sensor_elem.find('SerialNumber').text
-    cal_date = sensor_elem.find('CalibrationDate').text
-    
+    serial_num = sensor_elem.find("SerialNumber").text
+    cal_date = sensor_elem.find("CalibrationDate").text
+
     # Parse all coefficient elements to lowercase keys
     coef_dict = {}
-    
-    if sensor_type == 'conductivity':
+
+    if sensor_type == "conductivity":
         # Special handling for conductivity - check UseG_J flag
-        use_g_j_elem = sensor_elem.find('UseG_J')
-        use_g_j = use_g_j_elem is not None and use_g_j_elem.text == '1'
-        
+        use_g_j_elem = sensor_elem.find("UseG_J")
+        use_g_j = use_g_j_elem is not None and use_g_j_elem.text == "1"
+
         if use_g_j:
             # Look for equation="1" coefficients which contain G,H,I,J
-            for coeffs_elem in sensor_elem.findall('Coefficients'):
-                equation_attr = coeffs_elem.get('equation')
-                if equation_attr == '1':
+            for coeffs_elem in sensor_elem.findall("Coefficients"):
+                equation_attr = coeffs_elem.get("equation")
+                if equation_attr == "1":
                     for child in coeffs_elem:
                         if child.text:
                             coef_dict[child.tag.lower()] = float(child.text)
                     break
         else:
-            # Use equation="0" with A,B,C,D coefficients  
-            for coeffs_elem in sensor_elem.findall('Coefficients'):
-                equation_attr = coeffs_elem.get('equation')
-                if equation_attr == '0':
+            # Use equation="0" with A,B,C,D coefficients
+            for coeffs_elem in sensor_elem.findall("Coefficients"):
+                equation_attr = coeffs_elem.get("equation")
+                if equation_attr == "0":
                     for child in coeffs_elem:
                         if child.text:
                             coef_dict[child.tag.lower()] = float(child.text)
                     break
-        
+
         # Also parse direct children (slope, offset, etc.)
         for child in sensor_elem:
-            if child.tag.lower() in ['slope', 'offset']:
+            if child.tag.lower() in ["slope", "offset"]:
                 if child.text:
                     coef_dict[child.tag.lower()] = float(child.text)
-    
+
     else:
         # For temperature and pressure, parse all numeric child elements
         for child in sensor_elem:
-            if child.text and child.tag not in ['SerialNumber', 'CalibrationDate']:
+            if child.text and child.tag not in ["SerialNumber", "CalibrationDate"]:
                 try:
                     coef_dict[child.tag.lower()] = float(child.text)
                 except ValueError:
                     # Skip non-numeric elements
                     continue
-    
+
     # Separate seabirdscientific calibration coefficients from slope/offset
     cal_coeffs = {}
     metadata = {}
-    
+
     # Define expected coefficient names for each sensor type
-    if sensor_type == 'temperature':
-        expected_coeffs = ['a0', 'a1', 'a2', 'a3']
-    elif sensor_type == 'conductivity':
-        expected_coeffs = ['g', 'h', 'i', 'j', 'cpcor', 'ctcor', 'wbotc']
-    elif sensor_type == 'pressure':
-        expected_coeffs = ['pa0', 'pa1', 'pa2', 'ptca0', 'ptca1', 'ptca2', 
-                          'ptcb0', 'ptcb1', 'ptcb2', 'ptempa0', 'ptempa1', 'ptempa2']
+    if sensor_type == "temperature":
+        expected_coeffs = ["a0", "a1", "a2", "a3"]
+    elif sensor_type == "conductivity":
+        expected_coeffs = ["g", "h", "i", "j", "cpcor", "ctcor", "wbotc"]
+    elif sensor_type == "pressure":
+        expected_coeffs = [
+            "pa0",
+            "pa1",
+            "pa2",
+            "ptca0",
+            "ptca1",
+            "ptca2",
+            "ptcb0",
+            "ptcb1",
+            "ptcb2",
+            "ptempa0",
+            "ptempa1",
+            "ptempa2",
+        ]
     else:
         expected_coeffs = []
-    
+
     # Split coefficients
     for key, value in coef_dict.items():
         if key in expected_coeffs:
             cal_coeffs[key] = value
         else:
             metadata[key] = value
-    
+
     return {
-        'type': sensor_type,
-        'serial_number': serial_num,
-        'calibration_date': cal_date,
-        'coefficients': cal_coeffs,
-        'metadata': metadata,
-        'index': sensor_index
+        "type": sensor_type,
+        "serial_number": serial_num,
+        "calibration_date": cal_date,
+        "coefficients": cal_coeffs,
+        "metadata": metadata,
+        "index": sensor_index,
     }
 
 
