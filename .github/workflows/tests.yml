@@ -1,6 +1,9 @@
 name: Run tests
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -35,10 +38,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install -r requirements.txt
         if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
     - name: Install caldip
       run: |
-        python -m pip install -e . --no-deps --force-reinstall
+        python -m pip install -e .
     - name: Test with pytest
       run: |
         pytest
