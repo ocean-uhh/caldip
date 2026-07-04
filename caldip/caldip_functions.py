@@ -17,7 +17,6 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from typing import Dict, List
-from scipy.interpolate import interp1d
 
 
 def find_bottle_stops(

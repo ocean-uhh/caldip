@@ -171,5 +171,13 @@ cython_debug/
 *.html
 plots/
 output/
+outputs/
 temp/
 .claude/settings.local.json
+
+# one-off cruise diagnostic scripts
+check_serial_mapping.py
+check_tr1050_timestamps.py
+compare_durations.py
+compare_yaml_vs_results.py
+debug_tr1050_raw.py

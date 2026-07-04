@@ -32,28 +32,29 @@ Examples:
     )
 
     parser.add_argument(
-        "directory",
-        help="Path to caldip directory containing CTD and instrument files"
+        "directory", help="Path to caldip directory containing CTD and instrument files"
     )
     parser.add_argument(
         "--print-only",
         action="store_true",
-        help="Print YAML to stdout instead of writing file"
+        help="Print YAML to stdout instead of writing file",
     )
 
     args = parser.parse_args()
 
     try:
         config = generate_stub_yaml(args.directory, print_only=args.print_only)
-        
+
         if not args.print_only:
             print(f"\n✅ Successfully generated stub YAML for {args.directory}")
             print(f"📁 Found {len(config.get('instruments', []))} instruments")
-            if config.get('deployment_time'):
+            if config.get("deployment_time"):
                 print(f"📅 Deployment time: {config['deployment_time']}")
-            if config.get('deployment_latitude'):
-                print(f"🌍 Position: {config['deployment_latitude']}, {config['deployment_longitude']}")
-                
+            if config.get("deployment_latitude"):
+                print(
+                    f"🌍 Position: {config['deployment_latitude']}, {config['deployment_longitude']}"
+                )
+
     except Exception as e:
         print(f"❌ Error: {e}")
         sys.exit(1)
