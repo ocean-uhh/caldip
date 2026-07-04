@@ -25,6 +25,7 @@ def make_dataset(start="2024-01-01 12:00:00", periods=600, pressure=None):
 # trim_data_to_deployment
 # ---------------------------------------------------------------------------
 
+
 def test_trim_data_to_deployment_basic():
     """Data outside deployment window is removed."""
     ds = make_dataset(periods=600)
@@ -73,34 +74,64 @@ def test_trim_data_to_deployment_instrument_outside_window():
 # extract_summary_from_detailed_stats
 # ---------------------------------------------------------------------------
 
+
 def _make_detailed_df():
     """Build a minimal detailed stats DataFrame matching the real output structure."""
-    return pd.DataFrame([
-        {
-            "serial": "S001", "instrument_type": "sbe37", "label": "SBE37",
-            "N": 120, "bl_press": 1500, "temp_diff": 0.003, "temp_std": 0.001,
-            "cond_diff": 0.01, "cond_std": 0.005,
-            "press_diff": 0.5, "press_std": 0.2,
-            "time_start": "12:00:00", "time_end": "12:02:00",
-            "ctd_temp": 4.5, "ctd_cond": 34.5,
-        },
-        {
-            "serial": "S001", "instrument_type": "sbe37", "label": "SBE37",
-            "N": 120, "bl_press": 800, "temp_diff": 0.002, "temp_std": 0.001,
-            "cond_diff": 0.008, "cond_std": 0.004,
-            "press_diff": 0.4, "press_std": 0.1,
-            "time_start": "13:00:00", "time_end": "13:02:00",
-            "ctd_temp": 6.0, "ctd_cond": 34.2,
-        },
-        {
-            "serial": "T002", "instrument_type": "rbr", "label": "TR1050",
-            "N": 120, "bl_press": 1500, "temp_diff": -0.004, "temp_std": 0.002,
-            "cond_diff": "", "cond_std": "",
-            "press_diff": "", "press_std": "",
-            "time_start": "12:00:00", "time_end": "12:02:00",
-            "ctd_temp": 4.5, "ctd_cond": "",
-        },
-    ])
+    return pd.DataFrame(
+        [
+            {
+                "serial": "S001",
+                "instrument_type": "sbe37",
+                "label": "SBE37",
+                "N": 120,
+                "bl_press": 1500,
+                "temp_diff": 0.003,
+                "temp_std": 0.001,
+                "cond_diff": 0.01,
+                "cond_std": 0.005,
+                "press_diff": 0.5,
+                "press_std": 0.2,
+                "time_start": "12:00:00",
+                "time_end": "12:02:00",
+                "ctd_temp": 4.5,
+                "ctd_cond": 34.5,
+            },
+            {
+                "serial": "S001",
+                "instrument_type": "sbe37",
+                "label": "SBE37",
+                "N": 120,
+                "bl_press": 800,
+                "temp_diff": 0.002,
+                "temp_std": 0.001,
+                "cond_diff": 0.008,
+                "cond_std": 0.004,
+                "press_diff": 0.4,
+                "press_std": 0.1,
+                "time_start": "13:00:00",
+                "time_end": "13:02:00",
+                "ctd_temp": 6.0,
+                "ctd_cond": 34.2,
+            },
+            {
+                "serial": "T002",
+                "instrument_type": "rbr",
+                "label": "TR1050",
+                "N": 120,
+                "bl_press": 1500,
+                "temp_diff": -0.004,
+                "temp_std": 0.002,
+                "cond_diff": "",
+                "cond_std": "",
+                "press_diff": "",
+                "press_std": "",
+                "time_start": "12:00:00",
+                "time_end": "12:02:00",
+                "ctd_temp": 4.5,
+                "ctd_cond": "",
+            },
+        ]
+    )
 
 
 def test_extract_summary_picks_deepest_stop():

@@ -183,6 +183,7 @@ def extract_summary_from_detailed_stats(
 
         # Convert empty strings to NaN for proper numeric handling
         def convert_empty_to_nan(value):
+            """Return NaN for empty-string placeholders, otherwise return value unchanged."""
             return np.nan if value == "" else value
 
         summary_rows.append(

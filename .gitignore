@@ -175,6 +175,11 @@ outputs/
 temp/
 .claude/settings.local.json
 
+# exceptions for docs static files
+!docs/source/_static/*.html
+!docs/source/_static/*_statistics.csv
+!docs/source/_static/*_detailed_statistics.csv
+
 # one-off cruise diagnostic scripts
 check_serial_mapping.py
 check_tr1050_timestamps.py

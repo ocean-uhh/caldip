@@ -15,11 +15,13 @@ from caldip import plotters
 def _make_cast(start="2024-01-01 12:00:00", periods=600, with_cond=False):
     """Synthetic cast: descent → bottle stop → ascent."""
     times = pd.date_range(start, periods=periods, freq="1s")
-    pressure = np.concatenate([
-        np.linspace(0, 90, 200),
-        np.full(200, 100),
-        np.linspace(100, 0, 200),
-    ])
+    pressure = np.concatenate(
+        [
+            np.linspace(0, 90, 200),
+            np.full(200, 100),
+            np.linspace(100, 0, 200),
+        ]
+    )
     temp = np.full(periods, 15.0) + np.random.default_rng(0).normal(0, 0.01, periods)
     data_vars = {"prDM": ("time", pressure), "temperature": ("time", temp)}
     if with_cond:
@@ -30,7 +32,11 @@ def _make_cast(start="2024-01-01 12:00:00", periods=600, with_cond=False):
 def _make_instrument_data(with_cond=False):
     ds = _make_cast(with_cond=with_cond)
     return {
-        "S001": {"data": ds, "config": {"label": "SBE37", "instrument": "sbe37"}, "type": "sbe37"}
+        "S001": {
+            "data": ds,
+            "config": {"label": "SBE37", "instrument": "sbe37"},
+            "type": "sbe37",
+        }
     }
 
 
@@ -108,8 +114,16 @@ def test_create_plot_multiple_instruments():
     """Multiple instruments are all added to the figure."""
     ds = _make_cast()
     instrument_data = {
-        "S001": {"data": ds, "config": {"label": "SBE37", "instrument": "sbe37"}, "type": "sbe37"},
-        "S002": {"data": ds, "config": {"label": "SBE37", "instrument": "sbe37"}, "type": "sbe37"},
+        "S001": {
+            "data": ds,
+            "config": {"label": "SBE37", "instrument": "sbe37"},
+            "type": "sbe37",
+        },
+        "S002": {
+            "data": ds,
+            "config": {"label": "SBE37", "instrument": "sbe37"},
+            "type": "sbe37",
+        },
     }
     fig = plotters.create_universal_caldip_plot(instrument_data, _make_reference_data())
     assert fig is not None

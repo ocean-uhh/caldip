@@ -171,6 +171,7 @@ def create_universal_caldip_plot(
                     )
 
     def smart_range(values, padding=0.05):
+        """Return [min, max] axis range with fractional padding; defaults to [0,1] for empty input."""
         if not values:
             return [0, 1]
         min_val, max_val = min(values), max(values)
