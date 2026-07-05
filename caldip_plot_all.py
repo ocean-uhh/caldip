@@ -75,14 +75,14 @@ Examples:
     parser.add_argument(
         "--threshold",
         type=float,
-        default=30.0,
-        help="Bottle stop detection threshold (dbar/min, default: 30.0)",
+        default=10.0,
+        help="Bottle stop detection threshold (dbar/min, default: 10.0)",
     )
     parser.add_argument(
         "--min-duration",
         type=float,
-        default=120.0,
-        help="Minimum bottle stop duration (seconds, default: 120.0)",
+        default=180.0,
+        help="Minimum bottle stop duration (seconds, default: 180.0)",
     )
     parser.add_argument(
         "--show",
