@@ -9,7 +9,7 @@ netcdf4>=1.7.4
 pyyaml>=6.0.3
 
 # Interactive plotting
-plotly>=5.0
+plotly>=6.8.0
 matplotlib>=3.9
 
 # Oceanographic instrument data
