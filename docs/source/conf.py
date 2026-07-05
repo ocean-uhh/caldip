@@ -20,7 +20,7 @@ year = datetime.datetime.now(tz=datetime.timezone.utc).date().year
 project = "caldip"
 author = "Eleanor Frajka-Williams"
 copyright = f"{year}, {author}"
-release = "v0.0.2"
+release = "v0.1.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
