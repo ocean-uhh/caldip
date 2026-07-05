@@ -26,7 +26,7 @@ caldip plot <config_path> [options]
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--output NAME` | — | Base filename for the HTML file (no extension; `_plot.html` is appended) |
-| `-o DIR` | parent of cast dir | Directory to write the HTML file |
+| `-o DIR`, `--output-dir DIR` | parent of cast dir | Directory to write the HTML file |
 | `--title TEXT` | from config | Plot title |
 | `--threshold FLOAT` | 10.0 | Bottle stop detection threshold (dbar/min) |
 | `--min-duration FLOAT` | 180.0 | Minimum bottle stop duration (seconds) |
@@ -72,7 +72,7 @@ caldip stats <config_path> [options]
 |--------|---------|-------------|
 | `--ctd-sensor {1,2}` | from YAML, else 1 | Which CTD sensor pair to use |
 | `--output NAME` | cast name from YAML | Base filename for output files (no extension) |
-| `-o DIR` | parent of cast dir | Directory for all output files |
+| `-o DIR`, `--output-dir DIR` | parent of cast dir | Directory for all output files |
 | `--threshold FLOAT` | 10.0 | Bottle stop detection threshold (dbar/min) |
 | `--min-duration FLOAT` | 180.0 | Minimum bottle stop duration (seconds) |
 

@@ -92,7 +92,7 @@ CTD rosettes typically carry two independent sensor packages (primary=1, and sec
 
 | Flag | Sensor |
 |------|--------|
-| `--ctd-sensor 1` | Primary (default) |
+| `--ctd-sensor 1` | Primary (default if not set in YAML) |
 | `--ctd-sensor 2` | Secondary |
 
 > **Rerunning after CTD reprocessing:** If the CTD `.cnv` file is updated (spike removal, pressure correction, salinity calibration, sensor swap), regenerate both the plot and statistics for corrections to be applied to moored instruments.

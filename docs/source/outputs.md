@@ -39,7 +39,7 @@ caldip stats data/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml \
     --ctd-sensor 2 -o outputs/
 ```
 
-This produces two CSV files per cast.
+This produces two CSV files per cast, plus a `{cast}_timing.txt` timing report with bottle stop start/end times and pressures.
 
 ### Summary statistics (`{cast}_summary_statistics.csv`)
 
@@ -117,7 +117,7 @@ quality_flags:
 
 ## Output file location
 
-By default, output files are written to the **parent of the cast directory** (i.e., the `cal_dip/` level), not to the YAML directory. The command prints the exact paths when it runs. Use `-o` to specify a different location:
+By default, output files are written to the **parent of the cast directory** (i.e., the `cal_dip/` level), not to the YAML directory. The command prints the exact paths when it runs. Use `-o` (or `--output-dir`) to specify a different location:
 
 ```bash
 caldip stats castM4/castM4.caldip.yaml -o results/
