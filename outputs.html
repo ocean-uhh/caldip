@@ -59,8 +59,10 @@
 <li class="toctree-l2"><a class="reference internal" href="#statistics-csvs">Statistics CSVs</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#summary-statistics-cast-summary-statistics-csv">Summary statistics (<code class="docutils literal notranslate"><span class="pre">{cast}_summary_statistics.csv</span></code>)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#detailed-statistics-cast-detailed-statistics-csv">Detailed statistics (<code class="docutils literal notranslate"><span class="pre">{cast}_detailed_statistics.csv</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#quality-flag-thresholds">Quality flag thresholds</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#output-file-location">Output file location</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#batch-processing">Batch processing</a></li>
 </ul>
 </li>
@@ -123,7 +125,8 @@
 <p>This produces two CSV files per cast.</p>
 <section id="summary-statistics-cast-summary-statistics-csv">
 <h3>Summary statistics (<code class="docutils literal notranslate"><span class="pre">{cast}_summary_statistics.csv</span></code>)<a class="headerlink" href="#summary-statistics-cast-summary-statistics-csv" title="Link to this heading"></a></h3>
-<p>One row per instrument, averaged across all bottle stops.</p>
+<p>One row per instrument, taken from the <strong>deepest bottle stop</strong> of the cast.
+(This is a single-stop snapshot, not an average across all stops — use the detailed CSV to see all stops.)</p>
 <table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Column</p></th>
@@ -141,38 +144,157 @@
 <td><p>Human-readable model label</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">n_samples</span></code></p></td>
-<td><p>Number of bottle stops used</p></td>
+<td><p>Number of instrument data points in the 2-minute comparison window</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">bl_press</span></code></p></td>
-<td><p>Mean pressure across all bottle stops (dbar)</p></td>
+<td><p>Pressure of the deepest bottle stop (dbar)</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">temp_diff_mean</span></code></p></td>
-<td><p>Mean temperature offset vs CTD (°C)</p></td>
+<td><p>Temperature offset vs CTD at the deepest stop (°C)</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">temp_diff_std</span></code></p></td>
-<td><p>Standard deviation of temperature offset (°C)</p></td>
+<td><p>Standard deviation of temperature within the comparison window (°C)</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cond_diff_mean</span></code></p></td>
-<td><p>Mean conductivity offset vs CTD (mS/cm)</p></td>
+<td><p>Conductivity offset vs CTD at the deepest stop (mS/cm)</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cond_diff_std</span></code></p></td>
-<td><p>Standard deviation of conductivity offset (mS/cm)</p></td>
+<td><p>Standard deviation of conductivity within the comparison window (mS/cm)</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">press_diff_mean</span></code></p></td>
-<td><p>Mean pressure offset vs CTD (dbar)</p></td>
+<td><p>Pressure offset vs CTD at the deepest stop (dbar)</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">press_diff_std</span></code></p></td>
-<td><p>Standard deviation of pressure offset (dbar)</p></td>
+<td><p>Standard deviation of pressure within the comparison window (dbar)</p></td>
 </tr>
 </tbody>
 </table>
-<p>RBR thermistors (temperature-only) leave the conductivity and pressure columns blank.</p>
+<p>RBR thermistors (temperature-only) leave the conductivity and pressure columns as NaN.</p>
 <p><strong><a href="_static/castM4_summary_statistics.csv">Download example summary CSV (castM4, MSM142)</a></strong></p>
 </section>
 <section id="detailed-statistics-cast-detailed-statistics-csv">
 <h3>Detailed statistics (<code class="docutils literal notranslate"><span class="pre">{cast}_detailed_statistics.csv</span></code>)<a class="headerlink" href="#detailed-statistics-cast-detailed-statistics-csv" title="Link to this heading"></a></h3>
-<p>One row per instrument per bottle stop, giving the full per-stop breakdown used to compute the summary.</p>
+<p>One row per instrument per bottle stop. Columns:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Column</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">serial</span></code></p></td>
+<td><p>Instrument serial number</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">instrument_type</span></code></p></td>
+<td><p>Instrument family</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">bl_press</span></code></p></td>
+<td><p>Bottle stop pressure (dbar), rounded</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">temp_diff</span></code></p></td>
+<td><p>Temperature offset: instrument − CTD (°C)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">temp_std</span></code></p></td>
+<td><p>Standard deviation of instrument temperature in comparison window (°C)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cond_diff</span></code></p></td>
+<td><p>Conductivity offset: instrument − CTD (mS/cm); NaN for thermistors</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cond_std</span></code></p></td>
+<td><p>Standard deviation of instrument conductivity (mS/cm)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">press_diff</span></code></p></td>
+<td><p>Pressure offset: instrument − CTD (dbar); NaN if no pressure sensor</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">press_std</span></code></p></td>
+<td><p>Standard deviation of instrument pressure (dbar)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">temp_status</span></code></p></td>
+<td><p>Quality flag string, e.g. <code class="docutils literal notranslate"><span class="pre">T</span> <span class="pre">OK</span></code>, <code class="docutils literal notranslate"><span class="pre">T</span> <span class="pre">reads</span> <span class="pre">high</span> <span class="pre">by</span> <span class="pre">0.012</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cond_status</span></code></p></td>
+<td><p>Quality flag string for conductivity</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">press_status</span></code></p></td>
+<td><p>Quality flag string for pressure</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">date</span></code></p></td>
+<td><p>Date of the comparison period (UTC)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">time_start</span></code></p></td>
+<td><p>Start time of the 2-minute comparison window</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">time_end</span></code></p></td>
+<td><p>End time of the 2-minute comparison window</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ctd_temp</span></code></p></td>
+<td><p>CTD reference temperature during comparison window (°C)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ctd_cond</span></code></p></td>
+<td><p>CTD reference conductivity during comparison window (mS/cm)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">inst_temp</span></code></p></td>
+<td><p>Instrument mean temperature during comparison window (°C)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">inst_cond</span></code></p></td>
+<td><p>Instrument mean conductivity during comparison window (mS/cm)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">inst_press</span></code></p></td>
+<td><p>Instrument mean pressure during comparison window (dbar)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">N</span></code></p></td>
+<td><p>Number of instrument data points in the comparison window</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">label</span></code></p></td>
+<td><p>Human-readable instrument label</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ctd_sensor_used</span></code></p></td>
+<td><p>CTD sensor number used for the reference (1 or 2)</p></td>
+</tr>
+</tbody>
+</table>
 </section>
+<section id="quality-flag-thresholds">
+<h3>Quality flag thresholds<a class="headerlink" href="#quality-flag-thresholds" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">temp_status</span></code>, <code class="docutils literal notranslate"><span class="pre">cond_status</span></code>, and <code class="docutils literal notranslate"><span class="pre">press_status</span></code> columns compare the instrument offset against these thresholds:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Variable</p></th>
+<th class="head"><p>Default threshold</p></th>
+<th class="head"><p>Flag triggered when</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Temperature</p></td>
+<td><p>±0.005 °C</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">|instrument</span> <span class="pre">−</span> <span class="pre">CTD|</span> <span class="pre">&gt;</span> <span class="pre">0.005</span> <span class="pre">°C</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Conductivity</p></td>
+<td><p>±0.02 mS/cm</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">|instrument</span> <span class="pre">−</span> <span class="pre">CTD|</span> <span class="pre">&gt;</span> <span class="pre">0.02</span> <span class="pre">mS/cm</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Pressure</p></td>
+<td><p>±5 dbar</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">|instrument</span> <span class="pre">−</span> <span class="pre">CTD|</span> <span class="pre">&gt;</span> <span class="pre">5</span> <span class="pre">dbar</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>These thresholds are appropriate for SBE37 MicroCATs. For RBR thermistors or other instruments with wider specifications, override them in the YAML:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">quality_flags</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">temp_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span><span class="w">   </span><span class="c1"># °C</span>
+<span class="w">  </span><span class="nt">cond_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.05</span><span class="w">   </span><span class="c1"># mS/cm</span>
+<span class="w">  </span><span class="nt">press_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10.0</span><span class="w">  </span><span class="c1"># dbar</span>
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="output-file-location">
+<h2>Output file location<a class="headerlink" href="#output-file-location" title="Link to this heading"></a></h2>
+<p>By default, output files are written to the <strong>parent of the cast directory</strong> (i.e., the <code class="docutils literal notranslate"><span class="pre">cal_dip/</span></code> level), not to the YAML directory. The script prints the exact paths when it runs. Use <code class="docutils literal notranslate"><span class="pre">--output-dir</span></code> to specify a different location:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>caldip_check_all.py<span class="w"> </span>castM4/castM4.caldip.yaml<span class="w"> </span>--output-dir<span class="w"> </span>results/
+</pre></div>
+</div>
 </section>
 <hr class="docutils" />
 <section id="batch-processing">
@@ -181,7 +303,6 @@
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bash<span class="w"> </span>generate_all_caldip_plots.sh
 </pre></div>
 </div>
-<p>Output files are written to the same directory as the YAML configuration file.</p>
 </section>
 </section>
 

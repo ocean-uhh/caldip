@@ -30,29 +30,85 @@ This produces two CSV files per cast.
 
 ### Summary statistics (`{cast}_summary_statistics.csv`)
 
-One row per instrument, averaged across all bottle stops.
+One row per instrument, taken from the **deepest bottle stop** of the cast.
+(This is a single-stop snapshot, not an average across all stops — use the detailed CSV to see all stops.)
 
 | Column | Description |
 |--------|-------------|
 | `serial` | Instrument serial number |
 | `instrument_type` | Instrument family (`rbr`, `sbe37`, etc.) |
 | `label` | Human-readable model label |
-| `n_samples` | Number of bottle stops used |
-| `bl_press` | Mean pressure across all bottle stops (dbar) |
-| `temp_diff_mean` | Mean temperature offset vs CTD (°C) |
-| `temp_diff_std` | Standard deviation of temperature offset (°C) |
-| `cond_diff_mean` | Mean conductivity offset vs CTD (mS/cm) |
-| `cond_diff_std` | Standard deviation of conductivity offset (mS/cm) |
-| `press_diff_mean` | Mean pressure offset vs CTD (dbar) |
-| `press_diff_std` | Standard deviation of pressure offset (dbar) |
+| `n_samples` | Number of instrument data points in the 2-minute comparison window |
+| `bl_press` | Pressure of the deepest bottle stop (dbar) |
+| `temp_diff_mean` | Temperature offset vs CTD at the deepest stop (°C) |
+| `temp_diff_std` | Standard deviation of temperature within the comparison window (°C) |
+| `cond_diff_mean` | Conductivity offset vs CTD at the deepest stop (mS/cm) |
+| `cond_diff_std` | Standard deviation of conductivity within the comparison window (mS/cm) |
+| `press_diff_mean` | Pressure offset vs CTD at the deepest stop (dbar) |
+| `press_diff_std` | Standard deviation of pressure within the comparison window (dbar) |
 
-RBR thermistors (temperature-only) leave the conductivity and pressure columns blank.
+RBR thermistors (temperature-only) leave the conductivity and pressure columns as NaN.
 
 **<a href="_static/castM4_summary_statistics.csv">Download example summary CSV (castM4, MSM142)</a>**
 
 ### Detailed statistics (`{cast}_detailed_statistics.csv`)
 
-One row per instrument per bottle stop, giving the full per-stop breakdown used to compute the summary.
+One row per instrument per bottle stop. Columns:
+
+| Column | Description |
+|--------|-------------|
+| `serial` | Instrument serial number |
+| `instrument_type` | Instrument family |
+| `bl_press` | Bottle stop pressure (dbar), rounded |
+| `temp_diff` | Temperature offset: instrument − CTD (°C) |
+| `temp_std` | Standard deviation of instrument temperature in comparison window (°C) |
+| `cond_diff` | Conductivity offset: instrument − CTD (mS/cm); NaN for thermistors |
+| `cond_std` | Standard deviation of instrument conductivity (mS/cm) |
+| `press_diff` | Pressure offset: instrument − CTD (dbar); NaN if no pressure sensor |
+| `press_std` | Standard deviation of instrument pressure (dbar) |
+| `temp_status` | Quality flag string, e.g. `T OK`, `T reads high by 0.012` |
+| `cond_status` | Quality flag string for conductivity |
+| `press_status` | Quality flag string for pressure |
+| `date` | Date of the comparison period (UTC) |
+| `time_start` | Start time of the 2-minute comparison window |
+| `time_end` | End time of the 2-minute comparison window |
+| `ctd_temp` | CTD reference temperature during comparison window (°C) |
+| `ctd_cond` | CTD reference conductivity during comparison window (mS/cm) |
+| `inst_temp` | Instrument mean temperature during comparison window (°C) |
+| `inst_cond` | Instrument mean conductivity during comparison window (mS/cm) |
+| `inst_press` | Instrument mean pressure during comparison window (dbar) |
+| `N` | Number of instrument data points in the comparison window |
+| `label` | Human-readable instrument label |
+| `ctd_sensor_used` | CTD sensor number used for the reference (1 or 2) |
+
+### Quality flag thresholds
+
+The `temp_status`, `cond_status`, and `press_status` columns compare the instrument offset against these thresholds:
+
+| Variable | Default threshold | Flag triggered when |
+|----------|-------------------|---------------------|
+| Temperature | ±0.005 °C | `\|instrument − CTD\| > 0.005 °C` |
+| Conductivity | ±0.02 mS/cm | `\|instrument − CTD\| > 0.02 mS/cm` |
+| Pressure | ±5 dbar | `\|instrument − CTD\| > 5 dbar` |
+
+These thresholds are appropriate for SBE37 MicroCATs. For RBR thermistors or other instruments with wider specifications, override them in the YAML:
+
+```yaml
+quality_flags:
+  temp_threshold: 0.01   # °C
+  cond_threshold: 0.05   # mS/cm
+  press_threshold: 10.0  # dbar
+```
+
+---
+
+## Output file location
+
+By default, output files are written to the **parent of the cast directory** (i.e., the `cal_dip/` level), not to the YAML directory. The script prints the exact paths when it runs. Use `--output-dir` to specify a different location:
+
+```bash
+python caldip_check_all.py castM4/castM4.caldip.yaml --output-dir results/
+```
 
 ---
 
@@ -63,5 +119,3 @@ One row per instrument per bottle stop, giving the full per-stop breakdown used 
 ```bash
 bash generate_all_caldip_plots.sh
 ```
-
-Output files are written to the same directory as the YAML configuration file.

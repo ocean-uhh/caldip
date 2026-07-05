@@ -107,7 +107,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 
 
 <div class="viewcode-block" id="find_bottle_stops">
@@ -344,16 +344,51 @@
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_format_status</span><span class="p">(</span><span class="n">diff</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">var_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a human-readable quality flag string for a single variable difference.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">diff</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2"> NO DATA&quot;</span>
+    <span class="k">elif</span> <span class="nb">abs</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">threshold</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2"> OK&quot;</span>
+    <span class="k">elif</span> <span class="n">diff</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2"> reads high by </span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2"> reads low by </span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span>
+
+
 <div class="viewcode-block" id="calculate_universal_statistics_by_bottle_stop">
 <a class="viewcode-back" href="../../caldip.html#caldip.caldip_functions.calculate_universal_statistics_by_bottle_stop">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">calculate_universal_statistics_by_bottle_stop</span><span class="p">(</span>
-    <span class="n">instrument_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">reference_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">ctd_sensor</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">instrument_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span>
+    <span class="n">reference_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span>
+    <span class="n">ctd_sensor</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">threshold_dbar_per_min</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+    <span class="n">min_duration_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">180.0</span><span class="p">,</span>
+    <span class="n">temp_threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cond_threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">press_threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Calculate statistics for each bottle stop and each instrument (any type).</span>
 
 <span class="sd">    Returns DataFrame with one row per bottle stop per instrument.</span>
+
+<span class="sd">    Quality flag thresholds (``temp_threshold``, ``cond_threshold``,</span>
+<span class="sd">    ``press_threshold``) determine when a difference is flagged as</span>
+<span class="sd">    &quot;reads high/low&quot; vs &quot;OK&quot;.  They can also be set per-cast in the YAML</span>
+<span class="sd">    under ``quality_flags: {temp_threshold: 0.005, ...}``; explicit</span>
+<span class="sd">    arguments take precedence over YAML values, which in turn override the</span>
+<span class="sd">    built-in defaults (±0.005 °C, ±0.02 mS/cm, ±5 dbar).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Precedence: explicit arg &gt; YAML quality_flags &gt; built-in default</span>
+    <span class="n">yaml_flags</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;quality_flags&quot;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="k">if</span> <span class="n">temp_threshold</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">temp_threshold</span> <span class="o">=</span> <span class="n">yaml_flags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;temp_threshold&quot;</span><span class="p">,</span> <span class="mf">0.005</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cond_threshold</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cond_threshold</span> <span class="o">=</span> <span class="n">yaml_flags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cond_threshold&quot;</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">press_threshold</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">press_threshold</span> <span class="o">=</span> <span class="n">yaml_flags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;press_threshold&quot;</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">)</span>
     <span class="c1"># Get the first (and likely only) reference dataset</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">reference_data</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No reference data available!&quot;</span><span class="p">)</span>
@@ -363,7 +398,11 @@
     <span class="n">ctd_data</span> <span class="o">=</span> <span class="n">reference_data</span><span class="p">[</span><span class="n">ref_name</span><span class="p">][</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
 
     <span class="c1"># Get bottle stops using the detection function</span>
-    <span class="n">bottle_stops</span> <span class="o">=</span> <span class="n">find_bottle_stops</span><span class="p">(</span><span class="n">ctd_data</span><span class="p">)</span>
+    <span class="n">bottle_stops</span> <span class="o">=</span> <span class="n">find_bottle_stops</span><span class="p">(</span>
+        <span class="n">ctd_data</span><span class="p">,</span>
+        <span class="n">threshold_dbar_per_min</span><span class="o">=</span><span class="n">threshold_dbar_per_min</span><span class="p">,</span>
+        <span class="n">min_duration_seconds</span><span class="o">=</span><span class="n">min_duration_seconds</span><span class="p">,</span>
+    <span class="p">)</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">bottle_stops</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No bottle stops found!&quot;</span><span class="p">)</span>
@@ -486,29 +525,9 @@
                 <span class="n">inst_press</span> <span class="o">-</span> <span class="n">ctd_press_comp</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">inst_press</span><span class="p">)</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
             <span class="p">)</span>
 
-            <span class="c1"># Quality flags (thresholds: T ±0.005°C, C ±0.02 mS/cm, P ±5 dbar)</span>
-            <span class="k">def</span><span class="w"> </span><span class="nf">format_status</span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">var_name</span><span class="p">):</span>
-<span class="w">                </span><span class="sd">&quot;&quot;&quot;Return a human-readable quality flag string for a single variable difference.&quot;&quot;&quot;</span>
-                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">diff</span><span class="p">):</span>
-                    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2"> NO DATA&quot;</span>
-                <span class="k">elif</span> <span class="nb">abs</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">threshold</span><span class="p">:</span>
-                    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2"> OK&quot;</span>
-                <span class="k">elif</span> <span class="n">diff</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2"> reads high by </span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2"> reads low by </span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span>
-
-            <span class="n">temp_status</span> <span class="o">=</span> <span class="n">format_status</span><span class="p">(</span><span class="n">temp_diff</span><span class="p">,</span> <span class="mf">0.005</span><span class="p">,</span> <span class="s2">&quot;T&quot;</span><span class="p">)</span>
-            <span class="n">cond_status</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">format_status</span><span class="p">(</span><span class="n">cond_diff</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">inst_cond</span><span class="p">)</span>
-                <span class="k">else</span> <span class="s2">&quot;C NO DATA&quot;</span>
-            <span class="p">)</span>
-            <span class="n">press_status</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">format_status</span><span class="p">(</span><span class="n">press_diff</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">,</span> <span class="s2">&quot;P&quot;</span><span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">inst_press</span><span class="p">)</span>
-                <span class="k">else</span> <span class="s2">&quot;P NO DATA&quot;</span>
-            <span class="p">)</span>
+            <span class="n">temp_status</span> <span class="o">=</span> <span class="n">_format_status</span><span class="p">(</span><span class="n">temp_diff</span><span class="p">,</span> <span class="n">temp_threshold</span><span class="p">,</span> <span class="s2">&quot;T&quot;</span><span class="p">)</span>
+            <span class="n">cond_status</span> <span class="o">=</span> <span class="n">_format_status</span><span class="p">(</span><span class="n">cond_diff</span><span class="p">,</span> <span class="n">cond_threshold</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">)</span>
+            <span class="n">press_status</span> <span class="o">=</span> <span class="n">_format_status</span><span class="p">(</span><span class="n">press_diff</span><span class="p">,</span> <span class="n">press_threshold</span><span class="p">,</span> <span class="s2">&quot;P&quot;</span><span class="p">)</span>
 
             <span class="c1"># Extract date and time components</span>
             <span class="n">date_part</span> <span class="o">=</span> <span class="n">comp_start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -520,14 +539,18 @@
                     <span class="s2">&quot;serial&quot;</span><span class="p">:</span> <span class="n">serial</span><span class="p">,</span>
                     <span class="s2">&quot;instrument_type&quot;</span><span class="p">:</span> <span class="n">inst_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;instrument&quot;</span><span class="p">,</span> <span class="s2">&quot;unknown&quot;</span><span class="p">),</span>
                     <span class="s2">&quot;bl_press&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">stop</span><span class="p">[</span><span class="s2">&quot;pressure&quot;</span><span class="p">]),</span>
-                    <span class="s2">&quot;temp_diff&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">temp_diff</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">temp_diff</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;temp_std&quot;</span><span class="p">:</span> <span class="n">inst_temp_std</span><span class="p">,</span>
-                    <span class="s2">&quot;cond_diff&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">cond_diff</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">cond_diff</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;cond_std&quot;</span><span class="p">:</span> <span class="n">inst_cond_std</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">inst_cond_std</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;press_diff&quot;</span><span class="p">:</span> <span class="p">(</span>
-                        <span class="nb">round</span><span class="p">(</span><span class="n">press_diff</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">press_diff</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+                    <span class="s2">&quot;temp_diff&quot;</span><span class="p">:</span> <span class="p">(</span>
+                        <span class="nb">round</span><span class="p">(</span><span class="n">temp_diff</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">temp_diff</span><span class="p">)</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
                     <span class="p">),</span>
-                    <span class="s2">&quot;press_std&quot;</span><span class="p">:</span> <span class="n">inst_press_std</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">inst_press_std</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;temp_std&quot;</span><span class="p">:</span> <span class="n">inst_temp_std</span><span class="p">,</span>
+                    <span class="s2">&quot;cond_diff&quot;</span><span class="p">:</span> <span class="p">(</span>
+                        <span class="nb">round</span><span class="p">(</span><span class="n">cond_diff</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">cond_diff</span><span class="p">)</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+                    <span class="p">),</span>
+                    <span class="s2">&quot;cond_std&quot;</span><span class="p">:</span> <span class="n">inst_cond_std</span><span class="p">,</span>
+                    <span class="s2">&quot;press_diff&quot;</span><span class="p">:</span> <span class="p">(</span>
+                        <span class="nb">round</span><span class="p">(</span><span class="n">press_diff</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">press_diff</span><span class="p">)</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+                    <span class="p">),</span>
+                    <span class="s2">&quot;press_std&quot;</span><span class="p">:</span> <span class="n">inst_press_std</span><span class="p">,</span>
                     <span class="s2">&quot;temp_status&quot;</span><span class="p">:</span> <span class="n">temp_status</span><span class="p">,</span>
                     <span class="s2">&quot;cond_status&quot;</span><span class="p">:</span> <span class="n">cond_status</span><span class="p">,</span>
                     <span class="s2">&quot;press_status&quot;</span><span class="p">:</span> <span class="n">press_status</span><span class="p">,</span>
@@ -535,13 +558,12 @@
                     <span class="s2">&quot;time_start&quot;</span><span class="p">:</span> <span class="n">time_start</span><span class="p">,</span>
                     <span class="s2">&quot;time_end&quot;</span><span class="p">:</span> <span class="n">time_end</span><span class="p">,</span>
                     <span class="s2">&quot;ctd_temp&quot;</span><span class="p">:</span> <span class="n">ctd_temp_comp</span><span class="p">,</span>
-                    <span class="s2">&quot;ctd_cond&quot;</span><span class="p">:</span> <span class="n">ctd_cond_comp</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">ctd_cond_comp</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;ctd_cond&quot;</span><span class="p">:</span> <span class="n">ctd_cond_comp</span><span class="p">,</span>
                     <span class="s2">&quot;inst_temp&quot;</span><span class="p">:</span> <span class="n">inst_temp</span><span class="p">,</span>
-                    <span class="s2">&quot;inst_cond&quot;</span><span class="p">:</span> <span class="n">inst_cond</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">inst_cond</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;inst_press&quot;</span><span class="p">:</span> <span class="n">inst_press</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">inst_press</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;inst_cond&quot;</span><span class="p">:</span> <span class="n">inst_cond</span><span class="p">,</span>
+                    <span class="s2">&quot;inst_press&quot;</span><span class="p">:</span> <span class="n">inst_press</span><span class="p">,</span>
                     <span class="s2">&quot;N&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">inst_comp_mask</span><span class="p">)),</span>
                     <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="n">inst_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;label&quot;</span><span class="p">,</span> <span class="s2">&quot;Unknown&quot;</span><span class="p">),</span>
-                    <span class="s2">&quot;serial&quot;</span><span class="p">:</span> <span class="n">serial</span><span class="p">,</span>
                 <span class="p">}</span>
             <span class="p">)</span>
 
