@@ -183,6 +183,33 @@ def test_bottle_stop_detection_with_real_data():
         pytest.skip(f"Bottle stop detection failed: {e}")
 
 
+def test_bottle_stop_detection_castM4_five_stops():
+    """castM4 CTD profile must yield exactly 5 bottle stops at known depths."""
+    fixture = get_fixture_data_path()
+    config_file = fixture / "castM4.caldip.yaml"
+    if not config_file.exists():
+        pytest.skip("castM4 fixture not available")
+
+    config = readers.load_caldip_config(config_file)
+    reference_data = readers.load_reference_data(config, fixture)
+    ctd_data = list(reference_data.values())[0]["data"]
+
+    stops = cf.find_bottle_stops(ctd_data)
+
+    assert len(stops) == 5, f"Expected 5 bottle stops, got {len(stops)}"
+
+    pressures = sorted([s["pressure"] for s in stops], reverse=True)
+    assert pressures[0] == pytest.approx(2027, abs=20)  # deepest
+    assert pressures[1] == pytest.approx(1522, abs=20)
+    assert pressures[2] == pytest.approx(909, abs=20)
+    assert pressures[3] == pytest.approx(355, abs=20)
+    assert pressures[4] == pytest.approx(51, abs=10)  # shallowest
+
+    for stop in stops:
+        assert stop["duration_seconds"] >= 180
+        assert stop["pressure"] > 0
+
+
 # Config validation tests
 def test_config_validation_missing_name(tmp_path):
     """Test that configs without 'name' are handled."""

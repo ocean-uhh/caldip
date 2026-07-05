@@ -2,10 +2,8 @@
 Tests for caldip/writers.py output formatting functions.
 """
 
-import io
 import numpy as np
 import pandas as pd
-import pytest
 
 from caldip import writers
 
@@ -39,9 +37,12 @@ def _make_summary_df(with_cond=True, with_press=True, with_bottle_stops=False):
 
     rows = [
         {
-            "serial": "S001", "instrument_type": "sbe37", "label": "SBE37",
+            "serial": "S001",
+            "instrument_type": "sbe37",
+            "label": "SBE37",
             "N": 120,
-            "temp_diff": 0.003, "temp_diff_std": 0.001,
+            "temp_diff": 0.003,
+            "temp_diff_std": 0.001,
             "cond_diff": 0.01 if with_cond else np.nan,
             "cond_diff_std": 0.005 if with_cond else np.nan,
             "press_diff": 0.5 if with_press else np.nan,

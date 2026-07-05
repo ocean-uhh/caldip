@@ -174,3 +174,198 @@ def test_missing_pressure_variable():
 
     bottle_stops = cf.find_bottle_stops(data)
     assert bottle_stops == []
+
+
+def test_find_bottle_stops_multiple_stops():
+    """Multiple bottle stops are detected and all exceed minimum duration."""
+    # Between stops and on ascent use steep transitions (>10 dbar/min per sample)
+    # so the sample-to-sample rate exceeds the threshold and stops are kept separate.
+    # Transition between stops is 20 samples (> 10-sample merge threshold)
+    times = pd.date_range("2024-01-01 12:00:00", periods=1130, freq="1s")
+    pressure = np.concatenate(
+        [
+            np.linspace(0, 90, 200),  # descent
+            np.full(400, 100),  # first stop ~6.5 min at 100 dbar
+            np.linspace(
+                100, 60, 20
+            ),  # fast drop (120 dbar/min >> 10 threshold, 20-sample gap)
+            np.full(400, 60),  # second stop ~6.5 min at 60 dbar
+            np.linspace(60, 0, 110),  # fast ascent (33 dbar/min >> 10 threshold)
+        ]
+    )
+    ctd_data = xr.Dataset({"prDM": ("time", pressure)}, coords={"time": times})
+
+    bottle_stops = cf.find_bottle_stops(ctd_data)
+
+    assert len(bottle_stops) >= 2
+    pressures = [s["pressure"] for s in bottle_stops]
+    assert max(pressures) == pytest.approx(100, abs=5)
+    assert min(pressures) == pytest.approx(60, abs=5)
+
+
+def test_calculate_stats_for_time_period_basic():
+    """Stats are calculated correctly over a simple time window."""
+    times = pd.date_range("2024-01-01 12:00:00", periods=300, freq="1s")
+    data = xr.Dataset(
+        {
+            "temperature": ("time", np.full(300, 5.0)),
+            "pressure": ("time", np.full(300, 100.0)),
+        },
+        coords={"time": times},
+    )
+
+    # Derive start/end from the data timestamps to avoid timezone offset issues
+    start_time = pd.Timestamp(times[60])
+    end_time = pd.Timestamp(times[180])
+
+    stats = cf.calculate_stats_for_time_period(
+        data,
+        start_time=start_time,
+        end_time=end_time,
+        variables=["temperature", "pressure"],
+    )
+
+    assert stats["mean_temperature"] == pytest.approx(5.0)
+    assert stats["mean_pressure"] == pytest.approx(100.0)
+    assert stats["std_temperature"] == pytest.approx(0.0, abs=1e-10)
+    assert stats["n_samples"] > 0
+
+
+def test_calculate_stats_for_time_period_no_overlap():
+    """Returns NaN means when time window has no data."""
+    times = pd.date_range("2024-01-01 12:00:00", periods=60, freq="1s")
+    data = xr.Dataset(
+        {"temperature": ("time", np.full(60, 5.0))}, coords={"time": times}
+    )
+
+    stats = cf.calculate_stats_for_time_period(
+        data,
+        start_time=pd.Timestamp("2024-01-01 14:00:00"),
+        end_time=pd.Timestamp("2024-01-01 14:05:00"),
+        variables=["temperature"],
+    )
+
+    assert stats["n_samples"] == 0
+    assert np.isnan(stats["mean_temperature"])
+
+
+def test_format_status_reads_high():
+    """Instrument that reads above CTD triggers the 'reads high' branch."""
+    times = pd.date_range("2024-01-01 12:00:00", periods=1000, freq="1s")
+    pressure = np.concatenate(
+        [
+            np.linspace(0, 90, 400),
+            np.full(200, 100),
+            np.linspace(100, 0, 400),
+        ]
+    )
+    # Instrument temperature is HIGHER than CTD — triggers format_status "reads high"
+    instruments = {
+        "S001": {
+            "data": xr.Dataset(
+                {
+                    "temperature": ("time", np.full(1000, 15.10)),
+                },
+                coords={"time": times},
+            ),
+            "config": {"instrument": "sbe37", "label": "Test"},
+            "type": "sbe37",
+        }
+    }
+    reference_data = {
+        "ctd": {
+            "data": xr.Dataset(
+                {
+                    "prDM": ("time", pressure),
+                    "t090C": ("time", np.full(1000, 15.00)),
+                    "c0mS/cm": ("time", np.full(1000, 34.5)),
+                },
+                coords={"time": times},
+            ),
+            "config": {},
+        }
+    }
+    df = cf.calculate_universal_statistics_by_bottle_stop(
+        instruments, reference_data, {"name": "test"}, ctd_sensor=1
+    )
+    assert not df.empty
+    assert df.iloc[0]["temp_status"].startswith("T reads high")
+
+
+def test_ctd_sensor_fallback_variable_names():
+    """Falls back to temp1/cond1 when t090C/c0mS/cm are absent (sensor 1)."""
+    times = pd.date_range("2024-01-01 12:00:00", periods=1000, freq="1s")
+    pressure = np.concatenate(
+        [
+            np.linspace(0, 90, 400),
+            np.full(200, 100),
+            np.linspace(100, 0, 400),
+        ]
+    )
+    instruments = {
+        "S001": {
+            "data": xr.Dataset(
+                {"temperature": ("time", np.full(1000, 4.0))},
+                coords={"time": times},
+            ),
+            "config": {"instrument": "sbe37", "label": "Test"},
+            "type": "sbe37",
+        }
+    }
+    # Use fallback names temp1 / cond1 instead of t090C / c0mS/cm
+    reference_data = {
+        "ctd": {
+            "data": xr.Dataset(
+                {
+                    "prDM": ("time", pressure),
+                    "temp1": ("time", np.full(1000, 4.0)),
+                    "cond1": ("time", np.full(1000, 34.5)),
+                },
+                coords={"time": times},
+            ),
+            "config": {},
+        }
+    }
+    df = cf.calculate_universal_statistics_by_bottle_stop(
+        instruments, reference_data, {"name": "test"}, ctd_sensor=1
+    )
+    assert not df.empty
+
+
+def test_ctd_sensor_2_fallback_variable_names():
+    """Falls back to temp2/cond2 when t190C/c1mS/cm are absent (sensor 2)."""
+    times = pd.date_range("2024-01-01 12:00:00", periods=1000, freq="1s")
+    pressure = np.concatenate(
+        [
+            np.linspace(0, 90, 400),
+            np.full(200, 100),
+            np.linspace(100, 0, 400),
+        ]
+    )
+    instruments = {
+        "S001": {
+            "data": xr.Dataset(
+                {"temperature": ("time", np.full(1000, 4.0))},
+                coords={"time": times},
+            ),
+            "config": {"instrument": "sbe37", "label": "Test"},
+            "type": "sbe37",
+        }
+    }
+    reference_data = {
+        "ctd": {
+            "data": xr.Dataset(
+                {
+                    "prDM": ("time", pressure),
+                    "temp2": ("time", np.full(1000, 4.0)),
+                    "cond2": ("time", np.full(1000, 34.5)),
+                },
+                coords={"time": times},
+            ),
+            "config": {},
+        }
+    }
+    df = cf.calculate_universal_statistics_by_bottle_stop(
+        instruments, reference_data, {"name": "test"}, ctd_sensor=2
+    )
+    assert not df.empty

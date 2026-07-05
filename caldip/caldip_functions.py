@@ -217,10 +217,12 @@ def calculate_stats_for_time_period(
     Dict
         Statistics dictionary with means, stds, and sample count for each variable
     """
-    # Convert dataset time to numeric
-    time_numeric = pd.to_datetime(data.time.values).astype(np.int64) / 1e9
-    start_ts = start_time.timestamp()
-    end_ts = end_time.timestamp()
+    # Normalize to nanoseconds before int64 so xarray (μs) and pandas (ns) agree
+    time_numeric = (
+        pd.to_datetime(data.time.values).astype("datetime64[ns]").astype(np.int64) / 1e9
+    )
+    start_ts = pd.Timestamp(start_time).value / 1e9
+    end_ts = pd.Timestamp(end_time).value / 1e9
 
     # Create time mask
     time_mask = (time_numeric >= start_ts) & (time_numeric <= end_ts)
@@ -387,6 +389,7 @@ def calculate_universal_statistics_by_bottle_stop(
 
             # Quality flags (thresholds: T ±0.005°C, C ±0.02 mS/cm, P ±5 dbar)
             def format_status(diff, threshold, var_name):
+                """Return a human-readable quality flag string for a single variable difference."""
                 if np.isnan(diff):
                     return f"{var_name} NO DATA"
                 elif abs(diff) <= threshold:
