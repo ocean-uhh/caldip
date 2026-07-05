@@ -20,7 +20,16 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Oceanography",
+  "Topic :: Scientific/Engineering :: Atmospheric Science",
+  "Intended Audience :: Science/Research",
 ]
+
+[project.urls]
+Homepage = "https://github.com/eleanorfrajka/caldip"
+Repository = "https://github.com/eleanorfrajka/caldip"
+Documentation = "https://eleanorfrajka.github.io/caldip"
+"Bug Tracker" = "https://github.com/eleanorfrajka/caldip/issues"
 version = "0.1.0"
 dynamic = [
   "dependencies",

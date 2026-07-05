@@ -77,6 +77,22 @@ After generation, open the stub and fill in the fields marked `null` or `.nan`.
 | `directory` | string | yes | Path to cast folder (relative to repo root or absolute) |
 | `ctd_file` | string | yes | CTD `.cnv` filename |
 | `ctd_sensors` | integer | recommended | Which sensor pair to use: `1` (primary) or `2` (secondary) |
+| `ctd_vars` | mapping | optional | Override CTD variable names (see below) |
+
+#### `ctd_vars` — overriding CTD variable names
+
+By default caldip looks for standard SBEDataProcessing output names (`t090C`, `t190C`, `c0mS/cm`, `c1mS/cm`, `prDM`). If your CNV file uses different names — because of a non-standard SBEDataProcessing template or a different instrument — add a `ctd_vars` block:
+
+```yaml
+ctd_vars:
+  temp: "TEMP"    # replaces t090C / t190C
+  cond: "CNDC"    # replaces c0mS/cm / c1mS/cm
+  press: "PRES"   # replaces prDM (optional; auto-detected if absent)
+```
+
+Only set the fields that differ. Omitting a field keeps the default auto-detection for that variable. The override applies to whichever sensor is selected via `ctd_sensors` or `--ctd-sensor`.
+
+> **When do you need this?** Run `caldip stats` and check whether the temperature difference column is NaN for all bottle stops. If so, open the `.cnv` file in a text editor, find the variable name list near the top of the header, and add the correct names here.
 
 ### Instruments list
 

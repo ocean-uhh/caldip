@@ -343,32 +343,11 @@ def load_ctd_data(file_path: Union[str, Path]) -> xr.Dataset:
     file_path = Path(file_path)
 
     if file_path.suffix.lower() == ".hex":
-        # For .hex files, use our custom MSM142 parser
-        try:
-            # Import the MSM142 parser
-            import sys
-            from pathlib import Path as PathlibPath
-
-            parser_path = PathlibPath(__file__).parent.parent / "msm142_hex_parser.py"
-            if parser_path.exists():
-                sys.path.insert(0, str(parser_path.parent))
-                from msm142_hex_parser import load_msm142_hex
-
-                # Use the base path (without extension)
-                base_path = str(file_path.with_suffix(""))
-                ds = load_msm142_hex(base_path)
-            else:
-                raise ImportError("MSM142 hex parser not found")
-
-        except Exception as e:
-            warnings.warn(
-                f"Failed to load hex with MSM142 parser: {e}. Falling back to basic approach."
-            )
-            # Fallback to basic approach if available
-            if SEABIRD_AVAILABLE:
-                ds = sbe911_hex_reader(file_path)
-            else:
-                raise ImportError("No suitable hex parser available")
+        raise ValueError(
+            f"CTD hex files are not supported directly: {file_path.name}\n"
+            "Convert the file to a 1-Hz CNV file using SBEDataProcessing first, "
+            "then update the 'ctd_file' field in your YAML to point to the .cnv output."
+        )
 
     elif file_path.suffix.lower() == ".cnv":
         # For .cnv files, use seabirdscientific if available

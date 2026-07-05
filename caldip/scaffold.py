@@ -51,10 +51,18 @@ def generate_stub_yaml(directory: str, print_only: bool = False) -> Dict:
 
     # Find CTD file and extract metadata
     ctd_file = _find_ctd_file(dir_path)
-    if not ctd_file:
-        raise FileNotFoundError(f"No *_1sec.cnv file found in {directory}")
+    if ctd_file:
+        ctd_metadata = _extract_ctd_metadata(ctd_file)
+        ctd_file_name = ctd_file.name
+    else:
+        import warnings
 
-    ctd_metadata = _extract_ctd_metadata(ctd_file)
+        warnings.warn(
+            f"Could not auto-detect CTD CNV file in {directory}. "
+            "Set 'ctd_file' manually in the generated YAML."
+        )
+        ctd_metadata = {}
+        ctd_file_name = None
 
     # Detect instruments
     instruments = _detect_instruments(dir_path)
@@ -66,7 +74,7 @@ def generate_stub_yaml(directory: str, print_only: bool = False) -> Dict:
         "waterdepth": ".nan",
         "cruise": cruise_name,
         "directory": f"{directory}/",
-        "ctd_file": ctd_file.name,
+        "ctd_file": ctd_file_name,
         "ctd_sensors": 2,  # Default assumption
         "instruments": instruments,
     }
@@ -128,11 +136,42 @@ def generate_stub_yaml(directory: str, print_only: bool = False) -> Dict:
 
 
 def _find_ctd_file(directory: Path) -> Optional[Path]:
-    """Find the main CTD file (*_1sec.cnv) in the directory."""
+    """Find the CTD CNV file in the directory.
+
+    Prefers *_1sec.cnv (SBEDataProcessing convention). If not found, reads
+    the first line of each .cnv file and picks the one that identifies itself
+    as an SBE 9 (shipboard CTD) rather than SBE 37 / SBE 56 (mooring
+    instruments). Returns None if the CTD file cannot be determined.
+    """
     files = list(directory.glob("*_1sec.cnv"))
     if files:
         return files[0]
+
+    all_cnv = list(directory.glob("*.cnv"))
+    if not all_cnv:
+        return None
+
+    ctd_files = [f for f in all_cnv if _is_sbe9_cnv(f)]
+    if len(ctd_files) == 1:
+        return ctd_files[0]
+    if len(ctd_files) > 1:
+        import warnings
+
+        warnings.warn(
+            f"Multiple SBE 9 CNV files found in {directory}: "
+            f"{[f.name for f in ctd_files]}. Set 'ctd_file' manually in the YAML."
+        )
     return None
+
+
+def _is_sbe9_cnv(file_path: Path) -> bool:
+    """Return True if the CNV file header identifies it as an SBE 9 CTD."""
+    try:
+        with open(file_path, "r", encoding="latin1") as f:
+            first_line = f.readline()
+        return "SBE 9" in first_line
+    except OSError:
+        return False
 
 
 def _extract_ctd_metadata(ctd_file: Path) -> Dict:
@@ -345,6 +384,8 @@ def _detect_instruments(directory: Path) -> List[Dict]:
     """Detect instruments based on files in directory."""
     instruments = []
 
+    ctd_file = _find_ctd_file(directory)
+
     # Find all potential instrument files
     all_files = list(directory.glob("*"))
 
@@ -354,8 +395,8 @@ def _detect_instruments(directory: Path) -> List[Dict]:
 
     for f in all_files:
         if f.is_file() and f.suffix.lower() not in ignored_extensions:
-            # Skip the main CTD file
-            if "_1sec.cnv" in f.name:
+            # Skip the CTD reference file
+            if ctd_file and f == ctd_file:
                 continue
             instrument_files.append(f)
 

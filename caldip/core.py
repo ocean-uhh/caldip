@@ -311,15 +311,23 @@ def stats(
 
     print(f"Found {len(bottle_stops)} bottle stops for analysis")
 
-    # Get CTD variable names
-    if ctd_sensor == 1:
+    # Get CTD variable names — YAML ctd_vars overrides auto-detection
+    yaml_vars = config.get("ctd_vars", {})
+    if yaml_vars.get("temp"):
+        ctd_temp = yaml_vars["temp"]
+    elif ctd_sensor == 1:
         ctd_temp = "t090C" if "t090C" in ctd_data else "temp1"
-        ctd_cond = "c0mS/cm" if "c0mS/cm" in ctd_data else "cond1"
     else:
         ctd_temp = "t190C" if "t190C" in ctd_data else "temp2"
+
+    if yaml_vars.get("cond"):
+        ctd_cond = yaml_vars["cond"]
+    elif ctd_sensor == 1:
+        ctd_cond = "c0mS/cm" if "c0mS/cm" in ctd_data else "cond1"
+    else:
         ctd_cond = "c1mS/cm" if "c1mS/cm" in ctd_data else "cond2"
 
-    ctd_press = "prDM" if "prDM" in ctd_data else "press"
+    ctd_press = yaml_vars.get("press") or ("prDM" if "prDM" in ctd_data else "press")
 
     # Convert CTD time to numeric for time comparisons
     ctd_time_dt = pd.to_datetime(ctd_data.time.values)
