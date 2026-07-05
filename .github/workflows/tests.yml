@@ -38,8 +38,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools wheel
-        pip install --only-binary=matplotlib "matplotlib>=3.9"
-        pip install --prefer-binary -r requirements.txt
+        pip install --only-binary=matplotlib --prefer-binary -r requirements.txt
         pip install -r requirements-test.txt
     - name: Install caldip
       run: |
