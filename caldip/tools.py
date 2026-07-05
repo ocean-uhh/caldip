@@ -12,7 +12,7 @@ Currently Used Functions:
 - summary_stats() -> pd.DataFrame
   Extract summary statistics from detailed bottle stop statistics
 
-These functions are used by data_loader.py and the main processing scripts.
+These functions are used by caldip.readers, caldip.core, and the CLI entry points in caldip.cli.
 """
 
 import numpy as np

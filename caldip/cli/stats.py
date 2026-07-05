@@ -149,11 +149,12 @@ def run(args):
 
     output_path = Path(args.output_dir) if args.output_dir else data_dir.parent
     output_path.mkdir(parents=True, exist_ok=True)
-    base_name = args.output if args.output else config["name"]
+    cast_name = config.get("name") or config_file.stem
+    base_name = args.output if args.output else cast_name
 
     detailed_csv = output_path / f"{base_name}_detailed_statistics.csv"
     summary_csv = output_path / f"{base_name}_summary_statistics.csv"
-    timing_txt = output_path / f"{config['name']}_timing.txt"
+    timing_txt = output_path / f"{base_name}_timing.txt"
 
     if not detailed_df.empty:
         float_cols = [
@@ -183,7 +184,7 @@ def run(args):
         out_df.to_csv(detailed_csv, index=False)
         print(f"\nSaved detailed statistics to {detailed_csv}")
 
-    csv_df = summary_df.drop("ctd_stats", axis=1).copy()
+    csv_df = summary_df.drop("ctd_stats", axis=1, errors="ignore").copy()
     csv_df = csv_df.rename(
         columns={
             "N": "n_samples",
@@ -208,9 +209,13 @@ def run(args):
     csv_df.to_csv(summary_csv, index=False)
     print(f"Saved summary statistics to {summary_csv}")
 
-    bottle_stops = core.find_bottle_stops(list(reference_data.values())[0]["data"])
+    bottle_stops = core.find_bottle_stops(
+        list(reference_data.values())[0]["data"],
+        threshold_dbar_per_min=args.threshold,
+        min_duration_seconds=args.min_duration,
+    )
     with open(timing_txt, "w") as f:
-        f.write(f"CALDIP TIMING REPORT - {config['name']}\n")
+        f.write(f"CALDIP TIMING REPORT - {cast_name}\n")
         f.write("=" * 60 + "\n\n")
         if bottle_stops:
             f.write(f"Found {len(bottle_stops)} bottle stop(s):\n\n")

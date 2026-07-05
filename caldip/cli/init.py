@@ -3,7 +3,7 @@
 import sys
 import argparse
 
-from caldip.readers import generate_stub_yaml
+from caldip.scaffold import generate_stub_yaml
 
 
 def build_parser(subparsers=None):

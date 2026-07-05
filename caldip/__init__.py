@@ -21,5 +21,6 @@ __all__ = [
     "trim_to_deployment",
     "core",
     "readers",
+    "scaffold",
     "tools",
 ]

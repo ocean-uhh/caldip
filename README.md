@@ -36,12 +36,14 @@ caldip/
 │   ├── __init__.py            # Public API: plot, stats, find_bottle_stops, load_config
 │   ├── core.py                # Core algorithms
 │   ├── readers.py             # Universal data loading
+│   ├── scaffold.py            # Stub YAML generator (caldip init)
 │   ├── tools.py               # Shared utilities
 │   ├── sbe_hex_reader.py      # SBE hex format reader
 │   ├── _plot.py               # Plotly implementation (internal)
 │   ├── _writers.py            # Output formatting (internal)
 │   └── cli/                   # CLI entry points
 │       ├── __init__.py        # `caldip` dispatcher
+│       ├── init.py            # `caldip init` subcommand
 │       ├── plot.py            # `caldip plot` subcommand
 │       └── stats.py           # `caldip stats` subcommand
 ├── generate_all_caldip_plots.sh  # Batch processing script
