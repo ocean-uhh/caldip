@@ -329,6 +329,19 @@ def stats(
 
     ctd_press = yaml_vars.get("press") or ("prDM" if "prDM" in ctd_data else "press")
 
+    # Validate that the resolved variable names actually exist in the CTD data
+    for var_name, var_label in [(ctd_temp, "temp"), (ctd_press, "press")]:
+        if var_name not in ctd_data.data_vars:
+            source = (
+                f"ctd_vars.{var_label}"
+                if yaml_vars.get(var_label)
+                else "auto-detection"
+            )
+            raise KeyError(
+                f"CTD variable '{var_name}' (from {source}) not found in CTD data. "
+                f"Available variables: {list(ctd_data.data_vars)}"
+            )
+
     # Convert CTD time to numeric for time comparisons
     ctd_time_dt = pd.to_datetime(ctd_data.time.values)
     ctd_time_numeric = np.array([t.timestamp() for t in ctd_time_dt])

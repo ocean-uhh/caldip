@@ -61,7 +61,15 @@ def generate_stub_yaml(directory: str, print_only: bool = False) -> Dict:
             f"Could not auto-detect CTD CNV file in {directory}. "
             "Set 'ctd_file' manually in the generated YAML."
         )
-        ctd_metadata = {}
+        ctd_metadata = {
+            "start_time": None,
+            "end_time": None,
+            "latitude": None,
+            "longitude": None,
+            "ship": None,
+            "nvalues": None,
+            "interval": None,
+        }
         ctd_file_name = None
 
     # Detect instruments
@@ -395,8 +403,10 @@ def _detect_instruments(directory: Path) -> List[Dict]:
 
     for f in all_files:
         if f.is_file() and f.suffix.lower() not in ignored_extensions:
-            # Skip the CTD reference file
+            # Skip the CTD reference file (known or identified by header)
             if ctd_file and f == ctd_file:
+                continue
+            if ctd_file is None and f.suffix.lower() == ".cnv" and _is_sbe9_cnv(f):
                 continue
             instrument_files.append(f)
 
