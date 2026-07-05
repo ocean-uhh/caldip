@@ -96,14 +96,14 @@
 <span class="sd">modules in the caldip package.</span>
 
 <span class="sd">Currently Used Functions:</span>
-<span class="sd">- instrument_data_to_xarray() -&gt; xr.Dataset</span>
+<span class="sd">- to_xarray() -&gt; xr.Dataset</span>
 <span class="sd">  Convert seabirdscientific objects to xarray Datasets</span>
-<span class="sd">- trim_data_to_deployment() -&gt; tuple</span>
+<span class="sd">- trim_to_deployment() -&gt; tuple</span>
 <span class="sd">  Trim instrument and reference data to deployment/recovery times</span>
-<span class="sd">- extract_summary_from_detailed_stats() -&gt; pd.DataFrame</span>
+<span class="sd">- summary_stats() -&gt; pd.DataFrame</span>
 <span class="sd">  Extract summary statistics from detailed bottle stop statistics</span>
 
-<span class="sd">These functions are used by data_loader.py and the main processing scripts.</span>
+<span class="sd">These functions are used by caldip.readers, caldip.core, and the CLI entry points in caldip.cli.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -112,9 +112,9 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span>
 
 
-<div class="viewcode-block" id="instrument_data_to_xarray">
-<a class="viewcode-back" href="../../caldip.html#caldip.tools.instrument_data_to_xarray">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">instrument_data_to_xarray</span><span class="p">(</span><span class="n">instrument_data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<div class="viewcode-block" id="to_xarray">
+<a class="viewcode-back" href="../../caldip.html#caldip.tools.to_xarray">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">to_xarray</span><span class="p">(</span><span class="n">instrument_data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert seabirdscientific InstrumentData object to xarray Dataset.</span>
 
@@ -194,9 +194,9 @@
 
 
 
-<div class="viewcode-block" id="trim_data_to_deployment">
-<a class="viewcode-back" href="../../caldip.html#caldip.tools.trim_data_to_deployment">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">trim_data_to_deployment</span><span class="p">(</span>
+<div class="viewcode-block" id="trim_to_deployment">
+<a class="viewcode-back" href="../../caldip.html#caldip.tools.trim_to_deployment">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">trim_to_deployment</span><span class="p">(</span>
     <span class="n">instruments</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">],</span> <span class="n">reference_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">],</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -259,11 +259,9 @@
 
 
 
-<div class="viewcode-block" id="extract_summary_from_detailed_stats">
-<a class="viewcode-back" href="../../caldip.html#caldip.tools.extract_summary_from_detailed_stats">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">extract_summary_from_detailed_stats</span><span class="p">(</span>
-    <span class="n">detailed_stats_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<div class="viewcode-block" id="summary_stats">
+<a class="viewcode-back" href="../../caldip.html#caldip.tools.summary_stats">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">summary_stats</span><span class="p">(</span><span class="n">detailed_stats_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Extract summary statistics from detailed bottle stop statistics.</span>
 <span class="sd">    Uses the deepest bottle stop data for each instrument.</span>
