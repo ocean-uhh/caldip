@@ -28,7 +28,7 @@ jobs:
         environment-name: TEST
         init-shell: bash
         create-args: >-
-          python=3 pip
+          python=3 pip matplotlib
           --file requirements-dev.txt
           --channel conda-forge
 
