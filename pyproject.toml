@@ -7,6 +7,7 @@ requires = [
 
 [project]
 name = "caldip"
+version = "0.1.0"
 description = "Calibration dip analysis for oceanographic instruments"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -20,8 +21,10 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Oceanography",
+  "Topic :: Scientific/Engineering :: Atmospheric Science",
+  "Intended Audience :: Science/Research",
 ]
-version = "0.1.0"
 dynamic = [
   "dependencies",
 ]
