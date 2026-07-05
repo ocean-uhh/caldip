@@ -26,6 +26,12 @@ dynamic = [
   "dependencies",
 ]
 
+[project.urls]
+Homepage = "https://github.com/ocean-uhh/caldip"
+Repository = "https://github.com/ocean-uhh/caldip"
+Documentation = "https://ocean-uhh.github.io/caldip"
+"Bug Tracker" = "https://github.com/ocean-uhh/caldip/issues"
+
 [project.scripts]
 caldip = "caldip.cli:main"
 

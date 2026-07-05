@@ -1,5 +1,10 @@
 # 🌊 caldip
 
+[![Tests](https://github.com/ocean-uhh/caldip/actions/workflows/tests.yml/badge.svg)](https://github.com/ocean-uhh/caldip/actions/workflows/tests.yml)
+[![Docs](https://github.com/ocean-uhh/caldip/actions/workflows/docs.yml/badge.svg)](https://github.com/ocean-uhh/caldip/actions/workflows/docs.yml)
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 **Calibration dip analysis for oceanographic instruments**
 
 Caldip provides tools for processing, analyzing, and visualizing data from calibration dips performed with CTD profiles and multiple instrument types including MicroCATs and RBR thermistors. The package enables comparison and calibration analysis between reference CTD measurements and deployed oceanographic instruments during calibration dips.
@@ -9,7 +14,7 @@ Caldip provides tools for processing, analyzing, and visualizing data from calib
 ### Installation
 
 ```bash
-git clone https://github.com/eleanorfrajka/caldip.git
+git clone https://github.com/ocean-uhh/caldip.git
 cd caldip
 pip install -r requirements.txt
 pip install -e .
@@ -200,7 +205,7 @@ for stop in stops:
     print(f"  {stop['pressure']:.0f} dbar — {stop['duration_seconds']/60:.1f} min")
 ```
 
-See the [API documentation](https://eleanorfrajka.github.io/caldip) for full details.
+See the [API documentation](https://ocean-uhh.github.io/caldip) for full details.
 
 ## 🛠️ Dependencies
 
