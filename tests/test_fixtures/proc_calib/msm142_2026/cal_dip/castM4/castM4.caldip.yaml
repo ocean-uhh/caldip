@@ -20,7 +20,7 @@ instruments:
   file_type: 'rbr-matlab-legacy'
   filename: '013874_20260403_1302.mat'
   depth: 0
-  clock_offset: 2599175 # 7175
+  clock_offset: 7175
 - position: '2'
   serial: 13840
   label: 'SBE37'
