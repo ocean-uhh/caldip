@@ -7,6 +7,7 @@ requires = [
 
 [project]
 name = "caldip"
+version = "0.1.0"
 description = "Calibration dip analysis for oceanographic instruments"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -24,16 +25,15 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Atmospheric Science",
   "Intended Audience :: Science/Research",
 ]
+dynamic = [
+  "dependencies",
+]
 
 [project.urls]
 Homepage = "https://github.com/eleanorfrajka/caldip"
 Repository = "https://github.com/eleanorfrajka/caldip"
 Documentation = "https://eleanorfrajka.github.io/caldip"
 "Bug Tracker" = "https://github.com/eleanorfrajka/caldip/issues"
-version = "0.1.0"
-dynamic = [
-  "dependencies",
-]
 
 [project.scripts]
 caldip = "caldip.cli:main"
