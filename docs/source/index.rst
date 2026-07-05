@@ -9,7 +9,7 @@ Welcome to caldip's documentation!
 It provides tools for processing, analyzing, and visualizing data from calibration dips
 performed with CTD profiles and multiple instrument types including MicroCATs and RBR thermistors.
 
-For recommendations or bug reports, please visit https://github.com/eleanorfrajka/caldip/issues/new
+For recommendations or bug reports, please visit https://github.com/ocean-uhh/caldip/issues/new
 
 
 
@@ -33,7 +33,7 @@ For recommendations or bug reports, please visit https://github.com/eleanorfrajk
    :maxdepth: 3
    :caption: Help and reference
 
-   GitHub Repo <http://github.com/eleanorfrajka/caldip>
+   GitHub Repo <http://github.com/ocean-uhh/caldip>
    caldip
    aboutcaldip
    bottle_stops
