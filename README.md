@@ -3,7 +3,7 @@
 [![Tests](https://github.com/ocean-uhh/caldip/actions/workflows/tests.yml/badge.svg)](https://github.com/ocean-uhh/caldip/actions/workflows/tests.yml)
 [![Docs](https://github.com/ocean-uhh/caldip/actions/workflows/docs.yml/badge.svg)](https://github.com/ocean-uhh/caldip/actions/workflows/docs.yml)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/github/license/ocean-uhh/caldip)](https://github.com/ocean-uhh/caldip)
 
 **Calibration dip analysis for oceanographic instruments**
 

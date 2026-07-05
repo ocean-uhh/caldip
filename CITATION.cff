@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+title: "caldip: Calibration Dip Analysis for Oceanographic Instruments"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: Frajka-Williams
+    given-names: Eleanor
+    orcid: "https://orcid.org/0000-0001-8773-7838"
+    affiliation: "University of Hamburg, Oceanography"
+repository-code: "https://github.com/ocean-uhh/caldip"
+url: "https://ocean-uhh.github.io/caldip"
+abstract: >-
+  caldip is a Python package for calibration dip analysis of oceanographic
+  instruments. It provides tools for processing, analyzing, and visualizing
+  data from calibration dips performed with CTD profiles and multiple
+  instrument types including MicroCATs and RBR thermistors. The package
+  enables comparison and calibration analysis between reference CTD
+  measurements and deployed oceanographic instruments during calibration dips.
+keywords:
+  - oceanography
+  - calibration
+  - CTD
+  - MicroCAT
+  - RBR
+  - instruments
+  - bottle stops
+license: MIT
+version: "0.1.0"
+date-released: "2026-07-05"
