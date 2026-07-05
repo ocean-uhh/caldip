@@ -156,12 +156,46 @@ The core algorithm for detecting bottle stops in CTD data (`caldip/core.py:find_
 
 ## 🐍 Python API
 
-For use in Jupyter notebooks or custom scripts:
+For use in Jupyter notebooks or custom scripts. Prefer `import caldip` over `from caldip import plot, stats` to avoid shadowing common names like `scipy.stats`.
+
+### Typical notebook workflow
+
+```python
+import caldip
+from pathlib import Path
+
+# 1. Load configuration
+config = caldip.load_config("data/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml")
+data_dir = Path("data/proc_calib/msm142_2026/cal_dip/castM4/")
+
+# 2. Load instrument and CTD data
+instruments = caldip.load_instruments_from_config(config, data_dir)
+reference   = caldip.load_reference_data(config, data_dir)
+
+# 3. Trim to deployment window (optional — uses deployment_time/recovery_time from YAML)
+instruments, reference = caldip.trim_to_deployment(instruments, reference, config)
+
+# 4. Interactive plot (opens in browser or notebook)
+fig = caldip.plot(instruments, reference, config=config)
+fig.show()
+
+# 5. Per-bottle-stop statistics
+df = caldip.stats(instruments, reference, config, ctd_sensor=2)
+print(df[["serial", "bl_press", "temp_diff", "cond_diff"]])
+```
+
+### Lower-level access
 
 ```python
 import caldip
 
-config = caldip.load_config("castM4/castM4.caldip.yaml")
+# Detect bottle stops from a CTD xarray Dataset
+ctd_data = caldip.load_reference_data(config, data_dir)
+ctd_ds   = list(ctd_data.values())[0]["data"]
+stops    = caldip.find_bottle_stops(ctd_ds)
+
+for stop in stops:
+    print(f"  {stop['pressure']:.0f} dbar — {stop['duration_seconds']/60:.1f} min")
 ```
 
 See the [API documentation](https://eleanorfrajka.github.io/caldip) for full details.
