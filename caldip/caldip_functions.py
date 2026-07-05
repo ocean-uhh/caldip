@@ -247,14 +247,45 @@ def calculate_stats_for_time_period(
     return stats
 
 
+def _format_status(diff: float, threshold: float, var_name: str) -> str:
+    """Return a human-readable quality flag string for a single variable difference."""
+    if np.isnan(diff):
+        return f"{var_name} NO DATA"
+    elif abs(diff) <= threshold:
+        return f"{var_name} OK"
+    elif diff > 0:
+        return f"{var_name} reads high by {abs(diff):.3f}"
+    else:
+        return f"{var_name} reads low by {abs(diff):.3f}"
+
+
 def calculate_universal_statistics_by_bottle_stop(
-    instrument_data: Dict, reference_data: Dict, config: Dict, ctd_sensor: int = 1
+    instrument_data: Dict,
+    reference_data: Dict,
+    config: Dict,
+    ctd_sensor: int = 1,
+    threshold_dbar_per_min: float = 10.0,
+    min_duration_seconds: float = 180.0,
+    temp_threshold: float = 0.005,
+    cond_threshold: float = 0.02,
+    press_threshold: float = 5.0,
 ) -> pd.DataFrame:
     """
     Calculate statistics for each bottle stop and each instrument (any type).
 
     Returns DataFrame with one row per bottle stop per instrument.
+
+    Quality flag thresholds (``temp_threshold``, ``cond_threshold``,
+    ``press_threshold``) determine when a difference is flagged as
+    "reads high/low" vs "OK".  They can also be set per-cast in the YAML
+    under ``quality_flags: {temp_threshold: 0.005, ...}``; explicit
+    arguments take precedence over YAML values.
     """
+    # YAML quality_flags override function defaults, explicit args override YAML
+    yaml_flags = config.get("quality_flags", {})
+    temp_threshold = yaml_flags.get("temp_threshold", temp_threshold)
+    cond_threshold = yaml_flags.get("cond_threshold", cond_threshold)
+    press_threshold = yaml_flags.get("press_threshold", press_threshold)
     # Get the first (and likely only) reference dataset
     if not reference_data:
         print("No reference data available!")
@@ -264,7 +295,11 @@ def calculate_universal_statistics_by_bottle_stop(
     ctd_data = reference_data[ref_name]["data"]
 
     # Get bottle stops using the detection function
-    bottle_stops = find_bottle_stops(ctd_data)
+    bottle_stops = find_bottle_stops(
+        ctd_data,
+        threshold_dbar_per_min=threshold_dbar_per_min,
+        min_duration_seconds=min_duration_seconds,
+    )
 
     if not bottle_stops:
         print("No bottle stops found!")
@@ -387,29 +422,9 @@ def calculate_universal_statistics_by_bottle_stop(
                 inst_press - ctd_press_comp if not np.isnan(inst_press) else np.nan
             )
 
-            # Quality flags (thresholds: T ±0.005°C, C ±0.02 mS/cm, P ±5 dbar)
-            def format_status(diff, threshold, var_name):
-                """Return a human-readable quality flag string for a single variable difference."""
-                if np.isnan(diff):
-                    return f"{var_name} NO DATA"
-                elif abs(diff) <= threshold:
-                    return f"{var_name} OK"
-                elif diff > 0:
-                    return f"{var_name} reads high by {abs(diff):.3f}"
-                else:
-                    return f"{var_name} reads low by {abs(diff):.3f}"
-
-            temp_status = format_status(temp_diff, 0.005, "T")
-            cond_status = (
-                format_status(cond_diff, 0.02, "C")
-                if not np.isnan(inst_cond)
-                else "C NO DATA"
-            )
-            press_status = (
-                format_status(press_diff, 5.0, "P")
-                if not np.isnan(inst_press)
-                else "P NO DATA"
-            )
+            temp_status = _format_status(temp_diff, temp_threshold, "T")
+            cond_status = _format_status(cond_diff, cond_threshold, "C")
+            press_status = _format_status(press_diff, press_threshold, "P")
 
             # Extract date and time components
             date_part = comp_start.strftime("%Y-%m-%d")
@@ -421,14 +436,12 @@ def calculate_universal_statistics_by_bottle_stop(
                     "serial": serial,
                     "instrument_type": inst_config.get("instrument", "unknown"),
                     "bl_press": round(stop["pressure"]),
-                    "temp_diff": round(temp_diff, 4) if not np.isnan(temp_diff) else "",
+                    "temp_diff": round(temp_diff, 4) if not np.isnan(temp_diff) else np.nan,
                     "temp_std": inst_temp_std,
-                    "cond_diff": round(cond_diff, 4) if not np.isnan(cond_diff) else "",
-                    "cond_std": inst_cond_std if not np.isnan(inst_cond_std) else "",
-                    "press_diff": (
-                        round(press_diff, 1) if not np.isnan(press_diff) else ""
-                    ),
-                    "press_std": inst_press_std if not np.isnan(inst_press_std) else "",
+                    "cond_diff": round(cond_diff, 4) if not np.isnan(cond_diff) else np.nan,
+                    "cond_std": inst_cond_std,
+                    "press_diff": round(press_diff, 1) if not np.isnan(press_diff) else np.nan,
+                    "press_std": inst_press_std,
                     "temp_status": temp_status,
                     "cond_status": cond_status,
                     "press_status": press_status,
@@ -436,13 +449,12 @@ def calculate_universal_statistics_by_bottle_stop(
                     "time_start": time_start,
                     "time_end": time_end,
                     "ctd_temp": ctd_temp_comp,
-                    "ctd_cond": ctd_cond_comp if not np.isnan(ctd_cond_comp) else "",
+                    "ctd_cond": ctd_cond_comp,
                     "inst_temp": inst_temp,
-                    "inst_cond": inst_cond if not np.isnan(inst_cond) else "",
-                    "inst_press": inst_press if not np.isnan(inst_press) else "",
+                    "inst_cond": inst_cond,
+                    "inst_press": inst_press,
                     "N": int(np.sum(inst_comp_mask)),
                     "label": inst_config.get("label", "Unknown"),
-                    "serial": serial,
                 }
             )
 

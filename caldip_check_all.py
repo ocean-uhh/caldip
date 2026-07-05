@@ -60,9 +60,9 @@ Examples:
     parser.add_argument(
         "--ctd-sensor",
         type=int,
-        default=1,
+        default=None,
         choices=[1, 2],
-        help="Which CTD sensor to use (1 or 2, default: 1)",
+        help="Which CTD sensor to use (1 or 2). Overrides ctd_sensors in YAML. Default: read from YAML, or 1.",
     )
     parser.add_argument(
         "--output", "-o", help="Output CSV file for detailed statistics"
@@ -70,6 +70,18 @@ Examples:
     parser.add_argument(
         "--output-dir",
         help="Directory to save output files (default: parent of data dir)",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=10.0,
+        help="Bottle stop detection threshold (dbar/min, default: 10.0)",
+    )
+    parser.add_argument(
+        "--min-duration",
+        type=float,
+        default=180.0,
+        help="Minimum bottle stop duration (seconds, default: 180.0)",
     )
     parser.add_argument("--data-dir", help="Override data directory from config")
 
@@ -91,6 +103,16 @@ Examples:
     except Exception as e:
         print(f"Error loading config file: {e}")
         return 1
+
+    # Resolve CTD sensor: CLI flag overrides YAML field; YAML overrides default of 1
+    if ctd_sensor is not None:
+        ctd_sensor = ctd_sensor
+    else:
+        ctd_sensor = int(config.get("ctd_sensors", 1))
+        if ctd_sensor not in (1, 2):
+            print(f"Warning: ctd_sensors={ctd_sensor} in YAML is not 1 or 2; using 1")
+            ctd_sensor = 1
+    print(f"Using CTD sensor: {ctd_sensor}")
 
     # Determine data directory
     if args.data_dir:
@@ -147,14 +169,19 @@ Examples:
     try:
         # Detailed statistics (per bottle stop)
         detailed_stats_df = cf.calculate_universal_statistics_by_bottle_stop(
-            instruments, reference_data, config, args.ctd_sensor
+            instruments,
+            reference_data,
+            config,
+            ctd_sensor,
+            threshold_dbar_per_min=args.threshold,
+            min_duration_seconds=args.min_duration,
         )
 
         # Summary statistics - extract from deepest bottle stop in detailed stats
         stats_df = extract_summary_from_detailed_stats(detailed_stats_df, config)
 
         # Print report
-        print_universal_statistics_report(stats_df, config, args.ctd_sensor)
+        print_universal_statistics_report(stats_df, config, ctd_sensor)
 
     except Exception as e:
         print(f"Error calculating statistics: {e}")
@@ -203,7 +230,7 @@ Examples:
                 )
 
         # Add CTD sensor information to the DataFrame
-        detailed_csv_df["ctd_sensor_used"] = args.ctd_sensor
+        detailed_csv_df["ctd_sensor_used"] = ctd_sensor
 
         # Sort by serial number, then by bottle depth
         detailed_csv_df = detailed_csv_df.sort_values(
@@ -290,7 +317,7 @@ Examples:
         else:
             f.write("No bottle stops detected.\n")
 
-        f.write(f"\nCTD sensor used: {args.ctd_sensor}\n")
+        f.write(f"\nCTD sensor used: {ctd_sensor}\n")
 
         # Write instrument summary
         type_counts = stats_df["instrument_type"].value_counts()

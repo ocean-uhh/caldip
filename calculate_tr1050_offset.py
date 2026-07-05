@@ -1,83 +1,135 @@
 #!/usr/bin/env python3
 """
-Calculate correct clock offset for TR1050 instruments
+Calculate and verify the clock offset for TR1050 instruments.
+
+Loads actual data files rather than using hardcoded timestamps.
+Previously, dates in this script were written in YYYY-DD-MM order (European
+day-first notation) but pandas parsed them as YYYY-MM-DD (ISO), producing
+February/March timestamps instead of April.  This version avoids that bug by
+reading timestamps directly from the mat files and CNV via the readers module.
 """
+
+import copy
+from pathlib import Path
 
 import pandas as pd
 
-# Deployment period
-deployment_start = pd.to_datetime("2026-04-03T03:05:36")
-deployment_end = pd.to_datetime("2026-04-03T05:08:24")
+from caldip import readers
 
-# TR1050 data after current 7175s offset (example from 015581)
-tr1050_start_with_7175 = pd.to_datetime("2026-02-04 18:37:21")
-tr1050_end_with_7175 = pd.to_datetime("2026-03-04 05:47:21")
+DATA_DIR = Path("data/proc_calib/msm142_2026/cal_dip/castM4")
+CONFIG_FILE = DATA_DIR / "castM4.caldip.yaml"
+TARGET_SERIAL = "015581"  # TR1050 instrument to analyse
 
-# SBE37 reference data (correct timing)
-sbe_start = pd.to_datetime("2026-04-03 03:45:01")
-sbe_end = pd.to_datetime("2026-04-03 05:32:11")
+# ── load config ───────────────────────────────────────────────────────────────
+config = readers.load_caldip_config(CONFIG_FILE)
+deployment_start = pd.Timestamp(config["deployment_time"])
+deployment_end = pd.Timestamp(config["recovery_time"])
 
 print("=== TR1050 Clock Offset Analysis ===")
-print(f"Deployment period:     {deployment_start} to {deployment_end}")
-print(f"TR1050 (with +7175s):  {tr1050_start_with_7175} to {tr1050_end_with_7175}")
-print(f"SBE37 (correct):       {sbe_start} to {sbe_end}")
+print(f"Deployment period: {deployment_start} to {deployment_end}")
 print()
 
-# Calculate the additional offset needed
-additional_offset_needed = (deployment_start - tr1050_start_with_7175).total_seconds()
-total_offset_needed = 7175 + additional_offset_needed
+# ── load TR1050 raw timestamps (clock_offset forced to 0) ─────────────────────
+config_raw = copy.deepcopy(config)
+for inst in config_raw["instruments"]:
+    if str(inst.get("serial", "")) == TARGET_SERIAL:
+        configured_offset = inst.get("clock_offset", 0)
+        inst["clock_offset"] = 0
+        break
 
-print(f"Current offset:        +7175 seconds ({7175/86400:.1f} days)")
-print(
-    f"Additional needed:     +{additional_offset_needed:.0f} seconds ({additional_offset_needed/86400:.1f} days)"
-)
-print(
-    f"Total offset needed:   +{total_offset_needed:.0f} seconds ({total_offset_needed/86400:.1f} days)"
-)
+instruments_raw = readers.load_instruments_from_config(config_raw, DATA_DIR)
+tr1050_key = next(k for k in instruments_raw if str(k) == TARGET_SERIAL)
+tr1050 = instruments_raw[tr1050_key]["data"]
+tr1050_start_raw = pd.Timestamp(tr1050.time.values[0])
+tr1050_end_raw = pd.Timestamp(tr1050.time.values[-1])
+
+print(f"TR1050 {TARGET_SERIAL} raw timestamps (clock_offset=0):")
+print(f"  Start: {tr1050_start_raw}")
+print(f"  End:   {tr1050_end_raw}")
+print(f"  Duration: {(tr1050_end_raw - tr1050_start_raw).total_seconds()/3600:.1f} hours")
 print()
 
-# Verify this aligns TR1050 with deployment period
-tr1050_corrected_start = tr1050_start_with_7175 + pd.Timedelta(
-    seconds=additional_offset_needed
-)
-tr1050_corrected_end = tr1050_end_with_7175 + pd.Timedelta(
-    seconds=additional_offset_needed
-)
+# ── load CTD reference ────────────────────────────────────────────────────────
+reference_data = readers.load_reference_data(config, DATA_DIR)
+ctd = list(reference_data.values())[0]["data"]
+ctd_start = pd.Timestamp(ctd.time.values[0])
+ctd_end = pd.Timestamp(ctd.time.values[-1])
 
-print("=== Verification ===")
-print(f"TR1050 with total offset: {tr1050_corrected_start} to {tr1050_corrected_end}")
-print(f"Deployment period:        {deployment_start} to {deployment_end}")
+print(f"CTD reference timestamps:")
+print(f"  Start: {ctd_start}")
+print(f"  End:   {ctd_end}")
 print()
 
-if (
-    tr1050_corrected_start <= deployment_end
-    and tr1050_corrected_end >= deployment_start
-):
-    print("✅ TR1050 data will overlap with deployment period!")
+# ── load SBE37 if present ─────────────────────────────────────────────────────
+# Load with clock_offset=0 so we see its raw times too
+config_sbe_raw = copy.deepcopy(config)
+for inst in config_sbe_raw["instruments"]:
+    if inst.get("instrument", "") == "sbe":
+        inst["clock_offset"] = 0
+sbe_instruments = {
+    k: v
+    for k, v in readers.load_instruments_from_config(config_sbe_raw, DATA_DIR).items()
+    if v["type"] == "sbe37"
+}
+if sbe_instruments:
+    sbe_key = next(iter(sbe_instruments))
+    sbe_data = sbe_instruments[sbe_key]["data"]
+    sbe_start = pd.Timestamp(sbe_data.time.values[0])
+    sbe_end = pd.Timestamp(sbe_data.time.values[-1])
+    print(f"SBE37 {sbe_key} timestamps (clock_offset=0):")
+    print(f"  Start: {sbe_start}")
+    print(f"  End:   {sbe_end}")
+    print()
 
-    # Check if corrected time aligns well with SBE data
-    time_diff_start = abs((tr1050_corrected_start - sbe_start).total_seconds())
-    time_diff_end = abs((tr1050_corrected_end - sbe_end).total_seconds())
-    print("Time alignment with SBE37:")
-    print(f"  Start difference: {time_diff_start:.0f} seconds")
-    print(f"  End difference:   {time_diff_end:.0f} seconds")
+# ── check coverage with configured offset ─────────────────────────────────────
+print(f"Configured clock_offset in YAML: {configured_offset} seconds"
+      f"  ({configured_offset/3600:.2f} hours)")
+print()
+
+tr1050_corrected_start = tr1050_start_raw + pd.Timedelta(seconds=configured_offset)
+tr1050_corrected_end = tr1050_end_raw + pd.Timedelta(seconds=configured_offset)
+
+print(f"TR1050 with clock_offset={configured_offset}s:")
+print(f"  Start: {tr1050_corrected_start}")
+print(f"  End:   {tr1050_corrected_end}")
+print()
+
+deploy_duration = (deployment_end - deployment_start).total_seconds()
+if tr1050_corrected_start <= deployment_end and tr1050_corrected_end >= deployment_start:
+    overlap_start = max(tr1050_corrected_start, deployment_start)
+    overlap_end = min(tr1050_corrected_end, deployment_end)
+    overlap_seconds = (overlap_end - overlap_start).total_seconds()
+    print(f"Deployment coverage: {overlap_seconds:.0f}s / {deploy_duration:.0f}s"
+          f"  ({100 * overlap_seconds / deploy_duration:.0f}%)")
+    if overlap_seconds >= deploy_duration:
+        print("✅ TR1050 fully covers the deployment period")
+    else:
+        gap_start = tr1050_corrected_start > deployment_start
+        gap_end = tr1050_corrected_end < deployment_end
+        if gap_start:
+            print(f"⚠️  Misses {(tr1050_corrected_start - deployment_start).total_seconds():.0f}s at start")
+        if gap_end:
+            print(f"⚠️  Misses {(deployment_end - tr1050_corrected_end).total_seconds():.0f}s at end")
 else:
-    print("❌ TR1050 data still won't overlap with deployment period")
+    print("❌ TR1050 does not overlap with the deployment period")
+    needed = (deployment_start - tr1050_end_raw).total_seconds()
+    print(f"   Minimum offset needed to reach deployment: {needed:.0f}s")
 
 print()
-print("=== Recommended YAML Update ===")
-print(
-    f"Change clock_offset from 7175 to {total_offset_needed:.0f} for all TR1050 instruments"
-)
 
-# Check the specific pattern the user mentioned
-days_30_plus_7175 = 30 * 86400 + 7175
-print(
-    f"\nUser's hypothesis (30 days + 7175): {days_30_plus_7175} seconds ({days_30_plus_7175/86400:.1f} days)"
-)
-print(
-    f"Our calculated total:                 {total_offset_needed:.0f} seconds ({total_offset_needed/86400:.1f} days)"
-)
-print(
-    f"Difference: {abs(total_offset_needed - days_30_plus_7175):.0f} seconds ({abs(total_offset_needed - days_30_plus_7175)/86400:.1f} days)"
-)
+# ── what offset would align TR1050 end with deployment end ────────────────────
+offset_to_align_ends = (deployment_end - tr1050_end_raw).total_seconds()
+print(f"Offset to align TR1050 end with deployment end: {offset_to_align_ends:.0f}s"
+      f"  ({offset_to_align_ends/3600:.2f} hours)")
+
+if sbe_instruments:
+    offset_tr_sbe_start = (sbe_start - tr1050_start_raw).total_seconds()
+    print(f"Time from TR1050 raw start to SBE37 start:      {offset_tr_sbe_start:.0f}s"
+          f"  ({offset_tr_sbe_start/3600:.2f} hours)")
+
+print()
+print("=== Summary ===")
+print(f"clock_offset = {configured_offset}  →  deployment coverage"
+      f" {100 * min(overlap_seconds, deploy_duration) / deploy_duration:.0f}%"
+      if tr1050_corrected_start <= deployment_end and tr1050_corrected_end >= deployment_start
+      else f"clock_offset = {configured_offset}  →  NO deployment coverage")

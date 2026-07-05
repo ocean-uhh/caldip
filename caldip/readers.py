@@ -434,27 +434,38 @@ def load_microcat_data(file_path: Union[str, Path]) -> xr.Dataset:
 
         # Fix time coordinate if timeJV2 (actual timestamps) is available
         if "timeJV2" in ds.data_vars:
-            # timeJV2 is in Julian days - SeaBird convention
-            # SeaBird uses day 1 = Jan 1, day 2 = Jan 2, etc.
-            # So day 0 = Dec 31 of previous year
-            # Based on the data: 89.125 julian days = Mar 30, 2026 at 3:00
-
+            # timeJV2 is Julian days: day 1 = Jan 1, so day 0 = Dec 31 of previous year.
+            # Parse the year from the CNV header rather than hardcoding it.
             import pandas as pd
             from datetime import datetime, timedelta
 
+            year = None
+            with open(file_path, "r") as _f:
+                for _line in _f:
+                    if "* System UpLoad Time =" in _line:
+                        try:
+                            _date_str = _line.split("=")[-1].strip()
+                            year = datetime.strptime(_date_str, "%b %d %Y %H:%M:%S").year
+                        except Exception:
+                            pass
+                        break
+
+            if year is None:
+                import warnings
+                warnings.warn(
+                    f"Could not parse year from CNV header in {file_path.name}; "
+                    "falling back to current year for timeJV2 conversion.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                year = datetime.now().year
+
             julian_days = ds.timeJV2.values
+            reference_date = datetime(year - 1, 12, 31, 0, 0, 0)
 
-            # Determine the year from the file or metadata
-            # For 2026 data: day 0 = Dec 31, 2025
-            reference_date = datetime(2025, 12, 31, 0, 0, 0)
-
-            # Convert julian days to actual timestamps
-            actual_timestamps = []
-            for jd in julian_days:
-                timestamp = reference_date + timedelta(days=float(jd))
-                actual_timestamps.append(timestamp)
-
-            # Replace the time coordinate with actual timestamps
+            actual_timestamps = [
+                reference_date + timedelta(days=float(jd)) for jd in julian_days
+            ]
             ds = ds.assign_coords(time=pd.DatetimeIndex(actual_timestamps))
             ds.attrs["time_corrected"] = "Using actual timestamps from timeJV2"
 
