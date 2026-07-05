@@ -13,7 +13,7 @@ plotly>=5.0
 matplotlib>=3.9
 
 # Oceanographic instrument data
-seabirdscientific>=1.2.0
+seabirdscientific>=2.7.9
 
 # Optional: Universal instrument data loading
 seasenselib
