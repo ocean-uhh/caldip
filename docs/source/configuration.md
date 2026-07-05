@@ -28,17 +28,15 @@ All filenames in the YAML are relative to the `directory` field (i.e., the cast 
 
 ## Generating a stub
 
-`generate_stub_yaml.py` scans a cast directory for recognised instrument files and writes a skeleton YAML:
+`caldip init` scans a cast directory for recognised instrument files and writes a skeleton YAML:
 
 ```bash
 # Write YAML to the directory
-python generate_stub_yaml.py moor/proc_calib/msm142_2026/cal_dip/castM4/
+caldip init moor/proc_calib/msm142_2026/cal_dip/castM4/
 
-# Print to stdout instead
-python generate_stub_yaml.py --print-only moor/proc_calib/msm142_2026/cal_dip/castM4/
+# Print to stdout instead (useful for inspection before writing)
+caldip init --print-only moor/proc_calib/msm142_2026/cal_dip/castM4/
 ```
-
-`generate_stub_yamls.sh` wraps this for batch processing multiple cast directories.
 
 After generation, open the stub and fill in the fields marked `null` or `.nan`.
 
@@ -86,9 +84,9 @@ After generation, open the stub and fill in the fields marked `null` or `.nan`.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `position` | string | recommended | Position number on mooring frame, e.g. `'1'` |
+| `position` | string | recommended | Position number, e.g. `'1'` - does not affect processing |
 | `serial` | string or integer | yes | Instrument serial number |
-| `label` | string | recommended | Human-readable model, e.g. `SBE37`, `TR1050` |
+| `label` | string | recommended | Human-readable model, e.g. `MC` or `SBE37`, `Thermistor` or `TR1050` |
 | `instrument` | string | yes | Instrument family: `sbe37`, `sbe`, or `rbr` |
 | `file_type` | string | yes | File format (see table below) |
 | `filename` | string | yes | Data filename relative to `directory` |
@@ -122,7 +120,7 @@ longitude: -48.8285
 waterdepth: .nan
 directory: 'moor/proc_calib/msm142_2026/cal_dip/castM3/'
 ctd_file: 'msm_142_1_035_1sec.cnv'
-ctd_sensors: 2
+ctd_sensors: 2  # use secondary, 1=primary
 instruments:
   - position: '1'
     serial: '26271'
