@@ -46,7 +46,9 @@ tr1050_end_raw = pd.Timestamp(tr1050.time.values[-1])
 print(f"TR1050 {TARGET_SERIAL} raw timestamps (clock_offset=0):")
 print(f"  Start: {tr1050_start_raw}")
 print(f"  End:   {tr1050_end_raw}")
-print(f"  Duration: {(tr1050_end_raw - tr1050_start_raw).total_seconds()/3600:.1f} hours")
+print(
+    f"  Duration: {(tr1050_end_raw - tr1050_start_raw).total_seconds()/3600:.1f} hours"
+)
 print()
 
 # ── load CTD reference ────────────────────────────────────────────────────────
@@ -55,7 +57,7 @@ ctd = list(reference_data.values())[0]["data"]
 ctd_start = pd.Timestamp(ctd.time.values[0])
 ctd_end = pd.Timestamp(ctd.time.values[-1])
 
-print(f"CTD reference timestamps:")
+print("CTD reference timestamps:")
 print(f"  Start: {ctd_start}")
 print(f"  End:   {ctd_end}")
 print()
@@ -82,8 +84,10 @@ if sbe_instruments:
     print()
 
 # ── check coverage with configured offset ─────────────────────────────────────
-print(f"Configured clock_offset in YAML: {configured_offset} seconds"
-      f"  ({configured_offset/3600:.2f} hours)")
+print(
+    f"Configured clock_offset in YAML: {configured_offset} seconds"
+    f"  ({configured_offset/3600:.2f} hours)"
+)
 print()
 
 tr1050_corrected_start = tr1050_start_raw + pd.Timedelta(seconds=configured_offset)
@@ -95,21 +99,30 @@ print(f"  End:   {tr1050_corrected_end}")
 print()
 
 deploy_duration = (deployment_end - deployment_start).total_seconds()
-if tr1050_corrected_start <= deployment_end and tr1050_corrected_end >= deployment_start:
+if (
+    tr1050_corrected_start <= deployment_end
+    and tr1050_corrected_end >= deployment_start
+):
     overlap_start = max(tr1050_corrected_start, deployment_start)
     overlap_end = min(tr1050_corrected_end, deployment_end)
     overlap_seconds = (overlap_end - overlap_start).total_seconds()
-    print(f"Deployment coverage: {overlap_seconds:.0f}s / {deploy_duration:.0f}s"
-          f"  ({100 * overlap_seconds / deploy_duration:.0f}%)")
+    print(
+        f"Deployment coverage: {overlap_seconds:.0f}s / {deploy_duration:.0f}s"
+        f"  ({100 * overlap_seconds / deploy_duration:.0f}%)"
+    )
     if overlap_seconds >= deploy_duration:
         print("✅ TR1050 fully covers the deployment period")
     else:
         gap_start = tr1050_corrected_start > deployment_start
         gap_end = tr1050_corrected_end < deployment_end
         if gap_start:
-            print(f"⚠️  Misses {(tr1050_corrected_start - deployment_start).total_seconds():.0f}s at start")
+            print(
+                f"⚠️  Misses {(tr1050_corrected_start - deployment_start).total_seconds():.0f}s at start"
+            )
         if gap_end:
-            print(f"⚠️  Misses {(deployment_end - tr1050_corrected_end).total_seconds():.0f}s at end")
+            print(
+                f"⚠️  Misses {(deployment_end - tr1050_corrected_end).total_seconds():.0f}s at end"
+            )
 else:
     print("❌ TR1050 does not overlap with the deployment period")
     needed = (deployment_start - tr1050_end_raw).total_seconds()
@@ -119,17 +132,24 @@ print()
 
 # ── what offset would align TR1050 end with deployment end ────────────────────
 offset_to_align_ends = (deployment_end - tr1050_end_raw).total_seconds()
-print(f"Offset to align TR1050 end with deployment end: {offset_to_align_ends:.0f}s"
-      f"  ({offset_to_align_ends/3600:.2f} hours)")
+print(
+    f"Offset to align TR1050 end with deployment end: {offset_to_align_ends:.0f}s"
+    f"  ({offset_to_align_ends/3600:.2f} hours)"
+)
 
 if sbe_instruments:
     offset_tr_sbe_start = (sbe_start - tr1050_start_raw).total_seconds()
-    print(f"Time from TR1050 raw start to SBE37 start:      {offset_tr_sbe_start:.0f}s"
-          f"  ({offset_tr_sbe_start/3600:.2f} hours)")
+    print(
+        f"Time from TR1050 raw start to SBE37 start:      {offset_tr_sbe_start:.0f}s"
+        f"  ({offset_tr_sbe_start/3600:.2f} hours)"
+    )
 
 print()
 print("=== Summary ===")
-print(f"clock_offset = {configured_offset}  →  deployment coverage"
-      f" {100 * min(overlap_seconds, deploy_duration) / deploy_duration:.0f}%"
-      if tr1050_corrected_start <= deployment_end and tr1050_corrected_end >= deployment_start
-      else f"clock_offset = {configured_offset}  →  NO deployment coverage")
+print(
+    f"clock_offset = {configured_offset}  →  deployment coverage"
+    f" {100 * min(overlap_seconds, deploy_duration) / deploy_duration:.0f}%"
+    if tr1050_corrected_start <= deployment_end
+    and tr1050_corrected_end >= deployment_start
+    else f"clock_offset = {configured_offset}  →  NO deployment coverage"
+)

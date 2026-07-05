@@ -436,11 +436,17 @@ def calculate_universal_statistics_by_bottle_stop(
                     "serial": serial,
                     "instrument_type": inst_config.get("instrument", "unknown"),
                     "bl_press": round(stop["pressure"]),
-                    "temp_diff": round(temp_diff, 4) if not np.isnan(temp_diff) else np.nan,
+                    "temp_diff": (
+                        round(temp_diff, 4) if not np.isnan(temp_diff) else np.nan
+                    ),
                     "temp_std": inst_temp_std,
-                    "cond_diff": round(cond_diff, 4) if not np.isnan(cond_diff) else np.nan,
+                    "cond_diff": (
+                        round(cond_diff, 4) if not np.isnan(cond_diff) else np.nan
+                    ),
                     "cond_std": inst_cond_std,
-                    "press_diff": round(press_diff, 1) if not np.isnan(press_diff) else np.nan,
+                    "press_diff": (
+                        round(press_diff, 1) if not np.isnan(press_diff) else np.nan
+                    ),
                     "press_std": inst_press_std,
                     "temp_status": temp_status,
                     "cond_status": cond_status,

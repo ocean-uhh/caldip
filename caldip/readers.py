@@ -445,13 +445,16 @@ def load_microcat_data(file_path: Union[str, Path]) -> xr.Dataset:
                     if "* System UpLoad Time =" in _line:
                         try:
                             _date_str = _line.split("=")[-1].strip()
-                            year = datetime.strptime(_date_str, "%b %d %Y %H:%M:%S").year
+                            year = datetime.strptime(
+                                _date_str, "%b %d %Y %H:%M:%S"
+                            ).year
                         except Exception:
                             pass
                         break
 
             if year is None:
                 import warnings
+
                 warnings.warn(
                     f"Could not parse year from CNV header in {file_path.name}; "
                     "falling back to current year for timeJV2 conversion.",
