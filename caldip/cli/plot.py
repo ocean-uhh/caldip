@@ -168,7 +168,9 @@ def run(args):
     if args.output or args.output_dir:
         output_path = Path(args.output_dir) if args.output_dir else data_dir.parent
         output_path.mkdir(parents=True, exist_ok=True)
-        base_name = args.output if args.output else (config.get("name") or config_file.stem)
+        base_name = (
+            args.output if args.output else (config.get("name") or config_file.stem)
+        )
         plot_file = output_path / f"{base_name}_plot.html"
         try:
             fig.write_html(plot_file)

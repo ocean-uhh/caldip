@@ -8,7 +8,11 @@ MicroCATs and RBR thermistors.
 
 from caldip.core import stats, find_bottle_stops
 from caldip._plot import plot
-from caldip.readers import load_config, load_instruments_from_config, load_reference_data
+from caldip.readers import (
+    load_config,
+    load_instruments_from_config,
+    load_reference_data,
+)
 from caldip.tools import trim_to_deployment
 
 __all__ = [

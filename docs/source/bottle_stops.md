@@ -1,8 +1,9 @@
 # Bottle stop detection
 
-Bottle stops are periods during a CTD cast when the rosette is held stationary at a fixed depth, allowing instruments to equilibrate before firing a bottle.
-caldip automatically identifies these periods from the CTD pressure record using the algorithm described here.
-The implementation is in `caldip/caldip_functions.py:find_bottle_stops()`.
+Bottle stops are periods during a CTD cast when the rosette is held stationary at a fixed depth (or rather, fixed wire-out), allowing instruments to equilibrate before firing a bottle (usually after about 30 seconds).
+caldip automatically identifies these periods from the CTD pressure record using the algorithm described here.  The period of the bottle stop is normally chosen to be in relatively well-mixed (small changes in temperature and salinity in the vertical) so that even if the ship is heaving up and down a bit, the property changes are small.  The period in the middle of the bottle stop (after initial equilibration, before the rosette starts moving up again) is used as the intercomparison period between the standard CTD on the rosette and the values from the mooring instruments which are attached to the rosette.
+
+The implementation is in `caldip/core.py:find_bottle_stops()`.
 
 ---
 
@@ -10,11 +11,11 @@ The implementation is in `caldip/caldip_functions.py:find_bottle_stops()`.
 
 The algorithm works in five stages:
 
-1. Define the search region (near and after maximum depth)
-2. Scan for low-rate periods using a 60-second forward window
-3. Extend each candidate to its natural end using sample-to-sample rates
-4. Refine boundaries around the median pressure (±2 dbar)
-5. Merge nearby stops, then discard short ones
+1. Define the search region (after maximum depth - since bottle stops are normally done on the upcast)
+2. Scan for periods with low-rates of heave (slower upward motion) using a 60-second forward window
+3. Extend each candidate period to its natural end using sample-to-sample rates
+4. Using this initially defined period, determine the median pressure.  Refine the boundaries of the bottle stop period to the time period where the pressure is near the median pressure (±2 dbar)
+5. Merge nearby stops (in case a longer bottle stop gets separated into two by this algorithm), then discard short bottle stops.
 
 ---
 
@@ -105,12 +106,13 @@ This avoids data at the very end of the stop (when the CTD may have started movi
 | `threshold_dbar_per_min` | 10.0 | Maximum pressure rate for a stable period (dbar/min) |
 | `min_duration_seconds` | 180.0 | Minimum stop duration after merging (seconds) |
 
-Both can be overridden on the command line:
+Both can be overridden on the command line for either subcommand:
 
 ```bash
-python caldip_plot_all.py castM4/ --threshold 8.0 --min-duration 240
+caldip plot  castM4/ --threshold 8.0 --min-duration 240
+caldip stats castM4/ --threshold 8.0 --min-duration 240
 ```
 
-The `--threshold` and `--min-duration` flags apply to the plot only;
-`caldip_check_all.py` uses the defaults.
-Statistics are always computed over the 2-minute window described above, regardless of threshold settings.
+> **Important:** If you change these values, use the same values for both `caldip plot` and `caldip stats`. Different thresholds will produce different bottle stop lists, so the stops shown in the plot will not match those used to compute the statistics.
+
+Statistics are computed over the 2-minute comparison window (within the full bottle stop period) described above, regardless of threshold settings.
