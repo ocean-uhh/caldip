@@ -105,8 +105,8 @@ Examples:
         return 1
 
     # Resolve CTD sensor: CLI flag overrides YAML field; YAML overrides default of 1
-    if ctd_sensor is not None:
-        ctd_sensor = ctd_sensor
+    if args.ctd_sensor is not None:
+        ctd_sensor = args.ctd_sensor
     else:
         ctd_sensor = int(config.get("ctd_sensors", 1))
         if ctd_sensor not in (1, 2):

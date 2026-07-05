@@ -30,12 +30,15 @@ print(f"Deployment period: {deployment_start} to {deployment_end}")
 print()
 
 # ── load TR1050 raw timestamps (clock_offset forced to 0) ─────────────────────
+configured_offset = None
 config_raw = copy.deepcopy(config)
-for inst in config_raw["instruments"]:
+for inst in config_raw.get("instruments", []):
     if str(inst.get("serial", "")) == TARGET_SERIAL:
         configured_offset = inst.get("clock_offset", 0)
         inst["clock_offset"] = 0
         break
+if configured_offset is None:
+    raise ValueError(f"Serial {TARGET_SERIAL!r} not found in {CONFIG_FILE}")
 
 instruments_raw = readers.load_instruments_from_config(config_raw, DATA_DIR)
 tr1050_key = next(k for k in instruments_raw if str(k) == TARGET_SERIAL)

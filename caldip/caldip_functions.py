@@ -16,7 +16,7 @@ Currently Used Functions:
 import numpy as np
 import pandas as pd
 import xarray as xr
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 def find_bottle_stops(
@@ -266,9 +266,9 @@ def calculate_universal_statistics_by_bottle_stop(
     ctd_sensor: int = 1,
     threshold_dbar_per_min: float = 10.0,
     min_duration_seconds: float = 180.0,
-    temp_threshold: float = 0.005,
-    cond_threshold: float = 0.02,
-    press_threshold: float = 5.0,
+    temp_threshold: Optional[float] = None,
+    cond_threshold: Optional[float] = None,
+    press_threshold: Optional[float] = None,
 ) -> pd.DataFrame:
     """
     Calculate statistics for each bottle stop and each instrument (any type).
@@ -279,13 +279,17 @@ def calculate_universal_statistics_by_bottle_stop(
     ``press_threshold``) determine when a difference is flagged as
     "reads high/low" vs "OK".  They can also be set per-cast in the YAML
     under ``quality_flags: {temp_threshold: 0.005, ...}``; explicit
-    arguments take precedence over YAML values.
+    arguments take precedence over YAML values, which in turn override the
+    built-in defaults (±0.005 °C, ±0.02 mS/cm, ±5 dbar).
     """
-    # YAML quality_flags override function defaults, explicit args override YAML
+    # Precedence: explicit arg > YAML quality_flags > built-in default
     yaml_flags = config.get("quality_flags", {})
-    temp_threshold = yaml_flags.get("temp_threshold", temp_threshold)
-    cond_threshold = yaml_flags.get("cond_threshold", cond_threshold)
-    press_threshold = yaml_flags.get("press_threshold", press_threshold)
+    if temp_threshold is None:
+        temp_threshold = yaml_flags.get("temp_threshold", 0.005)
+    if cond_threshold is None:
+        cond_threshold = yaml_flags.get("cond_threshold", 0.02)
+    if press_threshold is None:
+        press_threshold = yaml_flags.get("press_threshold", 5.0)
     # Get the first (and likely only) reference dataset
     if not reference_data:
         print("No reference data available!")
