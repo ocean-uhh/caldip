@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>YAML Configuration Reference &mdash; caldip v0.0.2 documentation</title>
+  <title>YAML Configuration Reference &mdash; caldip v0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=393fce2e" />
@@ -14,7 +14,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=1812e922"></script>
+      <script src="_static/documentation_options.js?v=fa47ad08"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -60,7 +60,10 @@
 <li class="toctree-l3"><a class="reference internal" href="#cast-metadata">Cast metadata</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#position-and-depth">Position and depth</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#timing">Timing</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#ctd-reference">CTD reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ctd-reference">CTD reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ctd-vars-overriding-ctd-variable-names"><code class="docutils literal notranslate"><span class="pre">ctd_vars</span></code> — overriding CTD variable names</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="#instruments-list">Instruments list</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#supported-file-type-values">Supported <code class="docutils literal notranslate"><span class="pre">file_type</span></code> values</a></li>
 </ul>
@@ -269,8 +272,27 @@ caldip<span class="w"> </span>init<span class="w"> </span>--print-only<span clas
 <td><p>recommended</p></td>
 <td><p>Which sensor pair to use: <code class="docutils literal notranslate"><span class="pre">1</span></code> (primary) or <code class="docutils literal notranslate"><span class="pre">2</span></code> (secondary)</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ctd_vars</span></code></p></td>
+<td><p>mapping</p></td>
+<td><p>optional</p></td>
+<td><p>Override CTD variable names (see below)</p></td>
+</tr>
 </tbody>
 </table>
+<section id="ctd-vars-overriding-ctd-variable-names">
+<h4><code class="docutils literal notranslate"><span class="pre">ctd_vars</span></code> — overriding CTD variable names<a class="headerlink" href="#ctd-vars-overriding-ctd-variable-names" title="Link to this heading"></a></h4>
+<p>By default caldip looks for standard SBEDataProcessing output names (<code class="docutils literal notranslate"><span class="pre">t090C</span></code>, <code class="docutils literal notranslate"><span class="pre">t190C</span></code>, <code class="docutils literal notranslate"><span class="pre">c0mS/cm</span></code>, <code class="docutils literal notranslate"><span class="pre">c1mS/cm</span></code>, <code class="docutils literal notranslate"><span class="pre">prDM</span></code>). If your CNV file uses different names — because of a non-standard SBEDataProcessing template or a different instrument — add a <code class="docutils literal notranslate"><span class="pre">ctd_vars</span></code> block:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">ctd_vars</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">temp</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;TEMP&quot;</span><span class="w">    </span><span class="c1"># replaces t090C / t190C</span>
+<span class="w">  </span><span class="nt">cond</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;CNDC&quot;</span><span class="w">    </span><span class="c1"># replaces c0mS/cm / c1mS/cm</span>
+<span class="w">  </span><span class="nt">press</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;PRES&quot;</span><span class="w">   </span><span class="c1"># replaces prDM (optional; auto-detected if absent)</span>
+</pre></div>
+</div>
+<p>Only set the fields that differ. Omitting a field keeps the default auto-detection for that variable. The override applies to whichever sensor is selected via <code class="docutils literal notranslate"><span class="pre">ctd_sensors</span></code> or <code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span></code>.</p>
+<blockquote>
+<div><p><strong>When do you need this?</strong> Run <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">stats</span></code> and check whether the temperature difference column is NaN for all bottle stops. If so, open the <code class="docutils literal notranslate"><span class="pre">.cnv</span></code> file in a text editor, find the variable name list near the top of the header, and add the correct names here.</p>
+</div></blockquote>
+</section>
 </section>
 <section id="instruments-list">
 <h3>Instruments list<a class="headerlink" href="#instruments-list" title="Link to this heading"></a></h3>

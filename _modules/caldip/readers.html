@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>caldip.readers &mdash; caldip v0.0.2 documentation</title>
+  <title>caldip.readers &mdash; caldip v0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=393fce2e" />
@@ -13,7 +13,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=1812e922"></script>
+      <script src="../../_static/documentation_options.js?v=fa47ad08"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -454,32 +454,11 @@
     <span class="n">file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.hex&quot;</span><span class="p">:</span>
-        <span class="c1"># For .hex files, use our custom MSM142 parser</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="c1"># Import the MSM142 parser</span>
-            <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span> <span class="k">as</span> <span class="n">PathlibPath</span>
-
-            <span class="n">parser_path</span> <span class="o">=</span> <span class="n">PathlibPath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">&quot;msm142_hex_parser.py&quot;</span>
-            <span class="k">if</span> <span class="n">parser_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-                <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">parser_path</span><span class="o">.</span><span class="n">parent</span><span class="p">))</span>
-                <span class="kn">from</span><span class="w"> </span><span class="nn">msm142_hex_parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_msm142_hex</span>
-
-                <span class="c1"># Use the base path (without extension)</span>
-                <span class="n">base_path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">))</span>
-                <span class="n">ds</span> <span class="o">=</span> <span class="n">load_msm142_hex</span><span class="p">(</span><span class="n">base_path</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;MSM142 hex parser not found&quot;</span><span class="p">)</span>
-
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Failed to load hex with MSM142 parser: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. Falling back to basic approach.&quot;</span>
-            <span class="p">)</span>
-            <span class="c1"># Fallback to basic approach if available</span>
-            <span class="k">if</span> <span class="n">SEABIRD_AVAILABLE</span><span class="p">:</span>
-                <span class="n">ds</span> <span class="o">=</span> <span class="n">sbe911_hex_reader</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;No suitable hex parser available&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;CTD hex files are not supported directly: </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;Convert the file to a 1-Hz CNV file using SBEDataProcessing first, &quot;</span>
+            <span class="s2">&quot;then update the &#39;ctd_file&#39; field in your YAML to point to the .cnv output.&quot;</span>
+        <span class="p">)</span>
 
     <span class="k">elif</span> <span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.cnv&quot;</span><span class="p">:</span>
         <span class="c1"># For .cnv files, use seabirdscientific if available</span>
