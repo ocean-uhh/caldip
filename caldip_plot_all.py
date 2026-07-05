@@ -50,12 +50,15 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Plot using config file
-  python caldip_plot_all.py castM2/castM2.caldip.yaml --output plot.html
-  
-  # Plot by pointing to directory (auto-finds config)  
+  # Plot by pointing to directory (auto-finds config; saves HTML to parent of cast dir)
   python caldip_plot_all.py data/proc_calib/msm142_2026/cal_dip/castM2/
-  
+
+  # Save to a specific directory
+  python caldip_plot_all.py castM2/castM2.caldip.yaml -o /path/to/results/
+
+  # Override the base filename (saves as castM2_rev2_plot.html)
+  python caldip_plot_all.py castM2/castM2.caldip.yaml --output castM2_rev2
+
   # Customize bottle stop detection
   python caldip_plot_all.py config.yaml --threshold 25.0 --min-duration 90
         """,
@@ -65,7 +68,14 @@ Examples:
         "config_path",
         help="Path to .caldip.yaml config file or directory containing config",
     )
-    parser.add_argument("--output", "-o", help="Output file for plot (HTML format)")
+    parser.add_argument(
+        "--output",
+        help="Base filename for plot (without extension; _plot.html is appended)",
+    )
+    parser.add_argument(
+        "--output-dir", "-o",
+        help="Directory to save plot (default: parent of data dir)",
+    )
     parser.add_argument(
         "--title", "-t", help="Plot title (default: from config or auto-generated)"
     )
@@ -206,15 +216,19 @@ Examples:
         return 1
 
     # Output or show
-    if args.output:
+    if args.output or args.output_dir:
+        output_path = Path(args.output_dir) if args.output_dir else data_dir.parent
+        output_path.mkdir(parents=True, exist_ok=True)
+        base_name = args.output if args.output else config["name"]
+        plot_file = output_path / f"{base_name}_plot.html"
         try:
-            fig.write_html(args.output)
-            print(f"Plot saved to: {args.output}")
+            fig.write_html(plot_file)
+            print(f"Plot saved to: {plot_file}")
         except Exception as e:
             print(f"Error saving plot: {e}")
             return 1
 
-    if args.show or not args.output:
+    if args.show or not (args.output or args.output_dir):
         try:
             fig.show()
         except Exception as e:

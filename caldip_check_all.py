@@ -42,14 +42,17 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Analyze using config file
-  python caldip_check_all.py castM6/castM6.caldip.yaml --output results.csv
-  
+  # Analyze using config file (output goes to parent of cast directory)
+  python caldip_check_all.py castM6/castM6.caldip.yaml
+
   # Analyze by pointing to directory (auto-finds config)
   python caldip_check_all.py data/proc_calib/msm142_2026/cal_dip/castM6/
-  
-  # Use CTD sensor 2 and save to specific directory
-  python caldip_check_all.py config.yaml --ctd-sensor 2 --output-dir /path/to/results/
+
+  # Use CTD sensor 2 and save to a specific directory
+  python caldip_check_all.py config.yaml --ctd-sensor 2 -o /path/to/results/
+
+  # Override the base filename for all output files
+  python caldip_check_all.py config.yaml --output castM4_rev2
         """,
     )
 
@@ -65,10 +68,11 @@ Examples:
         help="Which CTD sensor to use (1 or 2). Overrides ctd_sensors in YAML. Default: read from YAML, or 1.",
     )
     parser.add_argument(
-        "--output", "-o", help="Output CSV file for detailed statistics"
+        "--output",
+        help="Base filename for output files (without extension); overrides the cast name",
     )
     parser.add_argument(
-        "--output-dir",
+        "--output-dir", "-o",
         help="Directory to save output files (default: parent of data dir)",
     )
     parser.add_argument(
@@ -188,21 +192,13 @@ Examples:
         return 1
 
     # Save outputs
-    if args.output_dir:
-        output_path = Path(args.output_dir)
-    elif args.output:
-        output_path = Path(args.output).parent
-    else:
-        # Save in cal_dip directory (parent of castM1, castM2, etc)
-        output_path = data_dir.parent
-
+    output_path = Path(args.output_dir) if args.output_dir else data_dir.parent
     output_path.mkdir(parents=True, exist_ok=True)
 
+    base_name = args.output if args.output else config["name"]
+
     # Save detailed statistics (one row per bottle stop per instrument)
-    if args.output:
-        detailed_csv_file = Path(args.output)
-    else:
-        detailed_csv_file = output_path / f"{config['name']}_detailed_statistics.csv"
+    detailed_csv_file = output_path / f"{base_name}_detailed_statistics.csv"
 
     if not detailed_stats_df.empty:
         # Round floating point columns for detailed CSV
@@ -244,7 +240,7 @@ Examples:
         )
 
     # Save summary statistics (clean format using deepest bottle stop data)
-    summary_csv_file = output_path / f"{config['name']}_summary_statistics.csv"
+    summary_csv_file = output_path / f"{base_name}_summary_statistics.csv"
 
     # Create clean summary CSV with consistent columns
     csv_df = stats_df.drop("ctd_stats", axis=1).copy()
