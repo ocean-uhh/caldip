@@ -10,7 +10,7 @@ pyyaml>=6.0
 
 # Interactive plotting
 plotly>=5.0
-matplotlib>=3.9
+matplotlib>=3.10.9
 
 # Oceanographic instrument data
 seabirdscientific>=1.2.0
