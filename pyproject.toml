@@ -26,9 +26,12 @@ dynamic = [
   "dependencies",
 ]
 
+[project.scripts]
+caldip = "caldip.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["caldip"]
+include = ["caldip", "caldip.*"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = [

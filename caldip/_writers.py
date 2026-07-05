@@ -5,7 +5,7 @@ This module contains functions for formatting and writing caldip analysis result
 to various output formats (console, CSV, etc.).
 
 Currently Used Functions:
-- print_universal_statistics_report() -> None
+- print_stats_report() -> None
   Print formatted statistics report to console
 
 These functions handle only output formatting with no calculations.
@@ -16,9 +16,7 @@ import pandas as pd
 from typing import Dict
 
 
-def print_universal_statistics_report(
-    stats_df: pd.DataFrame, config: Dict, ctd_sensor: int = 1
-):
+def print_stats_report(stats_df: pd.DataFrame, config: Dict, ctd_sensor: int = 1):
     """Print formatted statistics report for universal instrument types."""
 
     print("\n" + "=" * 80)

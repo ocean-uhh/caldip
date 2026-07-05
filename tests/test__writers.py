@@ -5,7 +5,7 @@ Tests for caldip/writers.py output formatting functions.
 import numpy as np
 import pandas as pd
 
-from caldip import writers
+from caldip import _writers as writers
 
 
 def _make_summary_df(with_cond=True, with_press=True, with_bottle_stops=False):
@@ -20,7 +20,7 @@ def _make_summary_df(with_cond=True, with_press=True, with_bottle_stops=False):
         "ctd_cond": 34.51,
         "mean_cond": 34.51,
         "cond_std": 0.003,
-        # No timing_info key → triggers the else branch in print_universal_statistics_report
+        # No timing_info key → triggers the else branch in print_stats_report
     }
 
     if with_bottle_stops:
@@ -56,7 +56,7 @@ def _make_summary_df(with_cond=True, with_press=True, with_bottle_stops=False):
 def test_print_report_runs_without_error(capsys):
     """Report prints without raising exceptions."""
     df = _make_summary_df()
-    writers.print_universal_statistics_report(df, {"name": "testCast"}, ctd_sensor=1)
+    writers.print_stats_report(df, {"name": "testCast"}, ctd_sensor=1)
     out = capsys.readouterr().out
     assert "testCast" in out
     assert "S001" in out
@@ -65,7 +65,7 @@ def test_print_report_runs_without_error(capsys):
 def test_print_report_sensor_2(capsys):
     """Sensor number appears in the header line."""
     df = _make_summary_df()
-    writers.print_universal_statistics_report(df, {"name": "testCast"}, ctd_sensor=2)
+    writers.print_stats_report(df, {"name": "testCast"}, ctd_sensor=2)
     out = capsys.readouterr().out
     assert "Sensor 2" in out
 
@@ -73,7 +73,7 @@ def test_print_report_sensor_2(capsys):
 def test_print_report_nan_cond_and_press(capsys):
     """NaN conductivity and pressure are shown as N/A, not errors."""
     df = _make_summary_df(with_cond=False, with_press=False)
-    writers.print_universal_statistics_report(df, {"name": "testCast"})
+    writers.print_stats_report(df, {"name": "testCast"})
     out = capsys.readouterr().out
     assert "N/A" in out
 
@@ -81,7 +81,7 @@ def test_print_report_nan_cond_and_press(capsys):
 def test_print_report_with_bottle_stops(capsys):
     """Bottle stop timing block is printed when stops are present."""
     df = _make_summary_df(with_bottle_stops=True)
-    writers.print_universal_statistics_report(df, {"name": "testCast"})
+    writers.print_stats_report(df, {"name": "testCast"})
     out = capsys.readouterr().out
     assert "Bottle Stop 1" in out
     assert "Duration" in out
@@ -90,6 +90,6 @@ def test_print_report_with_bottle_stops(capsys):
 def test_print_report_no_bottle_stops(capsys):
     """Falls back to generic timing text when no bottle stops in timing_info."""
     df = _make_summary_df(with_bottle_stops=False)
-    writers.print_universal_statistics_report(df, {"name": "testCast"})
+    writers.print_stats_report(df, {"name": "testCast"})
     out = capsys.readouterr().out
     assert "Bottle stop period" in out

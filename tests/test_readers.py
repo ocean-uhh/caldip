@@ -33,7 +33,7 @@ def test_find_config_file_not_found(tmp_path):
     assert result is None
 
 
-def test_load_caldip_config_valid(tmp_path):
+def test_load_config_valid(tmp_path):
     """Test loading a valid YAML config."""
     config_content = {
         "name": "test_cast",
@@ -46,18 +46,18 @@ def test_load_caldip_config_valid(tmp_path):
     config_file = tmp_path / "test.yaml"
     config_file.write_text(yaml.dump(config_content))
 
-    result = readers.load_caldip_config(config_file)
+    result = readers.load_config(config_file)
     assert result == config_content
     assert result["name"] == "test_cast"
 
 
-def test_load_caldip_config_invalid_yaml(tmp_path):
+def test_load_config_invalid_yaml(tmp_path):
     """Test loading invalid YAML raises appropriate error."""
     config_file = tmp_path / "invalid.yaml"
     config_file.write_text("invalid: yaml: content: [")
 
     with pytest.raises(Exception):
-        readers.load_caldip_config(config_file)
+        readers.load_config(config_file)
 
 
 def test_load_instruments_from_config_empty():

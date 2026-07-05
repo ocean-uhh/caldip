@@ -7,7 +7,7 @@ instrument types using their file_type specifications.
 Currently Used Functions:
 - find_config_file() -> Path
   Find caldip configuration file in directory or use provided file
-- load_caldip_config() -> Dict
+- load_config() -> Dict
 - generate_stub_yaml() -> Dict
   Generate stub YAML configuration from caldip directory structure
   Load YAML configuration files for caldip processing
@@ -23,7 +23,7 @@ Currently Used Functions:
   Load MicroCAT data from SeaBird hex/asc/cnv files
 
 All functions are actively used in caldip_plot_all.py and caldip_check_all.py
-for the main processing workflow. Note: trim_data_to_deployment() moved to tools.py.
+for the main processing workflow. Note: trim_to_deployment() moved to tools.py.
 """
 
 import numpy as np
@@ -57,7 +57,7 @@ except ImportError:
     warnings.warn("seabirdscientific not available. Some features will be limited.")
 
 # Import tools for shared utilities
-from caldip.tools import instrument_data_to_xarray
+from caldip.tools import to_xarray
 
 # Import SBE hex readers
 from .sbe_hex_reader import sbe37_hex_reader
@@ -97,11 +97,29 @@ def find_config_file(path):
     return None
 
 
-def load_caldip_config(yaml_file: Union[str, Path]) -> Dict:
+def load_config(yaml_file: Union[str, Path]) -> Dict:
     """Load caldip configuration from YAML file."""
     with open(yaml_file, "r") as f:
         config = yaml.safe_load(f)
     return config
+
+
+def resolve_data_dir(
+    config_file: Path,
+    config: Dict,
+    override: Optional[str] = None,
+) -> Path:
+    """Return the data directory for a cast, with optional CLI override.
+
+    Priority: explicit override > config 'directory' key > parent of config file.
+    For config files sitting inside a cast directory (name starts with 'cast'),
+    the config file's parent is used directly.
+    """
+    if override:
+        return Path(override)
+    if config_file.parent.name.startswith("cast"):
+        return config_file.parent
+    return Path(config.get("directory", config_file.parent))
 
 
 def load_instrument_data(
@@ -362,7 +380,7 @@ def load_ctd_data(file_path: Union[str, Path]) -> xr.Dataset:
 
         # Use cnv_to_instrument_data to load CNV files
         instrument_data = id.cnv_to_instrument_data(str(file_path))
-        ds = instrument_data_to_xarray(instrument_data)
+        ds = to_xarray(instrument_data)
 
         # Fix time if it's showing year 2000 incorrectly
         # CTD files have timeJ which is elapsed days since start of cast
@@ -430,7 +448,7 @@ def load_microcat_data(file_path: Union[str, Path]) -> xr.Dataset:
             )
 
         instrument_data = id.cnv_to_instrument_data(str(file_path))
-        ds = instrument_data_to_xarray(instrument_data)
+        ds = to_xarray(instrument_data)
 
         # Fix time coordinate if timeJV2 (actual timestamps) is available
         if "timeJV2" in ds.data_vars:

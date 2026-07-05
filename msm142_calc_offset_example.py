@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
-Calculate and verify the clock offset for TR1050 instruments.
+MSM142-specific example: calculate and verify the clock offset for TR1050.
+
+This is a cruise-specific one-off script, not part of the caldip package.
+Copy and adapt it for other cruises/instruments. Paths and TARGET_SERIAL are
+hardcoded for MSM142.
 
 Loads actual data files rather than using hardcoded timestamps.
 Previously, dates in this script were written in YYYY-DD-MM order (European
@@ -21,7 +25,7 @@ CONFIG_FILE = DATA_DIR / "castM4.caldip.yaml"
 TARGET_SERIAL = "015581"  # TR1050 instrument to analyse
 
 # ── load config ───────────────────────────────────────────────────────────────
-config = readers.load_caldip_config(CONFIG_FILE)
+config = readers.load_config(CONFIG_FILE)
 deployment_start = pd.Timestamp(config["deployment_time"])
 deployment_end = pd.Timestamp(config["recovery_time"])
 

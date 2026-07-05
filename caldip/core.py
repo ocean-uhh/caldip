@@ -7,9 +7,9 @@ xarray and numpy.
 Currently Used Functions:
 - find_bottle_stops() -> List[Dict]
   Detect bottle stops from CTD pressure data (primary algorithm)
-- calculate_stats_for_time_period() -> Dict
+- stats_for_time_period() -> Dict
   Calculate statistics for any dataset within a specified time period
-- calculate_universal_statistics_by_bottle_stop() -> pd.DataFrame
+- stats() -> pd.DataFrame
   Calculate statistics for each bottle stop and each instrument (any type)
 """
 
@@ -192,7 +192,7 @@ def find_bottle_stops(
     return final_stops
 
 
-def calculate_stats_for_time_period(
+def stats_for_time_period(
     data: xr.Dataset,
     start_time: pd.Timestamp,
     end_time: pd.Timestamp,
@@ -259,7 +259,7 @@ def _format_status(diff: float, threshold: float, var_name: str) -> str:
         return f"{var_name} reads low by {abs(diff):.3f}"
 
 
-def calculate_universal_statistics_by_bottle_stop(
+def stats(
     instrument_data: Dict,
     reference_data: Dict,
     config: Dict,

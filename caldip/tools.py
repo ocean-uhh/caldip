@@ -5,11 +5,11 @@ This module contains general-purpose utilities used across multiple
 modules in the caldip package.
 
 Currently Used Functions:
-- instrument_data_to_xarray() -> xr.Dataset
+- to_xarray() -> xr.Dataset
   Convert seabirdscientific objects to xarray Datasets
-- trim_data_to_deployment() -> tuple
+- trim_to_deployment() -> tuple
   Trim instrument and reference data to deployment/recovery times
-- extract_summary_from_detailed_stats() -> pd.DataFrame
+- summary_stats() -> pd.DataFrame
   Extract summary statistics from detailed bottle stop statistics
 
 These functions are used by data_loader.py and the main processing scripts.
@@ -21,7 +21,7 @@ import xarray as xr
 from typing import Dict
 
 
-def instrument_data_to_xarray(instrument_data) -> xr.Dataset:
+def to_xarray(instrument_data) -> xr.Dataset:
     """
     Convert seabirdscientific InstrumentData object to xarray Dataset.
 
@@ -100,7 +100,7 @@ def instrument_data_to_xarray(instrument_data) -> xr.Dataset:
     return ds
 
 
-def trim_data_to_deployment(
+def trim_to_deployment(
     instruments: Dict[str, Dict], reference_data: Dict[str, Dict], config: Dict
 ) -> tuple:
     """
@@ -162,9 +162,7 @@ def trim_data_to_deployment(
     return trimmed_instruments, trimmed_reference
 
 
-def extract_summary_from_detailed_stats(
-    detailed_stats_df: pd.DataFrame, config: Dict
-) -> pd.DataFrame:
+def summary_stats(detailed_stats_df: pd.DataFrame, config: Dict) -> pd.DataFrame:
     """
     Extract summary statistics from detailed bottle stop statistics.
     Uses the deepest bottle stop data for each instrument.
