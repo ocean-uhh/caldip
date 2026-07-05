@@ -9,7 +9,7 @@ import xarray as xr
 
 pytest.importorskip("plotly", reason="plotly not installed")
 
-from caldip import plotters
+from caldip import _plot as plotters
 
 
 def _make_cast(start="2024-01-01 12:00:00", periods=600, with_cond=False):
@@ -47,7 +47,7 @@ def _make_reference_data():
 
 def test_create_plot_returns_figure():
     """Basic call returns a plotly Figure object."""
-    fig = plotters.create_universal_caldip_plot(
+    fig = plotters.plot(
         _make_instrument_data(),
         _make_reference_data(),
     )
@@ -58,7 +58,7 @@ def test_create_plot_returns_figure():
 
 def test_create_plot_with_conductivity():
     """Plot runs without error when instruments have conductivity data."""
-    fig = plotters.create_universal_caldip_plot(
+    fig = plotters.plot(
         _make_instrument_data(with_cond=True),
         _make_reference_data(),
     )
@@ -67,7 +67,7 @@ def test_create_plot_with_conductivity():
 
 def test_create_plot_no_bottle_stops():
     """Disabling bottle stops still produces a valid figure."""
-    fig = plotters.create_universal_caldip_plot(
+    fig = plotters.plot(
         _make_instrument_data(),
         _make_reference_data(),
         show_bottle_stops=False,
@@ -77,7 +77,7 @@ def test_create_plot_no_bottle_stops():
 
 def test_create_plot_custom_title():
     """Custom title appears somewhere in the figure (subplot annotation)."""
-    fig = plotters.create_universal_caldip_plot(
+    fig = plotters.plot(
         _make_instrument_data(),
         _make_reference_data(),
         title="My Test Cast",
@@ -93,7 +93,7 @@ def test_create_plot_with_config():
         "deployment_time": "2024-01-01 12:00:00",
         "recovery_time": "2024-01-01 12:09:59",
     }
-    fig = plotters.create_universal_caldip_plot(
+    fig = plotters.plot(
         _make_instrument_data(),
         _make_reference_data(),
         config=config,
@@ -103,7 +103,7 @@ def test_create_plot_with_config():
 
 def test_create_plot_empty_instruments():
     """Plot with no instruments still runs."""
-    fig = plotters.create_universal_caldip_plot(
+    fig = plotters.plot(
         {},
         _make_reference_data(),
     )
@@ -125,5 +125,5 @@ def test_create_plot_multiple_instruments():
             "type": "sbe37",
         },
     }
-    fig = plotters.create_universal_caldip_plot(instrument_data, _make_reference_data())
+    fig = plotters.plot(instrument_data, _make_reference_data())
     assert fig is not None

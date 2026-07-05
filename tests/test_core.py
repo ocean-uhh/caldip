@@ -1,5 +1,5 @@
 """
-Unit tests for caldip_functions.py core functionality.
+Unit tests for caldip/core.py functionality.
 """
 
 import pytest
@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from caldip import caldip_functions as cf
+from caldip import core as cf
 
 
 def test_find_bottle_stops_basic():
@@ -78,7 +78,7 @@ def test_find_bottle_stops_pressure_variable_names():
     assert len(bottle_stops) == 1
 
 
-def test_calculate_universal_statistics_workflow():
+def test_stats_workflow():
     """Test the main statistics workflow like in caldip_check_all.py."""
     # Create mock instrument data
     times = pd.date_range("2024-01-01 12:00:00", periods=1000, freq="1s")
@@ -138,9 +138,7 @@ def test_calculate_universal_statistics_workflow():
 
     # Test the main workflow
     try:
-        detailed_stats_df = cf.calculate_universal_statistics_by_bottle_stop(
-            instruments, reference_data, config, ctd_sensor=1
-        )
+        detailed_stats_df = cf.stats(instruments, reference_data, config, ctd_sensor=1)
 
         # Should return a DataFrame with results
         assert not detailed_stats_df.empty
@@ -203,7 +201,7 @@ def test_find_bottle_stops_multiple_stops():
     assert min(pressures) == pytest.approx(60, abs=5)
 
 
-def test_calculate_stats_for_time_period_basic():
+def test_stats_for_time_period_basic():
     """Stats are calculated correctly over a simple time window."""
     times = pd.date_range("2024-01-01 12:00:00", periods=300, freq="1s")
     data = xr.Dataset(
@@ -218,7 +216,7 @@ def test_calculate_stats_for_time_period_basic():
     start_time = pd.Timestamp(times[60])
     end_time = pd.Timestamp(times[180])
 
-    stats = cf.calculate_stats_for_time_period(
+    stats = cf.stats_for_time_period(
         data,
         start_time=start_time,
         end_time=end_time,
@@ -231,14 +229,14 @@ def test_calculate_stats_for_time_period_basic():
     assert stats["n_samples"] > 0
 
 
-def test_calculate_stats_for_time_period_no_overlap():
+def test_stats_for_time_period_no_overlap():
     """Returns NaN means when time window has no data."""
     times = pd.date_range("2024-01-01 12:00:00", periods=60, freq="1s")
     data = xr.Dataset(
         {"temperature": ("time", np.full(60, 5.0))}, coords={"time": times}
     )
 
-    stats = cf.calculate_stats_for_time_period(
+    stats = cf.stats_for_time_period(
         data,
         start_time=pd.Timestamp("2024-01-01 14:00:00"),
         end_time=pd.Timestamp("2024-01-01 14:05:00"),
@@ -285,9 +283,7 @@ def test_format_status_reads_high():
             "config": {},
         }
     }
-    df = cf.calculate_universal_statistics_by_bottle_stop(
-        instruments, reference_data, {"name": "test"}, ctd_sensor=1
-    )
+    df = cf.stats(instruments, reference_data, {"name": "test"}, ctd_sensor=1)
     assert not df.empty
     assert df.iloc[0]["temp_status"].startswith("T reads high")
 
@@ -326,9 +322,7 @@ def test_ctd_sensor_fallback_variable_names():
             "config": {},
         }
     }
-    df = cf.calculate_universal_statistics_by_bottle_stop(
-        instruments, reference_data, {"name": "test"}, ctd_sensor=1
-    )
+    df = cf.stats(instruments, reference_data, {"name": "test"}, ctd_sensor=1)
     assert not df.empty
 
 
@@ -365,7 +359,5 @@ def test_ctd_sensor_2_fallback_variable_names():
             "config": {},
         }
     }
-    df = cf.calculate_universal_statistics_by_bottle_stop(
-        instruments, reference_data, {"name": "test"}, ctd_sensor=2
-    )
+    df = cf.stats(instruments, reference_data, {"name": "test"}, ctd_sensor=2)
     assert not df.empty

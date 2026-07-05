@@ -9,7 +9,7 @@ Caldip provides tools for processing, analyzing, and visualizing data from calib
 ### Installation
 
 ```bash
-git clone https://github.com/your-repo/caldip.git
+git clone https://github.com/eleanorfrajka/caldip.git
 cd caldip
 pip install -r requirements.txt
 pip install -e .
@@ -19,10 +19,10 @@ pip install -e .
 
 ```bash
 # Generate interactive plots
-python caldip_plot_all.py data/proc_calib/msm142_2026/cal_dip/castM4/ --output castM4_plot.html
+caldip plot data/proc_calib/msm142_2026/cal_dip/castM4/
 
 # Generate statistics (compared to CTD secondary sensors)
-python caldip_check_all.py data/proc_calib/msm142_2026/cal_dip/castM4/ --output castM4_stats.csv --ctd-sensor 2
+caldip stats data/proc_calib/msm142_2026/cal_dip/castM4/ --ctd-sensor 2
 
 # Batch processing
 bash generate_all_caldip_plots.sh
@@ -33,14 +33,19 @@ bash generate_all_caldip_plots.sh
 ```
 caldip/
 ├── caldip/                     # Python package
-│   ├── __init__.py            # Package initialization
-│   ├── caldip_functions.py    # Core processing algorithms
+│   ├── __init__.py            # Public API: plot, stats, find_bottle_stops, load_config
+│   ├── core.py                # Core algorithms
 │   ├── readers.py             # Universal data loading
-│   ├── plotters.py            # Interactive visualization
+│   ├── scaffold.py            # Stub YAML generator (caldip init)
 │   ├── tools.py               # Shared utilities
-│   └── writers.py             # Output formatting
-├── caldip_plot_all.py         # Universal plotting script
-├── caldip_check_all.py        # Universal statistics script
+│   ├── sbe_hex_reader.py      # SBE hex format reader
+│   ├── _plot.py               # Plotly implementation (internal)
+│   ├── _writers.py            # Output formatting (internal)
+│   └── cli/                   # CLI entry points
+│       ├── __init__.py        # `caldip` dispatcher
+│       ├── init.py            # `caldip init` subcommand
+│       ├── plot.py            # `caldip plot` subcommand
+│       └── stats.py           # `caldip stats` subcommand
 ├── generate_all_caldip_plots.sh  # Batch processing script
 ├── pyproject.toml             # Package configuration
 └── requirements.txt           # Package dependencies
@@ -96,15 +101,15 @@ Run analysis and generate outputs:
 
 ```bash
 # Interactive plots with bottle stop detection
-python caldip_plot_all.py data/proc_calib/msm142_2026/cal_dip/castM4/
+caldip plot data/proc_calib/msm142_2026/cal_dip/castM4/
 
 # Detailed comparison statistics
-python caldip_check_all.py data/proc_calib/msm142_2026/cal_dip/castM4/ --ctd-sensor 2
+caldip stats data/proc_calib/msm142_2026/cal_dip/castM4/ --ctd-sensor 2
 ```
 
 ## 🔬 Core Algorithm: Bottle Stop Detection
 
-The core algorithm for detecting bottle stops in CTD data (`caldip_functions.py:find_bottle_stops()`) works as follows:
+The core algorithm for detecting bottle stops in CTD data (`caldip/core.py:find_bottle_stops()`) works as follows:
 
 1. **Pressure Variable Detection**: Searches for pressure data in common variable names
 2. **Search Region Definition**: Finds maximum pressure depth and begins detection from max_pressure - 10 dbar
@@ -130,7 +135,7 @@ The core algorithm for detecting bottle stops in CTD data (`caldip_functions.py:
 
 ## 📊 Features
 
-### Interactive Visualization (`caldip_plot_all.py`)
+### Interactive Visualization (`caldip plot`)
 - **3 subplots**: Pressure, Temperature, Conductivity
 - **Interactive zooming**: Click and drag on any plot, all sync on x-axis
 - **Color coding**: Different colors for each instrument, black/gray for CTD
@@ -139,7 +144,7 @@ The core algorithm for detecting bottle stops in CTD data (`caldip_functions.py:
   - Red vertical lines: End of bottle stop  
   - Black dotted lines: Comparison period boundaries
 
-### Statistical Analysis (`caldip_check_all.py`)
+### Statistical Analysis (`caldip stats`)
 - **Detailed per-bottle-stop statistics**: Mean differences, standard deviations
 - **Quality flags**: GOOD/WARNING/BAD based on tolerance thresholds
 - **Comparison periods**: Last 3 minutes of each bottle stop
@@ -150,6 +155,52 @@ The core algorithm for detecting bottle stops in CTD data (`caldip_functions.py:
 - **CTD Sensor Selection**: Supports primary/secondary CTD sensor analysis
 - **Automatic Detection**: No manual bottle stop timing required
 - **Reproducible Analysis**: YAML configuration files ensure repeatable processing
+
+## 🐍 Python API
+
+For use in Jupyter notebooks or custom scripts. Prefer `import caldip` over `from caldip import plot, stats` to avoid shadowing common names like `scipy.stats`.
+
+### Typical notebook workflow
+
+```python
+import caldip
+from pathlib import Path
+
+# 1. Load configuration
+config = caldip.load_config("data/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml")
+data_dir = Path("data/proc_calib/msm142_2026/cal_dip/castM4/")
+
+# 2. Load instrument and CTD data
+instruments = caldip.load_instruments_from_config(config, data_dir)
+reference   = caldip.load_reference_data(config, data_dir)
+
+# 3. Trim to deployment window (optional — uses deployment_time/recovery_time from YAML)
+instruments, reference = caldip.trim_to_deployment(instruments, reference, config)
+
+# 4. Interactive plot (opens in browser or notebook)
+fig = caldip.plot(instruments, reference, config=config)
+fig.show()
+
+# 5. Per-bottle-stop statistics
+df = caldip.stats(instruments, reference, config, ctd_sensor=2)
+print(df[["serial", "bl_press", "temp_diff", "cond_diff"]])
+```
+
+### Lower-level access
+
+```python
+import caldip
+
+# Detect bottle stops from a CTD xarray Dataset
+ctd_data = caldip.load_reference_data(config, data_dir)
+ctd_ds   = list(ctd_data.values())[0]["data"]
+stops    = caldip.find_bottle_stops(ctd_ds)
+
+for stop in stops:
+    print(f"  {stop['pressure']:.0f} dbar — {stop['duration_seconds']/60:.1f} min")
+```
+
+See the [API documentation](https://eleanorfrajka.github.io/caldip) for full details.
 
 ## 🛠️ Dependencies
 
@@ -181,19 +232,19 @@ For each instrument file in your directory, add an entry to the YAML configurati
 ### Custom Bottle Stop Detection
 ```bash
 # Adjust detection parameters
-python caldip_plot_all.py config.yaml --threshold 25.0 --min-duration 90
+caldip plot config.yaml --threshold 25.0 --min-duration 90
 
 # Disable bottle stop detection
-python caldip_plot_all.py config.yaml --no-bottle-stops
+caldip plot config.yaml --no-bottle-stops
 ```
 
 ### CTD Sensor Selection
 ```bash
 # Use primary CTD sensor (default)
-python caldip_check_all.py config.yaml --ctd-sensor 1
+caldip stats config.yaml --ctd-sensor 1
 
 # Use secondary CTD sensor
-python caldip_check_all.py config.yaml --ctd-sensor 2
+caldip stats config.yaml --ctd-sensor 2
 ```
 
 ---

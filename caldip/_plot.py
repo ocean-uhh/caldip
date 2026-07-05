@@ -19,10 +19,10 @@ except ImportError:
     PLOTLY_AVAILABLE = False
 
 # Import caldip functions
-import caldip.caldip_functions as cf
+import caldip.core as cf
 
 
-def create_universal_caldip_plot(
+def plot(
     instrument_data: Dict[str, Dict],
     reference_data: Dict[str, Dict],
     config: Optional[Dict] = None,
