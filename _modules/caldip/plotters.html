@@ -1,0 +1,726 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caldip.plotters &mdash; caldip v0.0.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=393fce2e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=1812e922"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            caldip
+              <img src="../../_static/caldip_icon.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart: single cast</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Users guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../running.html">Running caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">YAML Configuration Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../outputs.html">Outputs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Help and reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="http://github.com/eleanorfrajka/caldip">GitHub Repo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../caldip.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">API</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../aboutcaldip.html">About caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../bottle_stops.html">Bottle stop detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../faq.html">FAQ / Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../funding.html">Acknowledgments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../funding.html#funding">Funding</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">caldip</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">caldip.plotters</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for caldip.plotters</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Universal plotting functions for caldip data visualization.</span>
+
+<span class="sd">This module provides plotting functions that work with any instrument type.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="c1"># Import plotting libraries</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">plotly.graph_objects</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">go</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">plotly.subplots</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_subplots</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">plotly.colors</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pc</span>
+
+    <span class="n">PLOTLY_AVAILABLE</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">PLOTLY_AVAILABLE</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="c1"># Import caldip functions</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">caldip.caldip_functions</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cf</span>
+
+
+<div class="viewcode-block" id="create_universal_caldip_plot">
+<a class="viewcode-back" href="../../caldip.html#caldip.plotters.create_universal_caldip_plot">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_universal_caldip_plot</span><span class="p">(</span>
+    <span class="n">instrument_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">],</span>
+    <span class="n">reference_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">],</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Caldip Data Comparison&quot;</span><span class="p">,</span>
+    <span class="n">show_bottle_stops</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">bottle_stop_params</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">object</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create interactive caldip comparison plot for any instrument types.</span>
+
+<span class="sd">    Subplot layout:</span>
+<span class="sd">    - Row 1: Pressure</span>
+<span class="sd">    - Row 2: Temperature</span>
+<span class="sd">    - Row 3: Conductivity (if available)</span>
+
+<span class="sd">    This function replaces the instrument-specific plotting functions with a</span>
+<span class="sd">    universal approach that works for MicroCATs, RBRs, and other instruments.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    instrument_data : dict</span>
+<span class="sd">        Dictionary of instrument data by serial number:</span>
+<span class="sd">        {serial: {&#39;data&#39;: xr.Dataset, &#39;config&#39;: dict, &#39;type&#39;: str}}</span>
+<span class="sd">    reference_data : dict</span>
+<span class="sd">        Dictionary of reference (CTD) data by name:</span>
+<span class="sd">        {name: {&#39;data&#39;: xr.Dataset, &#39;file&#39;: str}}</span>
+<span class="sd">    config : dict, optional</span>
+<span class="sd">        Configuration dictionary with deployment_time and recovery_time</span>
+<span class="sd">    title : str, optional</span>
+<span class="sd">        Plot title</span>
+<span class="sd">    show_bottle_stops : bool, optional</span>
+<span class="sd">        Whether to show bottle stop markers (default True)</span>
+<span class="sd">    bottle_stop_params : dict, optional</span>
+<span class="sd">        Parameters for bottle stop detection:</span>
+<span class="sd">        {&#39;threshold_dbar_per_min&#39;: 30.0, &#39;min_duration_seconds&#39;: 120.0}</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    plotly.graph_objects.Figure or None</span>
+<span class="sd">        Interactive plot figure, or None if plotly not available</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Subplot row assignments (can be changed here if needed)</span>
+    <span class="n">PRESSURE_ROW</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">TEMPERATURE_ROW</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">CONDUCTIVITY_ROW</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="n">OXYGEN_ROW</span> <span class="o">=</span> <span class="mi">4</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">PLOTLY_AVAILABLE</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Plotly not available - cannot create interactive plot&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="c1"># Set default bottle stop parameters</span>
+    <span class="k">if</span> <span class="n">bottle_stop_params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">bottle_stop_params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;threshold_dbar_per_min&quot;</span><span class="p">:</span> <span class="mf">30.0</span><span class="p">,</span>
+            <span class="s2">&quot;min_duration_seconds&quot;</span><span class="p">:</span> <span class="mf">120.0</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="c1"># Collect all data values for y-axis range calculation</span>
+    <span class="n">pressure_values</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">temperature_values</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">conductivity_values</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">oxygen_values</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Determine if we have pressure data from instruments (vs temperature-only)</span>
+    <span class="n">has_instrument_pressure</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">has_conductivity</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">has_oxygen</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="c1"># Collect instrument values and determine plot structure</span>
+    <span class="k">for</span> <span class="n">serial</span><span class="p">,</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">instrument_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Check for pressure variables</span>
+        <span class="n">pressure_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;prdM&quot;</span><span class="p">,</span> <span class="s2">&quot;pressure&quot;</span><span class="p">,</span> <span class="s2">&quot;press&quot;</span><span class="p">,</span> <span class="s2">&quot;PRES&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">pressure_vars</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                <span class="n">pressure_values</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)])</span>
+                <span class="n">has_instrument_pressure</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">break</span>
+
+        <span class="c1"># Check for temperature variables</span>
+        <span class="n">temp_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;tv290C&quot;</span><span class="p">,</span> <span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="s2">&quot;temp&quot;</span><span class="p">,</span> <span class="s2">&quot;TEMP&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">temp_vars</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                <span class="n">temperature_values</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)])</span>
+                <span class="k">break</span>
+
+        <span class="c1"># Check for conductivity variables - only from instruments that should have conductivity</span>
+        <span class="n">cond_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;cond0mS/cm&quot;</span><span class="p">,</span> <span class="s2">&quot;conductivity&quot;</span><span class="p">,</span> <span class="s2">&quot;cond&quot;</span><span class="p">,</span> <span class="s2">&quot;COND&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">cond_vars</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                <span class="c1"># Only count conductivity if it has actual values (not just NaN)</span>
+                <span class="n">cond_data</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cond_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">conductivity_values</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">cond_data</span><span class="p">)</span>
+                    <span class="n">has_conductivity</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">break</span>
+
+        <span class="c1"># Check for oxygen variables - SBE37-ODO sensors</span>
+        <span class="n">oxygen_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;oxygen_phase&quot;</span><span class="p">,</span> <span class="s2">&quot;oxygen_temp&quot;</span><span class="p">,</span> <span class="s2">&quot;oxygen&quot;</span><span class="p">,</span> <span class="s2">&quot;OXYGEN&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">oxygen_vars</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                <span class="c1"># Only count oxygen if it has actual values (not just NaN)</span>
+                <span class="n">oxygen_data</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">oxygen_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">oxygen_values</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">oxygen_data</span><span class="p">)</span>
+                    <span class="n">has_oxygen</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">break</span>
+
+    <span class="c1"># Collect reference data values</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">reference_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+
+        <span class="c1"># CTD pressure</span>
+        <span class="k">if</span> <span class="s2">&quot;prDM&quot;</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+            <span class="n">pressure_values</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">prDM</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">prDM</span><span class="o">.</span><span class="n">values</span><span class="p">)])</span>
+
+        <span class="c1"># CTD temperatures</span>
+        <span class="k">for</span> <span class="n">temp_var</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;t090C&quot;</span><span class="p">,</span> <span class="s2">&quot;t190C&quot;</span><span class="p">,</span> <span class="s2">&quot;temp_primary&quot;</span><span class="p">,</span> <span class="s2">&quot;temp_secondary&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">temp_var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                <span class="n">temperature_values</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                    <span class="n">ds</span><span class="p">[</span><span class="n">temp_var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="n">temp_var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)]</span>
+                <span class="p">)</span>
+
+        <span class="c1"># CTD conductivities - only collect values if instruments have conductivity</span>
+        <span class="k">if</span> <span class="n">has_conductivity</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">cond_var</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;c0mS/cm&quot;</span><span class="p">,</span> <span class="s2">&quot;c1mS/cm&quot;</span><span class="p">,</span> <span class="s2">&quot;cond_primary&quot;</span><span class="p">,</span> <span class="s2">&quot;cond_secondary&quot;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">cond_var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                    <span class="n">conductivity_values</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                        <span class="n">ds</span><span class="p">[</span><span class="n">cond_var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="n">cond_var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)]</span>
+                    <span class="p">)</span>
+
+        <span class="c1"># CTD oxygen - only collect values if instruments have oxygen</span>
+        <span class="k">if</span> <span class="n">has_oxygen</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">oxy_var</span> <span class="ow">in</span> <span class="p">[</span>
+                <span class="s2">&quot;sbeox0Mm/L&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;sbeox1Mm/L&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;oxygen&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;oxy_primary&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;oxy_secondary&quot;</span><span class="p">,</span>
+            <span class="p">]:</span>
+                <span class="k">if</span> <span class="n">oxy_var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                    <span class="n">oxygen_values</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                        <span class="n">ds</span><span class="p">[</span><span class="n">oxy_var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="n">oxy_var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)]</span>
+                    <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">smart_range</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mf">0.05</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return [min, max] axis range with fractional padding; defaults to [0,1] for empty input.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">values</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">min_val</span><span class="p">,</span> <span class="n">max_val</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+        <span class="n">range_val</span> <span class="o">=</span> <span class="n">max_val</span> <span class="o">-</span> <span class="n">min_val</span>
+        <span class="n">pad</span> <span class="o">=</span> <span class="n">range_val</span> <span class="o">*</span> <span class="n">padding</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">min_val</span> <span class="o">-</span> <span class="n">pad</span><span class="p">,</span> <span class="n">max_val</span> <span class="o">+</span> <span class="n">pad</span><span class="p">]</span>
+
+    <span class="n">pressure_range</span> <span class="o">=</span> <span class="n">smart_range</span><span class="p">(</span><span class="n">pressure_values</span><span class="p">)</span>
+    <span class="n">temperature_range</span> <span class="o">=</span> <span class="n">smart_range</span><span class="p">(</span><span class="n">temperature_values</span><span class="p">)</span>
+    <span class="n">conductivity_range</span> <span class="o">=</span> <span class="n">smart_range</span><span class="p">(</span><span class="n">conductivity_values</span><span class="p">)</span>
+    <span class="n">oxygen_range</span> <span class="o">=</span> <span class="n">smart_range</span><span class="p">(</span><span class="n">oxygen_values</span><span class="p">)</span>
+
+    <span class="c1"># Dynamic subplot structure - 2-4 subplots</span>
+    <span class="n">subplot_titles</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">row_heights</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Get CTD reference name for title</span>
+    <span class="n">ctd_name</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">reference_data</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">reference_data</span> <span class="k">else</span> <span class="s2">&quot;CTD&quot;</span>
+
+    <span class="c1"># Subplot 1: Always pressure (with main title)</span>
+    <span class="n">subplot_titles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2"> / CTD </span><span class="si">{</span><span class="n">ctd_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">row_heights</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Subplot 2: Always temperature (no title)</span>
+    <span class="n">subplot_titles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">row_heights</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Subplot 3: Conductivity if any instruments have it (no title)</span>
+    <span class="k">if</span> <span class="n">has_conductivity</span><span class="p">:</span>
+        <span class="n">subplot_titles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">row_heights</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Subplot 4: Oxygen if any instruments have it (no title)</span>
+    <span class="k">if</span> <span class="n">has_oxygen</span><span class="p">:</span>
+        <span class="n">subplot_titles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">row_heights</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Normalize row heights</span>
+    <span class="n">total_height</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">row_heights</span><span class="p">)</span>
+    <span class="n">row_heights</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span> <span class="o">/</span> <span class="n">total_height</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">row_heights</span><span class="p">]</span>
+
+    <span class="n">n_rows</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">subplot_titles</span><span class="p">)</span>
+
+    <span class="c1"># Create subplots</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">make_subplots</span><span class="p">(</span>
+        <span class="n">rows</span><span class="o">=</span><span class="n">n_rows</span><span class="p">,</span>
+        <span class="n">cols</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">subplot_titles</span><span class="o">=</span><span class="n">subplot_titles</span><span class="p">,</span>
+        <span class="n">shared_xaxes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">vertical_spacing</span><span class="o">=</span><span class="mf">0.08</span><span class="p">,</span>
+        <span class="n">row_heights</span><span class="o">=</span><span class="n">row_heights</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Generate colors for instruments</span>
+    <span class="n">instrument_serials</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">instrument_data</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">base_colors</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">qualitative</span><span class="o">.</span><span class="n">Plotly</span> <span class="o">+</span> <span class="n">pc</span><span class="o">.</span><span class="n">qualitative</span><span class="o">.</span><span class="n">D3</span> <span class="o">+</span> <span class="n">pc</span><span class="o">.</span><span class="n">qualitative</span><span class="o">.</span><span class="n">G10</span>
+
+    <span class="n">color_map</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">serial</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">instrument_serials</span><span class="p">):</span>
+        <span class="n">color_map</span><span class="p">[</span><span class="n">serial</span><span class="p">]</span> <span class="o">=</span> <span class="n">base_colors</span><span class="p">[</span><span class="n">i</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">base_colors</span><span class="p">)]</span>
+
+    <span class="n">current_row</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="c1"># Plot instrument data</span>
+    <span class="k">for</span> <span class="n">serial</span><span class="p">,</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">instrument_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="n">color_map</span><span class="p">[</span><span class="n">serial</span><span class="p">]</span>
+        <span class="n">instrument_label</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;label&quot;</span><span class="p">,</span> <span class="s2">&quot;Unknown&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Create smart legend labels and line styles</span>
+        <span class="n">instrument_type</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;instrument&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">instrument_type</span> <span class="o">==</span> <span class="s2">&quot;sbe&quot;</span> <span class="ow">or</span> <span class="s2">&quot;sbe&quot;</span> <span class="ow">in</span> <span class="n">instrument_label</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="n">legend_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;MC </span><span class="si">{</span><span class="n">serial</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">line_dash</span> <span class="o">=</span> <span class="s2">&quot;solid&quot;</span>  <span class="c1"># MicroCATs get solid lines</span>
+        <span class="k">elif</span> <span class="n">instrument_type</span> <span class="o">==</span> <span class="s2">&quot;rbr&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;solo&quot;</span> <span class="ow">in</span> <span class="n">instrument_label</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                <span class="n">legend_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;solo </span><span class="si">{</span><span class="n">serial</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">line_dash</span> <span class="o">=</span> <span class="s2">&quot;dash&quot;</span>  <span class="c1"># RBR thermistors get dashed lines</span>
+            <span class="k">elif</span> <span class="s2">&quot;tr&quot;</span> <span class="ow">in</span> <span class="n">instrument_label</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                <span class="n">legend_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;TR </span><span class="si">{</span><span class="n">serial</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">line_dash</span> <span class="o">=</span> <span class="s2">&quot;dash&quot;</span>  <span class="c1"># RBR thermistors get dashed lines</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">legend_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;RBR </span><span class="si">{</span><span class="n">serial</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">line_dash</span> <span class="o">=</span> <span class="s2">&quot;dash&quot;</span>  <span class="c1"># Default RBR get dashed lines</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">legend_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">serial</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">line_dash</span> <span class="o">=</span> <span class="s2">&quot;solid&quot;</span>  <span class="c1"># Default to solid</span>
+
+        <span class="n">show_legend_on_first_plot</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># Pressure subplot</span>
+        <span class="n">pressure_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;prdM&quot;</span><span class="p">,</span> <span class="s2">&quot;pressure&quot;</span><span class="p">,</span> <span class="s2">&quot;press&quot;</span><span class="p">,</span> <span class="s2">&quot;PRES&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">pressure_vars</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span>
+                    <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+                        <span class="n">x</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                        <span class="n">y</span><span class="o">=</span><span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                        <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;lines&quot;</span><span class="p">,</span>
+                        <span class="n">name</span><span class="o">=</span><span class="n">legend_name</span><span class="p">,</span>
+                        <span class="n">line</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">dash</span><span class="o">=</span><span class="n">line_dash</span><span class="p">),</span>
+                        <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;skip&quot;</span><span class="p">,</span>
+                        <span class="n">legendgroup</span><span class="o">=</span><span class="n">serial</span><span class="p">,</span>
+                        <span class="n">showlegend</span><span class="o">=</span><span class="n">show_legend_on_first_plot</span><span class="p">,</span>
+                    <span class="p">),</span>
+                    <span class="n">row</span><span class="o">=</span><span class="n">PRESSURE_ROW</span><span class="p">,</span>
+                    <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">show_legend_on_first_plot</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">break</span>
+
+        <span class="c1"># Temperature subplot</span>
+        <span class="n">temp_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;tv290C&quot;</span><span class="p">,</span> <span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="s2">&quot;temp&quot;</span><span class="p">,</span> <span class="s2">&quot;TEMP&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">temp_vars</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span>
+                    <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+                        <span class="n">x</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                        <span class="n">y</span><span class="o">=</span><span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                        <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;lines&quot;</span><span class="p">,</span>
+                        <span class="n">name</span><span class="o">=</span><span class="n">legend_name</span><span class="p">,</span>
+                        <span class="n">line</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">dash</span><span class="o">=</span><span class="n">line_dash</span><span class="p">),</span>
+                        <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;skip&quot;</span><span class="p">,</span>
+                        <span class="n">legendgroup</span><span class="o">=</span><span class="n">serial</span><span class="p">,</span>
+                        <span class="n">showlegend</span><span class="o">=</span><span class="n">show_legend_on_first_plot</span><span class="p">,</span>
+                    <span class="p">),</span>
+                    <span class="n">row</span><span class="o">=</span><span class="n">TEMPERATURE_ROW</span><span class="p">,</span>
+                    <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">show_legend_on_first_plot</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">break</span>
+
+        <span class="c1"># Conductivity subplot (if conductivity subplot exists)</span>
+        <span class="k">if</span> <span class="n">has_conductivity</span><span class="p">:</span>
+            <span class="n">cond_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;cond0mS/cm&quot;</span><span class="p">,</span> <span class="s2">&quot;conductivity&quot;</span><span class="p">,</span> <span class="s2">&quot;cond&quot;</span><span class="p">,</span> <span class="s2">&quot;COND&quot;</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">cond_vars</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                    <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span>
+                        <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+                            <span class="n">x</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                            <span class="n">y</span><span class="o">=</span><span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                            <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;lines&quot;</span><span class="p">,</span>
+                            <span class="n">name</span><span class="o">=</span><span class="n">legend_name</span><span class="p">,</span>
+                            <span class="n">line</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">dash</span><span class="o">=</span><span class="n">line_dash</span><span class="p">),</span>
+                            <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;skip&quot;</span><span class="p">,</span>
+                            <span class="n">legendgroup</span><span class="o">=</span><span class="n">serial</span><span class="p">,</span>
+                            <span class="n">showlegend</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="p">),</span>
+                        <span class="n">row</span><span class="o">=</span><span class="n">CONDUCTIVITY_ROW</span><span class="p">,</span>
+                        <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="k">break</span>
+
+        <span class="c1"># Oxygen subplot (if oxygen subplot exists)</span>
+        <span class="k">if</span> <span class="n">has_oxygen</span><span class="p">:</span>
+            <span class="c1"># Plot oxygen phase (primary oxygen measurement for SBE37-ODO)</span>
+            <span class="n">oxygen_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;oxygen_phase&quot;</span><span class="p">,</span> <span class="s2">&quot;oxygen&quot;</span><span class="p">,</span> <span class="s2">&quot;OXYGEN&quot;</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">oxygen_vars</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                    <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span>
+                        <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+                            <span class="n">x</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                            <span class="n">y</span><span class="o">=</span><span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                            <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;lines&quot;</span><span class="p">,</span>
+                            <span class="n">name</span><span class="o">=</span><span class="n">legend_name</span><span class="p">,</span>
+                            <span class="n">line</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">dash</span><span class="o">=</span><span class="n">line_dash</span><span class="p">),</span>
+                            <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;skip&quot;</span><span class="p">,</span>
+                            <span class="n">legendgroup</span><span class="o">=</span><span class="n">serial</span><span class="p">,</span>
+                            <span class="n">showlegend</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="p">),</span>
+                        <span class="n">row</span><span class="o">=</span><span class="n">OXYGEN_ROW</span><span class="p">,</span>
+                        <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="k">break</span>
+
+    <span class="c1"># Plot reference data</span>
+    <span class="n">ref_colors</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="s2">&quot;gray&quot;</span><span class="p">,</span> <span class="s2">&quot;darkred&quot;</span><span class="p">,</span> <span class="s2">&quot;darkblue&quot;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">info</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">reference_data</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+        <span class="n">ref_color</span> <span class="o">=</span> <span class="n">ref_colors</span><span class="p">[</span><span class="n">i</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">ref_colors</span><span class="p">)]</span>
+
+        <span class="n">show_ref_legend</span> <span class="o">=</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span>  <span class="c1"># Only show legend for first reference</span>
+
+        <span class="n">current_row</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c1"># Reference pressure</span>
+        <span class="k">if</span> <span class="s2">&quot;prDM&quot;</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+            <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span>
+                <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+                    <span class="n">x</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                    <span class="n">y</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">prDM</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;lines&quot;</span><span class="p">,</span>
+                    <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;CTD </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="n">line</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">ref_color</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+                    <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;skip&quot;</span><span class="p">,</span>
+                    <span class="n">legendgroup</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;ctd_</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="n">showlegend</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># Don&#39;t show CTD pressure in legend</span>
+                <span class="p">),</span>
+                <span class="n">row</span><span class="o">=</span><span class="n">PRESSURE_ROW</span><span class="p">,</span>
+                <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Reference temperatures</span>
+        <span class="n">temp_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;t090C&quot;</span><span class="p">,</span> <span class="s2">&quot;t190C&quot;</span><span class="p">,</span> <span class="s2">&quot;temp_primary&quot;</span><span class="p">,</span> <span class="s2">&quot;temp_secondary&quot;</span><span class="p">]</span>
+        <span class="n">temp_sensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">var</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">temp_vars</span> <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">temp_var</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">temp_sensors</span><span class="p">[:</span><span class="mi">2</span><span class="p">]):</span>  <span class="c1"># Max 2 temperature sensors</span>
+            <span class="n">sensor_color</span> <span class="o">=</span> <span class="s2">&quot;black&quot;</span> <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">&quot;gray&quot;</span>
+            <span class="n">sensor_name</span> <span class="o">=</span> <span class="s2">&quot;CTD primary&quot;</span> <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">&quot;CTD secondary&quot;</span>
+
+            <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span>
+                <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+                    <span class="n">x</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                    <span class="n">y</span><span class="o">=</span><span class="n">ds</span><span class="p">[</span><span class="n">temp_var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;lines&quot;</span><span class="p">,</span>
+                    <span class="n">name</span><span class="o">=</span><span class="n">sensor_name</span><span class="p">,</span>
+                    <span class="n">line</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">sensor_color</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+                    <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;skip&quot;</span><span class="p">,</span>
+                    <span class="n">legendgroup</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;ctd_t</span><span class="si">{</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="n">showlegend</span><span class="o">=</span><span class="p">(</span><span class="n">show_ref_legend</span> <span class="ow">and</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">),</span>
+                <span class="p">),</span>
+                <span class="n">row</span><span class="o">=</span><span class="n">TEMPERATURE_ROW</span><span class="p">,</span>
+                <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">show_ref_legend</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># Only show legend for first temperature sensor</span>
+
+        <span class="c1"># Reference conductivities</span>
+        <span class="k">if</span> <span class="n">has_conductivity</span><span class="p">:</span>
+            <span class="n">cond_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;c0mS/cm&quot;</span><span class="p">,</span> <span class="s2">&quot;c1mS/cm&quot;</span><span class="p">,</span> <span class="s2">&quot;cond_primary&quot;</span><span class="p">,</span> <span class="s2">&quot;cond_secondary&quot;</span><span class="p">]</span>
+            <span class="n">cond_sensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">var</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">cond_vars</span> <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">]</span>
+
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">cond_var</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
+                <span class="n">cond_sensors</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+            <span class="p">):</span>  <span class="c1"># Max 2 conductivity sensors</span>
+                <span class="n">sensor_color</span> <span class="o">=</span> <span class="s2">&quot;black&quot;</span> <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">&quot;gray&quot;</span>
+                <span class="n">sensor_name</span> <span class="o">=</span> <span class="s2">&quot;CTD C1&quot;</span> <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">&quot;CTD C2&quot;</span>
+
+                <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span>
+                    <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+                        <span class="n">x</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                        <span class="n">y</span><span class="o">=</span><span class="n">ds</span><span class="p">[</span><span class="n">cond_var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                        <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;lines&quot;</span><span class="p">,</span>
+                        <span class="n">name</span><span class="o">=</span><span class="n">sensor_name</span><span class="p">,</span>
+                        <span class="n">line</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">sensor_color</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+                        <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;skip&quot;</span><span class="p">,</span>
+                        <span class="n">legendgroup</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;ctd_c</span><span class="si">{</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                        <span class="n">showlegend</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># Don&#39;t repeat CTD in legend for conductivity</span>
+                    <span class="p">),</span>
+                    <span class="n">row</span><span class="o">=</span><span class="n">CONDUCTIVITY_ROW</span><span class="p">,</span>
+                    <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="p">)</span>
+
+        <span class="c1"># CTD Oxygen sensors</span>
+        <span class="k">if</span> <span class="n">has_oxygen</span><span class="p">:</span>
+            <span class="n">oxy_vars</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="s2">&quot;sbeox0Mm/L&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;sbeox1Mm/L&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;oxygen&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;oxy_primary&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;oxy_secondary&quot;</span><span class="p">,</span>
+            <span class="p">]</span>
+            <span class="n">oxy_sensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">var</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">oxy_vars</span> <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">]</span>
+
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">oxy_var</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">oxy_sensors</span><span class="p">[:</span><span class="mi">2</span><span class="p">]):</span>  <span class="c1"># Max 2 oxygen sensors</span>
+                <span class="n">sensor_color</span> <span class="o">=</span> <span class="s2">&quot;black&quot;</span> <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">&quot;gray&quot;</span>
+                <span class="n">sensor_name</span> <span class="o">=</span> <span class="s2">&quot;CTD O2-1&quot;</span> <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">&quot;CTD O2-2&quot;</span>
+
+                <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span>
+                    <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+                        <span class="n">x</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                        <span class="n">y</span><span class="o">=</span><span class="n">ds</span><span class="p">[</span><span class="n">oxy_var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                        <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;lines&quot;</span><span class="p">,</span>
+                        <span class="n">name</span><span class="o">=</span><span class="n">sensor_name</span><span class="p">,</span>
+                        <span class="n">line</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">sensor_color</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+                        <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;skip&quot;</span><span class="p">,</span>
+                        <span class="n">legendgroup</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;ctd_o</span><span class="si">{</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                        <span class="n">showlegend</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># Don&#39;t repeat CTD in legend for oxygen</span>
+                    <span class="p">),</span>
+                    <span class="n">row</span><span class="o">=</span><span class="n">OXYGEN_ROW</span><span class="p">,</span>
+                    <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="p">)</span>
+
+    <span class="c1"># Update y-axis labels and ranges</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_yaxes</span><span class="p">(</span>
+        <span class="nb">range</span><span class="o">=</span><span class="n">pressure_range</span><span class="p">,</span> <span class="n">title_text</span><span class="o">=</span><span class="s2">&quot;Pressure (dbar)&quot;</span><span class="p">,</span> <span class="n">row</span><span class="o">=</span><span class="n">PRESSURE_ROW</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="mi">1</span>
+    <span class="p">)</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_yaxes</span><span class="p">(</span>
+        <span class="nb">range</span><span class="o">=</span><span class="n">temperature_range</span><span class="p">,</span>
+        <span class="n">title_text</span><span class="o">=</span><span class="s2">&quot;Temperature (°C)&quot;</span><span class="p">,</span>
+        <span class="n">row</span><span class="o">=</span><span class="n">TEMPERATURE_ROW</span><span class="p">,</span>
+        <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">has_conductivity</span><span class="p">:</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">update_yaxes</span><span class="p">(</span>
+            <span class="nb">range</span><span class="o">=</span><span class="n">conductivity_range</span><span class="p">,</span>
+            <span class="n">title_text</span><span class="o">=</span><span class="s2">&quot;Conductivity (mS/cm)&quot;</span><span class="p">,</span>
+            <span class="n">row</span><span class="o">=</span><span class="n">CONDUCTIVITY_ROW</span><span class="p">,</span>
+            <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">has_oxygen</span><span class="p">:</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">update_yaxes</span><span class="p">(</span>
+            <span class="nb">range</span><span class="o">=</span><span class="n">oxygen_range</span><span class="p">,</span>
+            <span class="n">title_text</span><span class="o">=</span><span class="s2">&quot;Oxygen (μmol/L | phase°)&quot;</span><span class="p">,</span>
+            <span class="n">row</span><span class="o">=</span><span class="n">OXYGEN_ROW</span><span class="p">,</span>
+            <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Update x-axis (remove titles, keep tick labels)</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_rows</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">update_xaxes</span><span class="p">(</span><span class="n">title_text</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">showticklabels</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">row</span><span class="o">=</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span>
+        <span class="n">height</span><span class="o">=</span><span class="mi">300</span> <span class="o">*</span> <span class="n">n_rows</span> <span class="o">+</span> <span class="mi">100</span><span class="p">,</span>  <span class="c1"># Scale height based on number of subplots</span>
+        <span class="n">hovermode</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">showlegend</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">legend</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;h&quot;</span><span class="p">,</span> <span class="n">yanchor</span><span class="o">=</span><span class="s2">&quot;bottom&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mf">1.02</span><span class="p">,</span> <span class="n">xanchor</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="mf">0.5</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Add gridlines</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_xaxes</span><span class="p">(</span><span class="n">showgrid</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">gridwidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">gridcolor</span><span class="o">=</span><span class="s2">&quot;rgba(128,128,128,0.2)&quot;</span><span class="p">)</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_yaxes</span><span class="p">(</span><span class="n">showgrid</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">gridwidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">gridcolor</span><span class="o">=</span><span class="s2">&quot;rgba(128,128,128,0.2)&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Set x-axis limits based on config deployment/recovery times</span>
+    <span class="k">if</span> <span class="n">config</span> <span class="ow">and</span> <span class="s2">&quot;deployment_time&quot;</span> <span class="ow">in</span> <span class="n">config</span> <span class="ow">and</span> <span class="s2">&quot;recovery_time&quot;</span> <span class="ow">in</span> <span class="n">config</span><span class="p">:</span>
+        <span class="n">deployment_time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;deployment_time&quot;</span><span class="p">])</span>
+        <span class="n">recovery_time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;recovery_time&quot;</span><span class="p">])</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">update_xaxes</span><span class="p">(</span><span class="nb">range</span><span class="o">=</span><span class="p">[</span><span class="n">deployment_time</span><span class="p">,</span> <span class="n">recovery_time</span><span class="p">])</span>
+
+    <span class="c1"># Add bottle stop markers if requested</span>
+    <span class="k">if</span> <span class="n">show_bottle_stops</span> <span class="ow">and</span> <span class="n">reference_data</span><span class="p">:</span>
+        <span class="c1"># Get the first reference dataset for bottle stop detection</span>
+        <span class="n">ref_name</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">reference_data</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">ref_ds</span> <span class="o">=</span> <span class="n">reference_data</span><span class="p">[</span><span class="n">ref_name</span><span class="p">][</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Find bottle stops using the configurable parameters</span>
+        <span class="n">bottle_stops</span> <span class="o">=</span> <span class="n">cf</span><span class="o">.</span><span class="n">find_bottle_stops</span><span class="p">(</span>
+            <span class="n">ref_ds</span><span class="p">,</span>
+            <span class="n">threshold_dbar_per_min</span><span class="o">=</span><span class="n">bottle_stop_params</span><span class="p">[</span><span class="s2">&quot;threshold_dbar_per_min&quot;</span><span class="p">],</span>
+            <span class="n">min_duration_seconds</span><span class="o">=</span><span class="n">bottle_stop_params</span><span class="p">[</span><span class="s2">&quot;min_duration_seconds&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">bottle_stops</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">nFound </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">bottle_stops</span><span class="p">)</span><span class="si">}</span><span class="s2"> bottle stops:&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Add bottle stop markers to all subplots</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">stop</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">bottle_stops</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;  Stop </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">stop</span><span class="p">[</span><span class="s1">&#39;start_time&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">stop</span><span class="p">[</span><span class="s1">&#39;end_time&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">stop</span><span class="p">[</span><span class="s1">&#39;duration_seconds&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">s) at </span><span class="si">{</span><span class="n">stop</span><span class="p">[</span><span class="s1">&#39;pressure&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> dbar&quot;</span>
+                <span class="p">)</span>
+
+                <span class="c1"># Calculate comparison period (2 minutes ending 30 seconds before bottle stop end)</span>
+                <span class="n">end_dt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">stop</span><span class="p">[</span><span class="s2">&quot;end_time&quot;</span><span class="p">])</span>
+                <span class="n">comp_end</span> <span class="o">=</span> <span class="n">end_dt</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+                <span class="n">comp_start</span> <span class="o">=</span> <span class="n">comp_end</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+                <span class="c1"># Add vertical lines to all subplot rows</span>
+                <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_rows</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                    <span class="c1"># Get appropriate y-range for this subplot</span>
+                    <span class="k">if</span> <span class="n">row</span> <span class="o">==</span> <span class="n">PRESSURE_ROW</span><span class="p">:</span>
+                        <span class="n">y_range</span> <span class="o">=</span> <span class="n">pressure_range</span>
+                    <span class="k">elif</span> <span class="n">row</span> <span class="o">==</span> <span class="n">TEMPERATURE_ROW</span><span class="p">:</span>
+                        <span class="n">y_range</span> <span class="o">=</span> <span class="n">temperature_range</span>
+                    <span class="k">elif</span> <span class="n">row</span> <span class="o">==</span> <span class="n">CONDUCTIVITY_ROW</span><span class="p">:</span>
+                        <span class="n">y_range</span> <span class="o">=</span> <span class="n">conductivity_range</span>
+                    <span class="k">elif</span> <span class="n">row</span> <span class="o">==</span> <span class="n">OXYGEN_ROW</span><span class="p">:</span>
+                        <span class="n">y_range</span> <span class="o">=</span> <span class="n">oxygen_range</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">y_range</span> <span class="o">=</span> <span class="n">temperature_range</span>  <span class="c1"># Default</span>
+
+                    <span class="c1"># Start of bottle stop (blue)</span>
+                    <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span>
+                        <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+                            <span class="n">x</span><span class="o">=</span><span class="p">[</span><span class="n">stop</span><span class="p">[</span><span class="s2">&quot;start_time&quot;</span><span class="p">],</span> <span class="n">stop</span><span class="p">[</span><span class="s2">&quot;start_time&quot;</span><span class="p">]],</span>
+                            <span class="n">y</span><span class="o">=</span><span class="n">y_range</span><span class="p">,</span>
+                            <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;lines&quot;</span><span class="p">,</span>
+                            <span class="n">line</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span>
+                            <span class="n">showlegend</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                            <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;skip&quot;</span><span class="p">,</span>
+                        <span class="p">),</span>
+                        <span class="n">row</span><span class="o">=</span><span class="n">row</span><span class="p">,</span>
+                        <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="p">)</span>
+
+                    <span class="c1"># End of bottle stop (red)</span>
+                    <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span>
+                        <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+                            <span class="n">x</span><span class="o">=</span><span class="p">[</span><span class="n">stop</span><span class="p">[</span><span class="s2">&quot;end_time&quot;</span><span class="p">],</span> <span class="n">stop</span><span class="p">[</span><span class="s2">&quot;end_time&quot;</span><span class="p">]],</span>
+                            <span class="n">y</span><span class="o">=</span><span class="n">y_range</span><span class="p">,</span>
+                            <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;lines&quot;</span><span class="p">,</span>
+                            <span class="n">line</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span>
+                            <span class="n">showlegend</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                            <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;skip&quot;</span><span class="p">,</span>
+                        <span class="p">),</span>
+                        <span class="n">row</span><span class="o">=</span><span class="n">row</span><span class="p">,</span>
+                        <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="p">)</span>
+
+                    <span class="c1"># Comparison period boundaries (black dotted)</span>
+                    <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span>
+                        <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+                            <span class="n">x</span><span class="o">=</span><span class="p">[</span><span class="n">comp_start</span><span class="p">,</span> <span class="n">comp_start</span><span class="p">],</span>
+                            <span class="n">y</span><span class="o">=</span><span class="n">y_range</span><span class="p">,</span>
+                            <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;lines&quot;</span><span class="p">,</span>
+                            <span class="n">line</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dash</span><span class="o">=</span><span class="s2">&quot;dot&quot;</span><span class="p">),</span>
+                            <span class="n">showlegend</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                            <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;skip&quot;</span><span class="p">,</span>
+                        <span class="p">),</span>
+                        <span class="n">row</span><span class="o">=</span><span class="n">row</span><span class="p">,</span>
+                        <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="p">)</span>
+
+                    <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span>
+                        <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+                            <span class="n">x</span><span class="o">=</span><span class="p">[</span><span class="n">comp_end</span><span class="p">,</span> <span class="n">comp_end</span><span class="p">],</span>
+                            <span class="n">y</span><span class="o">=</span><span class="n">y_range</span><span class="p">,</span>
+                            <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;lines&quot;</span><span class="p">,</span>
+                            <span class="n">line</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dash</span><span class="o">=</span><span class="s2">&quot;dot&quot;</span><span class="p">),</span>
+                            <span class="n">showlegend</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                            <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;skip&quot;</span><span class="p">,</span>
+                        <span class="p">),</span>
+                        <span class="n">row</span><span class="o">=</span><span class="n">row</span><span class="p">,</span>
+                        <span class="n">col</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">fig</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Eleanor Frajka-Williams.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

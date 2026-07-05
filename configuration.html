@@ -1,0 +1,464 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YAML Configuration Reference &mdash; caldip v0.0.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=393fce2e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=1812e922"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Outputs" href="outputs.html" />
+    <link rel="prev" title="Running caldip" href="running.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            caldip
+              <img src="_static/caldip_icon.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart: single cast</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Users guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="running.html">Running caldip</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">YAML Configuration Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#directory-structure">Directory structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#generating-a-stub">Generating a stub</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#field-reference">Field reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cast-metadata">Cast metadata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#position-and-depth">Position and depth</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#timing">Timing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ctd-reference">CTD reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#instruments-list">Instruments list</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#supported-file-type-values">Supported <code class="docutils literal notranslate"><span class="pre">file_type</span></code> values</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#minimal-example-sbe37-hex-files">Minimal example (SBE37 hex files)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example-with-rbr-thermistors-and-clock-offset">Example with RBR thermistors and clock offset</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Help and reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="http://github.com/eleanorfrajka/caldip">GitHub Repo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="caldip.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">API</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="aboutcaldip.html">About caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bottle_stops.html">Bottle stop detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ / Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="funding.html">Acknowledgments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="funding.html#funding">Funding</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">caldip</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">YAML Configuration Reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/configuration.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="yaml-configuration-reference">
+<h1>YAML Configuration Reference<a class="headerlink" href="#yaml-configuration-reference" title="Link to this heading"></a></h1>
+<p>Each calibration dip cast requires a <code class="docutils literal notranslate"><span class="pre">*.caldip.yaml</span></code> configuration file that tells caldip where to find the CTD reference data and all deployed instruments.</p>
+<section id="directory-structure">
+<h2>Directory structure<a class="headerlink" href="#directory-structure" title="Link to this heading"></a></h2>
+<p>On the UHH ExO data server, calibration dip data live under the mooring data tree:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>moor/
+└── proc_calib/
+    └── {cruise_id}/
+        └── cal_dip/
+            └── cast{ID}/
+                ├── {mooring_id}.caldip.yaml   ← configuration file
+                ├── {ctd_file}.cnv             ← CTD reference cast
+                └── {serial}_{date}.{ext}      ← one file per instrument
+</pre></div>
+</div>
+<p>For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">moor</span><span class="o">/</span><span class="n">proc_calib</span><span class="o">/</span><span class="n">msm142_2026</span><span class="o">/</span><span class="n">cal_dip</span><span class="o">/</span><span class="n">castM4</span><span class="o">/</span><span class="n">castM4</span><span class="o">.</span><span class="n">caldip</span><span class="o">.</span><span class="n">yaml</span>
+</pre></div>
+</div>
+<p>All filenames in the YAML are relative to the <code class="docutils literal notranslate"><span class="pre">directory</span></code> field (i.e., the cast folder).</p>
+</section>
+<hr class="docutils" />
+<section id="generating-a-stub">
+<h2>Generating a stub<a class="headerlink" href="#generating-a-stub" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">generate_stub_yaml.py</span></code> scans a cast directory for recognised instrument files and writes a skeleton YAML:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Write YAML to the directory</span>
+python<span class="w"> </span>generate_stub_yaml.py<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/
+
+<span class="c1"># Print to stdout instead</span>
+python<span class="w"> </span>generate_stub_yaml.py<span class="w"> </span>--print-only<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">generate_stub_yamls.sh</span></code> wraps this for batch processing multiple cast directories.</p>
+<p>After generation, open the stub and fill in the fields marked <code class="docutils literal notranslate"><span class="pre">null</span></code> or <code class="docutils literal notranslate"><span class="pre">.nan</span></code>.</p>
+</section>
+<hr class="docutils" />
+<section id="field-reference">
+<h2>Field reference<a class="headerlink" href="#field-reference" title="Link to this heading"></a></h2>
+<section id="cast-metadata">
+<h3>Cast metadata<a class="headerlink" href="#cast-metadata" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>string</p></td>
+<td><p>yes</p></td>
+<td><p>Short cast identifier, e.g. <code class="docutils literal notranslate"><span class="pre">castM4</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cruise</span></code></p></td>
+<td><p>string</p></td>
+<td><p>yes</p></td>
+<td><p>Cruise identifier, e.g. <code class="docutils literal notranslate"><span class="pre">msm142</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ship</span></code></p></td>
+<td><p>string</p></td>
+<td><p>recommended</p></td>
+<td><p>Vessel name, e.g. <code class="docutils literal notranslate"><span class="pre">FS</span> <span class="pre">MSMerian</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">year</span></code></p></td>
+<td><p>integer</p></td>
+<td><p>recommended</p></td>
+<td><p>Year of cruise</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="position-and-depth">
+<h3>Position and depth<a class="headerlink" href="#position-and-depth" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">deployment_latitude</span></code></p></td>
+<td><p>string</p></td>
+<td><p>recommended</p></td>
+<td><p>Latitude with hemisphere, e.g. <code class="docutils literal notranslate"><span class="pre">59</span> <span class="pre">27.84</span> <span class="pre">N</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">deployment_longitude</span></code></p></td>
+<td><p>string</p></td>
+<td><p>recommended</p></td>
+<td><p>Longitude with hemisphere, e.g. <code class="docutils literal notranslate"><span class="pre">048</span> <span class="pre">27.21</span> <span class="pre">W</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">latitude</span></code></p></td>
+<td><p>float</p></td>
+<td><p>recommended</p></td>
+<td><p>Decimal latitude (positive N)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">longitude</span></code></p></td>
+<td><p>float</p></td>
+<td><p>recommended</p></td>
+<td><p>Decimal longitude (positive E)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">waterdepth</span></code></p></td>
+<td><p>float</p></td>
+<td><p>optional</p></td>
+<td><p>Bottom depth in metres (<code class="docutils literal notranslate"><span class="pre">.nan</span></code> if unknown)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="timing">
+<h3>Timing<a class="headerlink" href="#timing" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">deployment_time</span></code></p></td>
+<td><p>ISO 8601 string</p></td>
+<td><p>yes</p></td>
+<td><p>Time CTD entered water, e.g. <code class="docutils literal notranslate"><span class="pre">'2026-04-03T03:05:36'</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">recovery_time</span></code></p></td>
+<td><p>ISO 8601 string</p></td>
+<td><p>yes</p></td>
+<td><p>Time CTD left water</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="ctd-reference">
+<h3>CTD reference<a class="headerlink" href="#ctd-reference" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">directory</span></code></p></td>
+<td><p>string</p></td>
+<td><p>yes</p></td>
+<td><p>Path to cast folder (relative to repo root or absolute)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ctd_file</span></code></p></td>
+<td><p>string</p></td>
+<td><p>yes</p></td>
+<td><p>CTD <code class="docutils literal notranslate"><span class="pre">.cnv</span></code> filename</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ctd_sensors</span></code></p></td>
+<td><p>integer</p></td>
+<td><p>recommended</p></td>
+<td><p>Which sensor pair to use: <code class="docutils literal notranslate"><span class="pre">1</span></code> (primary) or <code class="docutils literal notranslate"><span class="pre">2</span></code> (secondary)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="instruments-list">
+<h3>Instruments list<a class="headerlink" href="#instruments-list" title="Link to this heading"></a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">instruments</span></code> is a list; each entry describes one deployed instrument.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">position</span></code></p></td>
+<td><p>string</p></td>
+<td><p>recommended</p></td>
+<td><p>Position number on mooring frame, e.g. <code class="docutils literal notranslate"><span class="pre">'1'</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">serial</span></code></p></td>
+<td><p>string or integer</p></td>
+<td><p>yes</p></td>
+<td><p>Instrument serial number</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">label</span></code></p></td>
+<td><p>string</p></td>
+<td><p>recommended</p></td>
+<td><p>Human-readable model, e.g. <code class="docutils literal notranslate"><span class="pre">SBE37</span></code>, <code class="docutils literal notranslate"><span class="pre">TR1050</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">instrument</span></code></p></td>
+<td><p>string</p></td>
+<td><p>yes</p></td>
+<td><p>Instrument family: <code class="docutils literal notranslate"><span class="pre">sbe37</span></code>, <code class="docutils literal notranslate"><span class="pre">sbe</span></code>, or <code class="docutils literal notranslate"><span class="pre">rbr</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">file_type</span></code></p></td>
+<td><p>string</p></td>
+<td><p>yes</p></td>
+<td><p>File format (see table below)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">filename</span></code></p></td>
+<td><p>string</p></td>
+<td><p>yes</p></td>
+<td><p>Data filename relative to <code class="docutils literal notranslate"><span class="pre">directory</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">depth</span></code></p></td>
+<td><p>float</p></td>
+<td><p>recommended</p></td>
+<td><p>Nominal mooring depth in metres</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">clock_offset</span></code></p></td>
+<td><p>integer</p></td>
+<td><p>optional</p></td>
+<td><p>Clock correction in seconds (positive = instrument clock runs fast)</p></td>
+</tr>
+</tbody>
+</table>
+<section id="supported-file-type-values">
+<h4>Supported <code class="docutils literal notranslate"><span class="pre">file_type</span></code> values<a class="headerlink" href="#supported-file-type-values" title="Link to this heading"></a></h4>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">file_type</span></code></p></th>
+<th class="head"><p>Instrument</p></th>
+<th class="head"><p>Format</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sbe-cnv</span></code></p></td>
+<td><p>SBE37 MicroCAT</p></td>
+<td><p>SeaBird processed <code class="docutils literal notranslate"><span class="pre">.cnv</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">sbe-hex</span></code></p></td>
+<td><p>SBE37 MicroCAT</p></td>
+<td><p>SeaBird raw <code class="docutils literal notranslate"><span class="pre">.hex</span></code> with embedded calibration</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sbe-asc</span></code></p></td>
+<td><p>SBE37 MicroCAT</p></td>
+<td><p>SeaBird ASCII <code class="docutils literal notranslate"><span class="pre">.asc</span></code> dump</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">rbr-matlab-legacy</span></code></p></td>
+<td><p>RBR TR-1050 thermistor</p></td>
+<td><p>Legacy MATLAB <code class="docutils literal notranslate"><span class="pre">.mat</span></code> export</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+</section>
+<hr class="docutils" />
+<section id="minimal-example-sbe37-hex-files">
+<h2>Minimal example (SBE37 hex files)<a class="headerlink" href="#minimal-example-sbe37-hex-files" title="Link to this heading"></a></h2>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">castM3</span>
+<span class="nt">cruise</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">msm142</span>
+<span class="nt">ship</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">FS MSMerian</span>
+<span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2026</span>
+<span class="nt">deployment_time</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;2026-04-04T15:19:06&#39;</span>
+<span class="nt">recovery_time</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;2026-04-04T18:11:16&#39;</span>
+<span class="nt">deployment_latitude</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">58 01.63 N</span>
+<span class="nt">deployment_longitude</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">048 49.71 W</span>
+<span class="nt">latitude</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">58.0272</span>
+<span class="nt">longitude</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-48.8285</span>
+<span class="nt">waterdepth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.nan</span>
+<span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;moor/proc_calib/msm142_2026/cal_dip/castM3/&#39;</span>
+<span class="nt">ctd_file</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;msm_142_1_035_1sec.cnv&#39;</span>
+<span class="nt">ctd_sensors</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="nt">instruments</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">position</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;1&#39;</span>
+<span class="w">    </span><span class="nt">serial</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;26271&#39;</span>
+<span class="w">    </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;SBE37&#39;</span>
+<span class="w">    </span><span class="nt">instrument</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sbe37</span>
+<span class="w">    </span><span class="nt">file_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sbe-hex</span>
+<span class="w">    </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SBE37SMP-RS232_03726271_2026_04_04.hex</span>
+<span class="w">    </span><span class="nt">depth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">position</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;2&#39;</span>
+<span class="w">    </span><span class="nt">serial</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;26270&#39;</span>
+<span class="w">    </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;SBE37&#39;</span>
+<span class="w">    </span><span class="nt">instrument</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sbe37</span>
+<span class="w">    </span><span class="nt">file_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sbe-hex</span>
+<span class="w">    </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SBE37SMP-RS232_03726270_2026_04_04.hex</span>
+<span class="w">    </span><span class="nt">depth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+</pre></div>
+</div>
+</section>
+<section id="example-with-rbr-thermistors-and-clock-offset">
+<h2>Example with RBR thermistors and clock offset<a class="headerlink" href="#example-with-rbr-thermistors-and-clock-offset" title="Link to this heading"></a></h2>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">castM4</span>
+<span class="nt">cruise</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">msm142</span>
+<span class="nt">ship</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">FS MSMerian</span>
+<span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2026</span>
+<span class="nt">deployment_time</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;2026-04-03T03:05:36&#39;</span>
+<span class="nt">recovery_time</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;2026-04-03T05:08:24&#39;</span>
+<span class="nt">deployment_latitude</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">59 27.84 N</span>
+<span class="nt">deployment_longitude</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">048 27.21 W</span>
+<span class="nt">latitude</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">59.4640</span>
+<span class="nt">longitude</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-48.4535</span>
+<span class="nt">waterdepth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.nan</span>
+<span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;moor/proc_calib/msm142_2026/cal_dip/castM4/&#39;</span>
+<span class="nt">ctd_file</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;msm_142_1_032_1sec.cnv&#39;</span>
+<span class="nt">ctd_sensors</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="nt">instruments</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">position</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;1&#39;</span>
+<span class="w">    </span><span class="nt">serial</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">013874</span>
+<span class="w">    </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;TR1050&#39;</span>
+<span class="w">    </span><span class="nt">instrument</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rbr</span>
+<span class="w">    </span><span class="nt">file_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rbr-matlab-legacy</span>
+<span class="w">    </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;013874_20260403_1302.mat&#39;</span>
+<span class="w">    </span><span class="nt">depth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<span class="w">    </span><span class="nt">clock_offset</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7175</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">position</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;17&#39;</span>
+<span class="w">    </span><span class="nt">serial</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">13840</span>
+<span class="w">    </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;SBE37&#39;</span>
+<span class="w">    </span><span class="nt">instrument</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sbe</span>
+<span class="w">    </span><span class="nt">file_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sbe-cnv</span>
+<span class="w">    </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;13840_cal_dip_data_time.cnv&#39;</span>
+<span class="w">    </span><span class="nt">depth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="running.html" class="btn btn-neutral float-left" title="Running caldip" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="outputs.html" class="btn btn-neutral float-right" title="Outputs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Eleanor Frajka-Williams.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

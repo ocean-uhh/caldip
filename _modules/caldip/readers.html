@@ -1,0 +1,1502 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caldip.readers &mdash; caldip v0.0.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=393fce2e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=1812e922"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            caldip
+              <img src="../../_static/caldip_icon.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart: single cast</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Users guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../running.html">Running caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">YAML Configuration Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../outputs.html">Outputs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Help and reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="http://github.com/eleanorfrajka/caldip">GitHub Repo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../caldip.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">API</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../aboutcaldip.html">About caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../bottle_stops.html">Bottle stop detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../faq.html">FAQ / Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../funding.html">Acknowledgments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../funding.html#funding">Funding</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">caldip</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">caldip.readers</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for caldip.readers</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Universal data loading functions for caldip processing.</span>
+
+<span class="sd">This module provides a unified interface for loading data from different</span>
+<span class="sd">instrument types using their file_type specifications.</span>
+
+<span class="sd">Currently Used Functions:</span>
+<span class="sd">- find_config_file() -&gt; Path</span>
+<span class="sd">  Find caldip configuration file in directory or use provided file</span>
+<span class="sd">- load_caldip_config() -&gt; Dict</span>
+<span class="sd">- generate_stub_yaml() -&gt; Dict</span>
+<span class="sd">  Generate stub YAML configuration from caldip directory structure</span>
+<span class="sd">  Load YAML configuration files for caldip processing</span>
+<span class="sd">- load_instruments_from_config() -&gt; Dict[str, Dict]</span>
+<span class="sd">  Load all instruments specified in a caldip configuration</span>
+<span class="sd">- load_reference_data() -&gt; Dict[str, Dict]</span>
+<span class="sd">  Load CTD reference data from configuration</span>
+<span class="sd">- load_instrument_data() -&gt; xr.Dataset</span>
+<span class="sd">  Load individual instrument data using appropriate loader (internal utility)</span>
+<span class="sd">- load_ctd_data() -&gt; xr.Dataset</span>
+<span class="sd">  Load CTD data from SeaBird hex/cnv files</span>
+<span class="sd">- load_microcat_data() -&gt; xr.Dataset</span>
+<span class="sd">  Load MicroCAT data from SeaBird hex/asc/cnv files</span>
+
+<span class="sd">All functions are actively used in caldip_plot_all.py and caldip_check_all.py</span>
+<span class="sd">for the main processing workflow. Note: trim_data_to_deployment() moved to tools.py.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">seasenselib</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sl</span>
+
+    <span class="n">SEASENSELIB_AVAILABLE</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">SEASENSELIB_AVAILABLE</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="c1"># Note: AQD binary files are supported via CSV export from AquaPro software</span>
+<span class="c1"># Use nortek-csv file type for exported CSV data</span>
+
+<span class="c1"># Import seabirdscientific if available</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">seabirdscientific.instrument_data</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">id</span>
+
+    <span class="n">SEABIRD_AVAILABLE</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">SEABIRD_AVAILABLE</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;seabirdscientific not available. Some features will be limited.&quot;</span><span class="p">)</span>
+
+<span class="c1"># Import tools for shared utilities</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">caldip.tools</span><span class="w"> </span><span class="kn">import</span> <span class="n">instrument_data_to_xarray</span>
+
+<span class="c1"># Import SBE hex readers</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.sbe_hex_reader</span><span class="w"> </span><span class="kn">import</span> <span class="n">sbe37_hex_reader</span>
+
+
+<div class="viewcode-block" id="find_config_file">
+<a class="viewcode-back" href="../../caldip.html#caldip.readers.find_config_file">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">find_config_file</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find caldip configuration file in directory or use provided file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str or Path</span>
+<span class="sd">        Directory path or direct path to .yaml config file</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Path or None</span>
+<span class="sd">        Path to config file, or None if not found</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="c1"># If it&#39;s a YAML file, use it directly</span>
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="ow">and</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;.yaml&quot;</span><span class="p">,</span> <span class="s2">&quot;.yml&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">path</span>
+
+    <span class="c1"># If it&#39;s a directory, look for .caldip.yaml files</span>
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+        <span class="n">config_files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;*.caldip.yaml&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">config_files</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">config_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Use first config file found</span>
+
+        <span class="c1"># Also check for .yaml files</span>
+        <span class="n">config_files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;*.yaml&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">config_files</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">config_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="load_caldip_config">
+<a class="viewcode-back" href="../../caldip.html#caldip.readers.load_caldip_config">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_caldip_config</span><span class="p">(</span><span class="n">yaml_file</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load caldip configuration from YAML file.&quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">yaml_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+
+
+<div class="viewcode-block" id="load_instrument_data">
+<a class="viewcode-back" href="../../caldip.html#caldip.readers.load_instrument_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_instrument_data</span><span class="p">(</span>
+    <span class="n">file_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">file_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load instrument data using the appropriate loader based on file_type.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file_path : str or Path</span>
+<span class="sd">        Path to the data file</span>
+<span class="sd">    file_type : str</span>
+<span class="sd">        Type of file format (e.g., &#39;sbe-cnv&#39;, &#39;sbe-asc&#39;, &#39;rbr-rsk&#39;)</span>
+<span class="sd">    **kwargs</span>
+<span class="sd">        Additional arguments passed to the specific loader</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xr.Dataset</span>
+<span class="sd">        Dataset with standardized variable names and metadata</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If file_type is not supported</span>
+<span class="sd">    FileNotFoundError</span>
+<span class="sd">        If file does not exist</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">file_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Data file not found: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Route to appropriate loader based on file_type</span>
+    <span class="k">if</span> <span class="n">file_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;sbe-cnv&quot;</span><span class="p">,</span> <span class="s2">&quot;sbe-asc&quot;</span><span class="p">,</span> <span class="s2">&quot;sbe-hex&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">load_microcat_data</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">file_type</span> <span class="o">==</span> <span class="s2">&quot;rbr-rsk&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">SEASENSELIB_AVAILABLE</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;seasenselib is required for RBR data loading&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sl</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">file_type</span> <span class="o">==</span> <span class="s2">&quot;ctd-cnv&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">load_ctd_data</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">file_type</span> <span class="o">==</span> <span class="s2">&quot;nortek-csv&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">load_nortek_csv_data</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># For all other file types, pass to seasenselib with any additional kwargs</span>
+        <span class="k">return</span> <span class="n">sl</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">file_format</span><span class="o">=</span><span class="n">file_type</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+    <span class="c1">#    raise ValueError(f&quot;Unsupported file_type: {file_type}&quot;)</span>
+
+
+<div class="viewcode-block" id="load_instruments_from_config">
+<a class="viewcode-back" href="../../caldip.html#caldip.readers.load_instruments_from_config">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_instruments_from_config</span><span class="p">(</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">data_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load all instruments specified in a caldip configuration.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    config : dict</span>
+<span class="sd">        Caldip configuration dictionary</span>
+<span class="sd">    data_dir : str or Path, optional</span>
+<span class="sd">        Base directory for data files. If None, uses config[&#39;directory&#39;]</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        Dictionary with instrument serial numbers as keys and data info as values:</span>
+<span class="sd">        {</span>
+<span class="sd">            &#39;serial_number&#39;: {</span>
+<span class="sd">                &#39;data&#39;: xr.Dataset,</span>
+<span class="sd">                &#39;config&#39;: dict,  # instrument config from YAML</span>
+<span class="sd">                &#39;type&#39;: str,     # file_type</span>
+<span class="sd">                &#39;file&#39;: str      # full file path</span>
+<span class="sd">            }</span>
+<span class="sd">        }</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">data_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">data_dir</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;directory&quot;</span><span class="p">,</span> <span class="s2">&quot;.&quot;</span><span class="p">)</span>
+
+    <span class="n">data_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+    <span class="n">instruments</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">instrument</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;instruments&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+        <span class="n">serial</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;serial&quot;</span><span class="p">])</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;filename&quot;</span><span class="p">]</span>
+        <span class="n">file_type</span> <span class="o">=</span> <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;file_type&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Construct full file path</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">data_dir</span> <span class="o">/</span> <span class="n">filename</span>
+
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Loading </span><span class="si">{</span><span class="n">instrument</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;label&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Unknown&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">serial</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">file_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">)...&quot;</span>
+        <span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Load the data - pass along any header_file if specified</span>
+            <span class="n">load_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="s2">&quot;header_file&quot;</span> <span class="ow">in</span> <span class="n">instrument</span><span class="p">:</span>
+                <span class="c1"># Construct full path to header file</span>
+                <span class="n">header_file_path</span> <span class="o">=</span> <span class="n">data_dir</span> <span class="o">/</span> <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;header_file&quot;</span><span class="p">]</span>
+                <span class="n">load_kwargs</span><span class="p">[</span><span class="s2">&quot;header_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">header_file_path</span><span class="p">)</span>
+
+            <span class="n">dataset</span> <span class="o">=</span> <span class="n">load_instrument_data</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">file_type</span><span class="p">,</span> <span class="o">**</span><span class="n">load_kwargs</span><span class="p">)</span>
+
+            <span class="c1"># Apply clock offset if specified (positive offset = add time, negative = subtract time)</span>
+            <span class="k">if</span> <span class="s2">&quot;clock_offset&quot;</span> <span class="ow">in</span> <span class="n">instrument</span> <span class="ow">and</span> <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;clock_offset&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">clock_offset</span> <span class="o">=</span> <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;clock_offset&quot;</span><span class="p">]</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ⏰ Applying clock offset: </span><span class="si">{</span><span class="n">clock_offset</span><span class="si">:</span><span class="s2">+.0f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+                <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span>
+                    <span class="n">time</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">clock_offset</span><span class="p">)</span>
+                <span class="p">)</span>
+
+            <span class="c1"># Warn if the serial number embedded in the dataset differs from the YAML</span>
+            <span class="n">dataset_serial</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="s2">&quot;attrs&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;raw_metadata&quot;</span> <span class="ow">in</span> <span class="n">dataset</span><span class="o">.</span><span class="n">attrs</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">raw_meta</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;raw_metadata&quot;</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="s2">&quot;blocks&quot;</span> <span class="ow">in</span> <span class="n">raw_meta</span> <span class="ow">and</span> <span class="s2">&quot;other&quot;</span> <span class="ow">in</span> <span class="n">raw_meta</span><span class="p">[</span><span class="s2">&quot;blocks&quot;</span><span class="p">]:</span>
+                        <span class="n">global_attrs</span> <span class="o">=</span> <span class="n">raw_meta</span><span class="p">[</span><span class="s2">&quot;blocks&quot;</span><span class="p">][</span><span class="s2">&quot;other&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                            <span class="s2">&quot;global_attributes&quot;</span><span class="p">,</span> <span class="p">{}</span>
+                        <span class="p">)</span>
+                        <span class="n">dataset_serial</span> <span class="o">=</span> <span class="n">global_attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;rbr_serial_number&quot;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+                    <span class="k">pass</span>
+
+            <span class="n">instruments</span><span class="p">[</span><span class="n">serial</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">dataset</span><span class="p">,</span>
+                <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="n">instrument</span><span class="p">,</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">file_type</span><span class="p">,</span>
+                <span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">),</span>
+            <span class="p">}</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">start_time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">end_time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">duration_hours</span> <span class="o">=</span> <span class="p">(</span><span class="n">end_time</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span> <span class="o">/</span> <span class="mi">3600</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ✅ Loaded: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span><span class="p">)</span><span class="si">}</span><span class="s2"> samples&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;     📅 Start: </span><span class="si">{</span><span class="n">start_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;     📅 End:   </span><span class="si">{</span><span class="n">end_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;     ⏱️  Duration: </span><span class="si">{</span><span class="n">duration_hours</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> hours&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">dataset_serial</span> <span class="ow">and</span> <span class="n">dataset_serial</span> <span class="o">!=</span> <span class="n">serial</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;     ⚠️  YAML serial </span><span class="si">{</span><span class="n">serial</span><span class="si">}</span><span class="s2"> != Dataset serial </span><span class="si">{</span><span class="n">dataset_serial</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ✅ Loaded: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span><span class="p">)</span><span class="si">}</span><span class="s2"> samples (no data)&quot;</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ❌ Failed to load </span><span class="si">{</span><span class="n">serial</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">instruments</span></div>
+
+
+
+<div class="viewcode-block" id="load_reference_data">
+<a class="viewcode-back" href="../../caldip.html#caldip.readers.load_reference_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_reference_data</span><span class="p">(</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">data_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load CTD reference data from config.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    config : dict</span>
+<span class="sd">        Caldip configuration dictionary</span>
+<span class="sd">    data_dir : str or Path, optional</span>
+<span class="sd">        Base directory for data files. If None, uses config[&#39;directory&#39;]</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        Dictionary with CTD data:</span>
+<span class="sd">        {</span>
+<span class="sd">            &#39;ctd_name&#39;: {</span>
+<span class="sd">                &#39;data&#39;: xr.Dataset,</span>
+<span class="sd">                &#39;file&#39;: str</span>
+<span class="sd">            }</span>
+<span class="sd">        }</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">data_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">data_dir</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;directory&quot;</span><span class="p">,</span> <span class="s2">&quot;.&quot;</span><span class="p">)</span>
+
+    <span class="n">data_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+    <span class="n">reference_data</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># Load CTD data if specified</span>
+    <span class="n">ctd_file</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ctd_file&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ctd_file</span><span class="p">:</span>
+        <span class="n">ctd_path</span> <span class="o">=</span> <span class="n">data_dir</span> <span class="o">/</span> <span class="n">ctd_file</span>
+        <span class="n">ctd_name</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">ctd_file</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading CTD reference </span><span class="si">{</span><span class="n">ctd_name</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">dataset</span> <span class="o">=</span> <span class="n">load_instrument_data</span><span class="p">(</span><span class="n">ctd_path</span><span class="p">,</span> <span class="s2">&quot;ctd-cnv&quot;</span><span class="p">)</span>
+
+            <span class="n">reference_data</span><span class="p">[</span><span class="n">ctd_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">dataset</span><span class="p">,</span> <span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">ctd_path</span><span class="p">)}</span>
+
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ✅ Loaded: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span><span class="p">)</span><span class="si">}</span><span class="s2"> samples&quot;</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ❌ Failed to load CTD: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">reference_data</span></div>
+
+
+
+<div class="viewcode-block" id="load_ctd_data">
+<a class="viewcode-back" href="../../caldip.html#caldip.readers.load_ctd_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_ctd_data</span><span class="p">(</span><span class="n">file_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load CTD 911 data from SeaBird hex/cnv file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file_path : str or Path</span>
+<span class="sd">        Path to CTD data file (.hex or .cnv format)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xarray.Dataset</span>
+<span class="sd">        CTD data with standardized variable names and metadata</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.hex&quot;</span><span class="p">:</span>
+        <span class="c1"># For .hex files, use our custom MSM142 parser</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Import the MSM142 parser</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span> <span class="k">as</span> <span class="n">PathlibPath</span>
+
+            <span class="n">parser_path</span> <span class="o">=</span> <span class="n">PathlibPath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">&quot;msm142_hex_parser.py&quot;</span>
+            <span class="k">if</span> <span class="n">parser_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">parser_path</span><span class="o">.</span><span class="n">parent</span><span class="p">))</span>
+                <span class="kn">from</span><span class="w"> </span><span class="nn">msm142_hex_parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_msm142_hex</span>
+
+                <span class="c1"># Use the base path (without extension)</span>
+                <span class="n">base_path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">))</span>
+                <span class="n">ds</span> <span class="o">=</span> <span class="n">load_msm142_hex</span><span class="p">(</span><span class="n">base_path</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;MSM142 hex parser not found&quot;</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Failed to load hex with MSM142 parser: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. Falling back to basic approach.&quot;</span>
+            <span class="p">)</span>
+            <span class="c1"># Fallback to basic approach if available</span>
+            <span class="k">if</span> <span class="n">SEABIRD_AVAILABLE</span><span class="p">:</span>
+                <span class="n">ds</span> <span class="o">=</span> <span class="n">sbe911_hex_reader</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;No suitable hex parser available&quot;</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.cnv&quot;</span><span class="p">:</span>
+        <span class="c1"># For .cnv files, use seabirdscientific if available</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">SEABIRD_AVAILABLE</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;seabirdscientific package required for CNV data loading&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Use cnv_to_instrument_data to load CNV files</span>
+        <span class="n">instrument_data</span> <span class="o">=</span> <span class="nb">id</span><span class="o">.</span><span class="n">cnv_to_instrument_data</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">))</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">instrument_data_to_xarray</span><span class="p">(</span><span class="n">instrument_data</span><span class="p">)</span>
+
+        <span class="c1"># Fix time if it&#39;s showing year 2000 incorrectly</span>
+        <span class="c1"># CTD files have timeJ which is elapsed days since start of cast</span>
+        <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2000</span><span class="p">:</span>
+            <span class="c1"># Check the raw file for the actual start time</span>
+            <span class="n">actual_start</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="s2">&quot;* NMEA UTC&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                        <span class="c1"># Extract date from line like: * NMEA UTC (Time) = Mar 30 2026 21:06:33</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">date_str</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                            <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+
+                            <span class="n">actual_start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span>
+                                <span class="n">date_str</span><span class="p">,</span> <span class="s2">&quot;%b </span><span class="si">%d</span><span class="s2"> %Y %H:%M:%S&quot;</span>
+                            <span class="p">)</span>
+                            <span class="k">break</span>
+                        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                            <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">actual_start</span> <span class="ow">and</span> <span class="s2">&quot;timeJ&quot;</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                <span class="c1"># timeJ is elapsed time in days since start of cast</span>
+                <span class="c1"># The first timeJ value corresponds to actual_start</span>
+                <span class="n">elapsed_days</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">timeJ</span><span class="o">.</span><span class="n">values</span> <span class="o">-</span> <span class="n">ds</span><span class="o">.</span><span class="n">timeJ</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                <span class="n">actual_timestamps</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">ed</span> <span class="ow">in</span> <span class="n">elapsed_days</span><span class="p">:</span>
+                    <span class="n">timestamp</span> <span class="o">=</span> <span class="n">actual_start</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">ed</span><span class="p">))</span>
+                    <span class="n">actual_timestamps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">timestamp</span><span class="p">)</span>
+
+                <span class="n">ds</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">actual_timestamps</span><span class="p">))</span>
+                <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;start_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">actual_start</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported file format: </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Add standardized variable names and units</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;instrument_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;CTD&quot;</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;filename&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ds</span></div>
+
+
+
+<div class="viewcode-block" id="load_microcat_data">
+<a class="viewcode-back" href="../../caldip.html#caldip.readers.load_microcat_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_microcat_data</span><span class="p">(</span><span class="n">file_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load microCAT (SBE37) data from SeaBird hex/asc/cnv file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file_path : str or Path</span>
+<span class="sd">        Path to microCAT data file (.hex, .asc, or .cnv format)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xarray.Dataset</span>
+<span class="sd">        MicroCAT data with standardized variable names and metadata</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.cnv&quot;</span><span class="p">:</span>
+        <span class="c1"># For .cnv files, use cnv_to_instrument_data (confirmed working)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">SEABIRD_AVAILABLE</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
+                <span class="s2">&quot;seabirdscientific package required for .cnv file loading&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">instrument_data</span> <span class="o">=</span> <span class="nb">id</span><span class="o">.</span><span class="n">cnv_to_instrument_data</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">))</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">instrument_data_to_xarray</span><span class="p">(</span><span class="n">instrument_data</span><span class="p">)</span>
+
+        <span class="c1"># Fix time coordinate if timeJV2 (actual timestamps) is available</span>
+        <span class="k">if</span> <span class="s2">&quot;timeJV2&quot;</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+            <span class="c1"># timeJV2 is in Julian days - SeaBird convention</span>
+            <span class="c1"># SeaBird uses day 1 = Jan 1, day 2 = Jan 2, etc.</span>
+            <span class="c1"># So day 0 = Dec 31 of previous year</span>
+            <span class="c1"># Based on the data: 89.125 julian days = Mar 30, 2026 at 3:00</span>
+
+            <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+
+            <span class="n">julian_days</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">timeJV2</span><span class="o">.</span><span class="n">values</span>
+
+            <span class="c1"># Determine the year from the file or metadata</span>
+            <span class="c1"># For 2026 data: day 0 = Dec 31, 2025</span>
+            <span class="n">reference_date</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2025</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+            <span class="c1"># Convert julian days to actual timestamps</span>
+            <span class="n">actual_timestamps</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">jd</span> <span class="ow">in</span> <span class="n">julian_days</span><span class="p">:</span>
+                <span class="n">timestamp</span> <span class="o">=</span> <span class="n">reference_date</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">jd</span><span class="p">))</span>
+                <span class="n">actual_timestamps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">timestamp</span><span class="p">)</span>
+
+            <span class="c1"># Replace the time coordinate with actual timestamps</span>
+            <span class="n">ds</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">actual_timestamps</span><span class="p">))</span>
+            <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;time_corrected&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Using actual timestamps from timeJV2&quot;</span>
+
+    <span class="k">elif</span> <span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.hex&quot;</span><span class="p">:</span>
+        <span class="c1"># Parse MicroCAT hex files using calibration data from hex header</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">sbe37_hex_reader</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.asc&quot;</span><span class="p">:</span>
+        <span class="c1"># Parse ASCII files manually</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">_parse_microcat_ascii</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported file format: </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Extract serial number from filename if not in metadata</span>
+    <span class="k">if</span> <span class="s2">&quot;serial_number&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">:</span>
+        <span class="n">serial_parts</span> <span class="o">=</span> <span class="n">file_path</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;serial_number&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serial_parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">serial_parts</span> <span class="k">else</span> <span class="s2">&quot;unknown&quot;</span>
+
+    <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;instrument_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;SBE37&quot;</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;filename&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ds</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_microcat_ascii</span><span class="p">(</span><span class="n">file_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse ASCII microCAT files (legacy format).</span>
+
+<span class="sd">    This handles the basic ASCII format structure from SeaBird instruments.</span>
+<span class="sd">    Automatically detects column format based on data structure.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+
+    <span class="c1"># Find data start (after header lines starting with * or #)</span>
+    <span class="n">data_start</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lines</span><span class="p">):</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+        <span class="c1"># Extract metadata from header</span>
+        <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s2">&quot;Temperature SN&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;temperature_sn&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="s2">&quot;Conductivity SN&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;conductivity_sn&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="s2">&quot;sample interval&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">interval_match</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;interval_s&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">interval_match</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">pass</span>
+            <span class="k">elif</span> <span class="s2">&quot;System UpLoad Time&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">time_str</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                    <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;upload_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span>
+                        <span class="n">time_str</span><span class="p">,</span> <span class="s2">&quot;%b </span><span class="si">%d</span><span class="s2"> %Y %H:%M:%S&quot;</span>
+                    <span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">line</span><span class="p">:</span>
+            <span class="c1"># Skip lines like &quot;start time = &quot;, &quot;sample interval = &quot;, &quot;start sample number = &quot;</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="s2">&quot;start time&quot;</span> <span class="ow">in</span> <span class="n">line</span>
+                <span class="ow">or</span> <span class="s2">&quot;sample interval&quot;</span> <span class="ow">in</span> <span class="n">line</span>
+                <span class="ow">or</span> <span class="s2">&quot;start sample number&quot;</span> <span class="ow">in</span> <span class="n">line</span>
+            <span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="c1"># First actual data line marks data start</span>
+            <span class="n">data_start</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="k">break</span>
+
+    <span class="c1"># Parse data lines (skip comments and empty lines)</span>
+    <span class="n">data_lines</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">time_stamps</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">has_pressure</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[</span><span class="n">data_start</span><span class="p">:]:</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">line</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">):</span>
+            <span class="c1"># Skip metadata lines that might appear in data section</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="s2">&quot;start time&quot;</span> <span class="ow">in</span> <span class="n">line</span>
+                <span class="ow">or</span> <span class="s2">&quot;sample interval&quot;</span> <span class="ow">in</span> <span class="n">line</span>
+                <span class="ow">or</span> <span class="s2">&quot;start sample number&quot;</span> <span class="ow">in</span> <span class="n">line</span>
+            <span class="p">):</span>
+                <span class="k">continue</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)]</span>
+
+                <span class="c1"># Detect format based on number of comma-separated values</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+                    <span class="c1"># Format: temperature, conductivity, pressure, date, time</span>
+                    <span class="n">temp</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">cond</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="mf">10.0</span>  <span class="c1"># Convert from S/m to mS/cm</span>
+                    <span class="n">press</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                    <span class="n">date_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="n">has_pressure</span> <span class="o">=</span> <span class="kc">True</span>
+
+                <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+                    <span class="c1"># Format: temperature, conductivity, date, time (no pressure)</span>
+                    <span class="n">temp</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">cond</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="mf">10.0</span>  <span class="c1"># Convert from S/m to mS/cm</span>
+                    <span class="n">press</span> <span class="o">=</span> <span class="mf">0.0</span>
+                    <span class="n">date_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+                <span class="c1"># Try multiple date formats</span>
+                <span class="n">date_formats</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="s2">&quot;</span><span class="si">%d</span><span class="s2"> %b %Y %H:%M:%S&quot;</span><span class="p">,</span>  <span class="c1"># &quot;30 Mar 2026 03:00:01&quot;</span>
+                    <span class="s2">&quot;%m-</span><span class="si">%d</span><span class="s2">-%Y %H:%M:%S&quot;</span><span class="p">,</span>  <span class="c1"># &quot;03-30-2026 03:00:01&quot;</span>
+                    <span class="s2">&quot;</span><span class="si">%d</span><span class="s2">-%m-%Y %H:%M:%S&quot;</span><span class="p">,</span>  <span class="c1"># &quot;30-03-2026 03:00:01&quot;</span>
+                    <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">,</span>  <span class="c1"># &quot;2026-03-30 03:00:01&quot;</span>
+                <span class="p">]</span>
+
+                <span class="n">timestamp</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">for</span> <span class="n">fmt</span> <span class="ow">in</span> <span class="n">date_formats</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">timestamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">date_str</span><span class="p">,</span> <span class="n">fmt</span><span class="p">)</span>
+                        <span class="k">break</span>
+                    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                        <span class="k">continue</span>
+
+                <span class="k">if</span> <span class="n">timestamp</span><span class="p">:</span>
+                    <span class="n">time_stamps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">timestamp</span><span class="p">)</span>
+                    <span class="n">data_lines</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">temp</span><span class="p">,</span> <span class="n">cond</span><span class="p">,</span> <span class="n">press</span><span class="p">])</span>
+
+            <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span>
+                <span class="k">continue</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">data_lines</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No valid data found in ASCII file </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Convert to numpy array</span>
+    <span class="n">data_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data_lines</span><span class="p">)</span>
+    <span class="n">n_samples</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_array</span><span class="p">)</span>
+
+    <span class="c1"># Create time coordinate - use parsed timestamps if available</span>
+    <span class="k">if</span> <span class="n">time_stamps</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">t</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">time_stamps</span><span class="p">):</span>
+        <span class="c1"># Use the actual timestamps from the data</span>
+        <span class="n">valid_timestamps</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">time_stamps</span> <span class="k">if</span> <span class="n">t</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">valid_timestamps</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">time_stamps</span><span class="p">):</span>
+            <span class="n">time_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">time_stamps</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Some timestamps missing, interpolate</span>
+            <span class="n">time_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">time_stamps</span><span class="p">)</span>
+            <span class="n">time_index</span> <span class="o">=</span> <span class="n">time_index</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;ffill&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;bfill&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Fallback: create regular time series</span>
+        <span class="n">interval_s</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;interval_s&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>  <span class="c1"># Default 10 seconds</span>
+        <span class="n">start_time</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;upload_time&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+        <span class="n">time_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span>
+            <span class="n">start</span><span class="o">=</span><span class="n">start_time</span><span class="p">,</span> <span class="n">periods</span><span class="o">=</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">interval_s</span><span class="si">}</span><span class="s2">s&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Create Dataset with appropriate variables</span>
+    <span class="n">data_vars</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">data_array</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]),</span>
+        <span class="s2">&quot;conductivity&quot;</span><span class="p">:</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">data_array</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]),</span>
+    <span class="p">}</span>
+
+    <span class="c1"># Only add pressure if it exists (not all zeros)</span>
+    <span class="k">if</span> <span class="n">has_pressure</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">data_array</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;prdM&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">data_array</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">])</span>
+
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span><span class="n">data_vars</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">time_index</span><span class="p">},</span> <span class="n">attrs</span><span class="o">=</span><span class="n">metadata</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ds</span>
+
+
+<div class="viewcode-block" id="generate_stub_yaml">
+<a class="viewcode-back" href="../../caldip.html#caldip.readers.generate_stub_yaml">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_stub_yaml</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">print_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate a stub YAML configuration for a caldip directory.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    directory : str</span>
+<span class="sd">        Path to caldip directory (e.g., &#39;data/proc_calib/cruise123/cal_dip/castM3&#39;)</span>
+<span class="sd">    print_only : bool</span>
+<span class="sd">        If True, print to stdout instead of writing file</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Dict</span>
+<span class="sd">        Configuration dictionary</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">dir_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">dir_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Directory not found: </span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Extract information from directory structure</span>
+    <span class="n">cast_name</span> <span class="o">=</span> <span class="n">dir_path</span><span class="o">.</span><span class="n">name</span>  <span class="c1"># e.g., &#39;castM3&#39;</span>
+
+    <span class="c1"># Try to extract cruise name from path structure</span>
+    <span class="n">path_parts</span> <span class="o">=</span> <span class="n">dir_path</span><span class="o">.</span><span class="n">parts</span>
+    <span class="n">cruise_name</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">path_parts</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s2">&quot;cal_dip&quot;</span> <span class="ow">in</span> <span class="n">part</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">x</span> <span class="ow">in</span> <span class="n">part</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;cruise&quot;</span><span class="p">,</span> <span class="s2">&quot;msm&quot;</span><span class="p">,</span> <span class="s2">&quot;expedition&quot;</span><span class="p">]):</span>
+            <span class="n">cruise_name</span> <span class="o">=</span> <span class="n">part</span>
+            <span class="k">break</span>
+
+    <span class="c1"># Extract year from cast name or directory</span>
+    <span class="n">year_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;20\d</span><span class="si">{2}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">dir_path</span><span class="p">))</span>
+    <span class="n">year</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">year_match</span><span class="o">.</span><span class="n">group</span><span class="p">())</span> <span class="k">if</span> <span class="n">year_match</span> <span class="k">else</span> <span class="mi">2024</span>
+
+    <span class="c1"># Find CTD file and extract metadata</span>
+    <span class="n">ctd_file</span> <span class="o">=</span> <span class="n">_find_ctd_file</span><span class="p">(</span><span class="n">dir_path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ctd_file</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No *_1sec.cnv file found in </span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">ctd_metadata</span> <span class="o">=</span> <span class="n">_extract_ctd_metadata</span><span class="p">(</span><span class="n">ctd_file</span><span class="p">)</span>
+
+    <span class="c1"># Detect instruments</span>
+    <span class="n">instruments</span> <span class="o">=</span> <span class="n">_detect_instruments</span><span class="p">(</span><span class="n">dir_path</span><span class="p">)</span>
+
+    <span class="c1"># Build the configuration</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">cast_name</span><span class="p">,</span>
+        <span class="s2">&quot;year&quot;</span><span class="p">:</span> <span class="n">year</span><span class="p">,</span>
+        <span class="s2">&quot;waterdepth&quot;</span><span class="p">:</span> <span class="s2">&quot;.nan&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;cruise&quot;</span><span class="p">:</span> <span class="n">cruise_name</span><span class="p">,</span>
+        <span class="s2">&quot;directory&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ctd_file&quot;</span><span class="p">:</span> <span class="n">ctd_file</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="s2">&quot;ctd_sensors&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>  <span class="c1"># Default assumption</span>
+        <span class="s2">&quot;instruments&quot;</span><span class="p">:</span> <span class="n">instruments</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="c1"># Add optional fields if available</span>
+    <span class="k">if</span> <span class="n">ctd_metadata</span><span class="p">[</span><span class="s2">&quot;start_time&quot;</span><span class="p">]:</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;deployment_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ctd_metadata</span><span class="p">[</span><span class="s2">&quot;start_time&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">ctd_metadata</span><span class="p">[</span><span class="s2">&quot;end_time&quot;</span><span class="p">]:</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;recovery_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ctd_metadata</span><span class="p">[</span><span class="s2">&quot;end_time&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">ctd_metadata</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]:</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;deployment_latitude&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ctd_metadata</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]</span>
+        <span class="c1"># Extract the number with proper sign</span>
+        <span class="n">lat_parts</span> <span class="o">=</span> <span class="n">ctd_metadata</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">lat_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lat_parts</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lat_parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">lat_parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;S&quot;</span><span class="p">:</span>
+            <span class="n">lat_value</span> <span class="o">=</span> <span class="o">-</span><span class="n">lat_value</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lat_value</span>
+    <span class="k">if</span> <span class="n">ctd_metadata</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">]:</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;deployment_longitude&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ctd_metadata</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">]</span>
+        <span class="c1"># Extract the number with proper sign</span>
+        <span class="n">lon_parts</span> <span class="o">=</span> <span class="n">ctd_metadata</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">lon_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lon_parts</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lon_parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">lon_parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;W&quot;</span><span class="p">:</span>
+            <span class="n">lon_value</span> <span class="o">=</span> <span class="o">-</span><span class="n">lon_value</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lon_value</span>
+    <span class="k">if</span> <span class="n">ctd_metadata</span><span class="p">[</span><span class="s2">&quot;ship&quot;</span><span class="p">]:</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;ship&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ctd_metadata</span><span class="p">[</span><span class="s2">&quot;ship&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Handle output</span>
+    <span class="k">if</span> <span class="n">print_only</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">config</span>
+
+    <span class="c1"># Determine output filename</span>
+    <span class="n">output_file</span> <span class="o">=</span> <span class="n">dir_path</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">cast_name</span><span class="si">}</span><span class="s2">.caldip.yaml&quot;</span>
+
+    <span class="c1"># Check if file exists and find next available name</span>
+    <span class="k">if</span> <span class="n">output_file</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">counter</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">new_name</span> <span class="o">=</span> <span class="n">dir_path</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">cast_name</span><span class="si">}</span><span class="s2">.caldip-</span><span class="si">{</span><span class="n">counter</span><span class="si">}</span><span class="s2">.yaml&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">new_name</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="n">output_file</span> <span class="o">=</span> <span class="n">new_name</span>
+                <span class="k">break</span>
+            <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="c1"># Write YAML file</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_file</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Generated stub YAML: </span><span class="si">{</span><span class="n">output_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;instruments&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2"> instruments&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">config</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_find_ctd_file</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find the main CTD file (*_1sec.cnv) in the directory.&quot;&quot;&quot;</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">directory</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;*_1sec.cnv&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">files</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_extract_ctd_metadata</span><span class="p">(</span><span class="n">ctd_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract metadata from CTD .cnv file header.&quot;&quot;&quot;</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;start_time&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;end_time&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;latitude&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;longitude&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;ship&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;nvalues&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;interval&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">ctd_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;latin1&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="c1"># Read header lines (typically first 100 lines contain metadata)</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">200</span><span class="p">:</span>  <span class="c1"># Stop reading after header</span>
+                    <span class="k">break</span>
+
+                <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+                <span class="c1"># Extract start time</span>
+                <span class="k">if</span> <span class="s2">&quot;start_time&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">or</span> <span class="s2">&quot;start time&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="c1"># Look for format like &quot;Apr 04 2026 15:19:06&quot;</span>
+                    <span class="n">time_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+                        <span class="sa">r</span><span class="s2">&quot;(\w</span><span class="si">{3}</span><span class="s2">)\s+(\d{1,2})\s+(\d</span><span class="si">{4}</span><span class="s2">)\s+(\d{1,2}):(\d</span><span class="si">{2}</span><span class="s2">):(\d</span><span class="si">{2}</span><span class="s2">)&quot;</span><span class="p">,</span>
+                        <span class="n">line</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="n">time_match</span><span class="p">:</span>
+                        <span class="n">month_abbr</span> <span class="o">=</span> <span class="n">time_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                        <span class="n">day</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+                        <span class="n">year</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+                        <span class="n">hour</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">4</span><span class="p">))</span>
+                        <span class="n">minute</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
+                        <span class="n">second</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">6</span><span class="p">))</span>
+
+                        <span class="c1"># Convert month abbreviation to number</span>
+                        <span class="n">months</span> <span class="o">=</span> <span class="p">{</span>
+                            <span class="s2">&quot;Jan&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                            <span class="s2">&quot;Feb&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+                            <span class="s2">&quot;Mar&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+                            <span class="s2">&quot;Apr&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+                            <span class="s2">&quot;May&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+                            <span class="s2">&quot;Jun&quot;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span>
+                            <span class="s2">&quot;Jul&quot;</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>
+                            <span class="s2">&quot;Aug&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+                            <span class="s2">&quot;Sep&quot;</span><span class="p">:</span> <span class="mi">9</span><span class="p">,</span>
+                            <span class="s2">&quot;Oct&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+                            <span class="s2">&quot;Nov&quot;</span><span class="p">:</span> <span class="mi">11</span><span class="p">,</span>
+                            <span class="s2">&quot;Dec&quot;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span>
+                        <span class="p">}</span>
+                        <span class="n">month</span> <span class="o">=</span> <span class="n">months</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">month_abbr</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+                        <span class="c1"># Format as ISO datetime</span>
+                        <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;start_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">year</span><span class="si">:</span><span class="s2">04d</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">month</span><span class="si">:</span><span class="s2">02d</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">day</span><span class="si">:</span><span class="s2">02d</span><span class="si">}</span><span class="s2">T</span><span class="si">{</span><span class="n">hour</span><span class="si">:</span><span class="s2">02d</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">minute</span><span class="si">:</span><span class="s2">02d</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">second</span><span class="si">:</span><span class="s2">02d</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c1"># Fallback to existing ISO format</span>
+                        <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+                            <span class="sa">r</span><span class="s2">&quot;(\d</span><span class="si">{4}</span><span class="s2">-\d</span><span class="si">{2}</span><span class="s2">-\d</span><span class="si">{2}</span><span class="s2">T\d</span><span class="si">{2}</span><span class="s2">:\d</span><span class="si">{2}</span><span class="s2">:\d</span><span class="si">{2}</span><span class="s2">)&quot;</span><span class="p">,</span> <span class="n">line</span>
+                        <span class="p">)</span>
+                        <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+                            <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;start_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+                <span class="c1"># Extract ship name</span>
+                <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;# ship:&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;# Ship:&quot;</span><span class="p">):</span>
+                    <span class="n">ship</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">ship</span> <span class="ow">and</span> <span class="n">ship</span> <span class="o">!=</span> <span class="s2">&quot;unknown&quot;</span><span class="p">:</span>
+                        <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;ship&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ship</span>
+
+                <span class="c1"># Extract NMEA latitude: &quot;* NMEA Latitude = 58 01.63 N&quot;</span>
+                <span class="k">if</span> <span class="s2">&quot;nmea latitude&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="n">lat_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(\d+)\s+(\d+\.?\d*)\s+([NS])&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">lat_match</span><span class="p">:</span>
+                        <span class="n">deg</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lat_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+                        <span class="n">mins</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lat_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+                        <span class="n">hemisphere</span> <span class="o">=</span> <span class="n">lat_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+                        <span class="n">decimal_deg</span> <span class="o">=</span> <span class="n">deg</span> <span class="o">+</span> <span class="n">mins</span> <span class="o">/</span> <span class="mf">60.0</span>
+                        <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">decimal_deg</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">hemisphere</span><span class="si">}</span><span class="s2">&quot;</span>
+
+                <span class="c1"># Extract NMEA longitude: &quot;* NMEA Longitude = 048 49.71 W&quot;</span>
+                <span class="k">if</span> <span class="s2">&quot;nmea longitude&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="n">lon_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(\d+)\s+(\d+\.?\d*)\s+([EW])&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">lon_match</span><span class="p">:</span>
+                        <span class="n">deg</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lon_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+                        <span class="n">mins</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lon_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+                        <span class="n">hemisphere</span> <span class="o">=</span> <span class="n">lon_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+                        <span class="n">decimal_deg</span> <span class="o">=</span> <span class="n">deg</span> <span class="o">+</span> <span class="n">mins</span> <span class="o">/</span> <span class="mf">60.0</span>
+                        <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">decimal_deg</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">hemisphere</span><span class="si">}</span><span class="s2">&quot;</span>
+
+                <span class="c1"># Fallback: Extract latitude from generic latitude lines</span>
+                <span class="k">if</span> <span class="s2">&quot;latitude&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]:</span>
+                    <span class="c1"># Look for patterns like &quot;59 27.84&quot; (degrees minutes) or &quot;59.4640&quot; (decimal degrees)</span>
+                    <span class="n">lat_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(-?\d+)\s+(\d+\.?\d*)&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">lat_match</span><span class="p">:</span>
+                        <span class="c1"># Degrees minutes format</span>
+                        <span class="n">deg</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lat_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+                        <span class="n">mins</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lat_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+                        <span class="n">decimal_deg</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">deg</span><span class="p">)</span> <span class="o">+</span> <span class="n">mins</span> <span class="o">/</span> <span class="mf">60.0</span>
+                        <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">decimal_deg</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;N&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">deg</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;S&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c1"># Try decimal degrees format</span>
+                        <span class="n">lat_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(-?\d+\.?\d*)&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">lat_match</span><span class="p">:</span>
+                            <span class="n">deg</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lat_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+                            <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">deg</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;N&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">deg</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;S&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+                            <span class="p">)</span>
+
+                <span class="c1"># Fallback: Extract longitude from generic longitude lines</span>
+                <span class="k">if</span> <span class="s2">&quot;longitude&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">]:</span>
+                    <span class="c1"># Look for patterns like &quot;-048 27.21&quot; (degrees minutes) or &quot;-48.4535&quot; (decimal degrees)</span>
+                    <span class="n">lon_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(-?\d+)\s+(\d+\.?\d*)&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">lon_match</span><span class="p">:</span>
+                        <span class="c1"># Degrees minutes format</span>
+                        <span class="n">deg</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lon_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+                        <span class="n">mins</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lon_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+                        <span class="n">decimal_deg</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">deg</span><span class="p">)</span> <span class="o">+</span> <span class="n">mins</span> <span class="o">/</span> <span class="mf">60.0</span>
+                        <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">decimal_deg</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;E&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">deg</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;W&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c1"># Try decimal degrees format</span>
+                        <span class="n">lon_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(-?\d+\.?\d*)&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">lon_match</span><span class="p">:</span>
+                            <span class="n">deg</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lon_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+                            <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">deg</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;E&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">deg</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;W&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+                            <span class="p">)</span>
+
+                <span class="c1"># Extract nvalues</span>
+                <span class="k">if</span> <span class="s2">&quot;nvalues&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="n">nval_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;nvalues\s*=\s*(\d+)&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">nval_match</span><span class="p">:</span>
+                        <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;nvalues&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">nval_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+
+                <span class="c1"># Extract interval</span>
+                <span class="k">if</span> <span class="s2">&quot;interval&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="n">interval_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+                        <span class="sa">r</span><span class="s2">&quot;interval\s*=\s*seconds:\s*(\d+(?:\.\d+)?)&quot;</span><span class="p">,</span> <span class="n">line</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="n">interval_match</span><span class="p">:</span>
+                        <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;interval&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">interval_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Could not extract metadata from </span><span class="si">{</span><span class="n">ctd_file</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Calculate recovery time if we have all the data</span>
+    <span class="k">if</span> <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;start_time&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;nvalues&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;interval&quot;</span><span class="p">]:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+
+            <span class="n">start_dt</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;start_time&quot;</span><span class="p">])</span>
+            <span class="n">duration_seconds</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;nvalues&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;interval&quot;</span><span class="p">]</span>
+            <span class="n">end_dt</span> <span class="o">=</span> <span class="n">start_dt</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">duration_seconds</span><span class="p">)</span>
+            <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;end_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">end_dt</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">T%H:%M:%S&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Could not calculate end time: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">metadata</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_prioritize_files</span><span class="p">(</span><span class="n">files</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Select the best file based on extension priority.&quot;&quot;&quot;</span>
+    <span class="c1"># Group files by base name (without extension)</span>
+    <span class="n">by_basename</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+        <span class="n">basename</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">stem</span>
+        <span class="c1"># Handle cases like file.12345.cnv -&gt; use just file.12345</span>
+        <span class="k">if</span> <span class="s2">&quot;.&quot;</span> <span class="ow">in</span> <span class="n">basename</span><span class="p">:</span>
+            <span class="n">basename</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">basename</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">basename</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span>
+                <span class="k">else</span> <span class="n">basename</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">basename</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">by_basename</span><span class="p">:</span>
+            <span class="n">by_basename</span><span class="p">[</span><span class="n">basename</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">by_basename</span><span class="p">[</span><span class="n">basename</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+    <span class="c1"># For each basename, pick the best file</span>
+    <span class="n">selected</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">basename</span><span class="p">,</span> <span class="n">file_list</span> <span class="ow">in</span> <span class="n">by_basename</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="c1"># Priority: .cnv &gt; .mat &gt; .rsk &gt; .hex</span>
+        <span class="n">cnv_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">file_list</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.cnv&quot;</span><span class="p">]</span>
+        <span class="n">mat_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">file_list</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.mat&quot;</span><span class="p">]</span>
+        <span class="n">rsk_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">file_list</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.rsk&quot;</span><span class="p">]</span>
+        <span class="n">hex_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">file_list</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.hex&quot;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">cnv_files</span><span class="p">:</span>
+            <span class="n">selected</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cnv_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">mat_files</span><span class="p">:</span>
+            <span class="n">selected</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mat_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">rsk_files</span><span class="p">:</span>
+            <span class="n">selected</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rsk_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">hex_files</span><span class="p">:</span>
+            <span class="n">selected</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hex_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">file_list</span><span class="p">:</span>  <span class="c1"># fallback</span>
+            <span class="n">selected</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">file_list</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">selected</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_detect_instruments</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Detect instruments based on files in directory.&quot;&quot;&quot;</span>
+    <span class="n">instruments</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Find all potential instrument files</span>
+    <span class="n">all_files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">directory</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">))</span>
+
+    <span class="c1"># Filter out unwanted files</span>
+    <span class="n">instrument_files</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">ignored_extensions</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;.xml&quot;</span><span class="p">,</span> <span class="s2">&quot;.xmlcon&quot;</span><span class="p">,</span> <span class="s2">&quot;.cap&quot;</span><span class="p">,</span> <span class="s2">&quot;.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;.log&quot;</span><span class="p">,</span> <span class="s2">&quot;.yaml&quot;</span><span class="p">,</span> <span class="s2">&quot;.yml&quot;</span><span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">all_files</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="ow">and</span> <span class="n">f</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ignored_extensions</span><span class="p">:</span>
+            <span class="c1"># Skip the main CTD file</span>
+            <span class="k">if</span> <span class="s2">&quot;_1sec.cnv&quot;</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">instrument_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+    <span class="c1"># Prioritize files</span>
+    <span class="n">selected_files</span> <span class="o">=</span> <span class="n">_prioritize_files</span><span class="p">(</span><span class="n">instrument_files</span><span class="p">)</span>
+
+    <span class="c1"># Create instrument entries</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">file</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">selected_files</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="c1"># Try to extract serial number from filename</span>
+        <span class="n">serial</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="c1"># Handle SBE37SMP-RS232 pattern: SBE37SMP-RS232_037#####_20*.*</span>
+        <span class="n">sbe_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;SBE37SMP-RS232_037(\d</span><span class="si">{5}</span><span class="s2">)_20&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sbe_match</span><span class="p">:</span>
+            <span class="n">serial</span> <span class="o">=</span> <span class="n">sbe_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">instrument</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;position&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span>
+            <span class="s2">&quot;serial&quot;</span><span class="p">:</span> <span class="n">serial</span><span class="p">,</span>
+            <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;filename&quot;</span><span class="p">:</span> <span class="n">file</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;depth&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="c1"># Determine instrument type and file_type based on extension</span>
+        <span class="n">ext</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">ext</span> <span class="o">==</span> <span class="s2">&quot;.cnv&quot;</span><span class="p">:</span>
+            <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;instrument&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;sbe&quot;</span>
+            <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;file_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;sbe-cnv&quot;</span>
+        <span class="k">elif</span> <span class="n">ext</span> <span class="o">==</span> <span class="s2">&quot;.mat&quot;</span><span class="p">:</span>
+            <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;instrument&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;rbr&quot;</span>  <span class="c1"># Common for RBR files</span>
+            <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;file_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;rbr-matlab-legacy&quot;</span>
+        <span class="k">elif</span> <span class="n">ext</span> <span class="o">==</span> <span class="s2">&quot;.rsk&quot;</span><span class="p">:</span>
+            <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;instrument&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;rbr&quot;</span>
+            <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;file_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;rbr-rsk&quot;</span>
+        <span class="k">elif</span> <span class="n">ext</span> <span class="o">==</span> <span class="s2">&quot;.hex&quot;</span><span class="p">:</span>
+            <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;instrument&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;sbe&quot;</span>  <span class="c1"># SBE hex files</span>
+            <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;file_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;sbe-hex&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Unknown file type - leave instrument and file_type blank</span>
+            <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;instrument&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;file_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="n">instruments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">instrument</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">instruments</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_nortek_csv_columns</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract data variables from Nortek CSV DataFrame.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df : pd.DataFrame</span>
+<span class="sd">        DataFrame with Nortek CSV data</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Dict</span>
+<span class="sd">        Dictionary of data variables for xarray Dataset</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data_vars</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># Environmental data</span>
+    <span class="k">for</span> <span class="n">csv_col</span><span class="p">,</span> <span class="n">var_name</span> <span class="ow">in</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="s2">&quot;temperature&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;pressure&quot;</span><span class="p">,</span> <span class="s2">&quot;pressure&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;heading&quot;</span><span class="p">,</span> <span class="s2">&quot;heading&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;pitch&quot;</span><span class="p">,</span> <span class="s2">&quot;pitch&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;roll&quot;</span><span class="p">,</span> <span class="s2">&quot;roll&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;speedOfSound&quot;</span><span class="p">,</span> <span class="s2">&quot;speed_of_sound&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;batteryVoltage&quot;</span><span class="p">,</span> <span class="s2">&quot;battery_voltage&quot;</span><span class="p">),</span>
+    <span class="p">]:</span>
+        <span class="k">if</span> <span class="n">csv_col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">data_vars</span><span class="p">[</span><span class="n">var_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="n">csv_col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+
+    <span class="c1"># Velocity, amplitude, correlation data for 3 beams</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">data_type</span><span class="p">,</span> <span class="n">prefix</span> <span class="ow">in</span> <span class="p">[</span>
+            <span class="p">(</span><span class="s2">&quot;vel&quot;</span><span class="p">,</span> <span class="s2">&quot;velocity&quot;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;amp&quot;</span><span class="p">,</span> <span class="s2">&quot;amplitude&quot;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;corr&quot;</span><span class="p">,</span> <span class="s2">&quot;correlation&quot;</span><span class="p">),</span>
+        <span class="p">]:</span>
+            <span class="n">csv_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">data_type</span><span class="si">}</span><span class="s2">Beam</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">#1&quot;</span>
+            <span class="n">var_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">_beam</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="n">csv_col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">data_vars</span><span class="p">[</span><span class="n">var_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">([</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="n">csv_col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">data_vars</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_add_nortek_variable_attributes</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Add units and metadata attributes to Nortek dataset variables.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ds : xr.Dataset</span>
+<span class="sd">        Dataset to add attributes to</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xr.Dataset</span>
+<span class="sd">        Dataset with variable attributes added</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Environmental variable attributes</span>
+    <span class="n">attr_map</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="s2">&quot;degrees_C&quot;</span><span class="p">,</span> <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Water Temperature&quot;</span><span class="p">},</span>
+        <span class="s2">&quot;pressure&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="s2">&quot;dbar&quot;</span><span class="p">,</span> <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Pressure&quot;</span><span class="p">},</span>
+        <span class="s2">&quot;heading&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="s2">&quot;degrees&quot;</span><span class="p">,</span> <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Heading&quot;</span><span class="p">},</span>
+        <span class="s2">&quot;pitch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="s2">&quot;degrees&quot;</span><span class="p">,</span> <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Pitch&quot;</span><span class="p">},</span>
+        <span class="s2">&quot;roll&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="s2">&quot;degrees&quot;</span><span class="p">,</span> <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Roll&quot;</span><span class="p">},</span>
+        <span class="s2">&quot;speed_of_sound&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="s2">&quot;m/s&quot;</span><span class="p">,</span> <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Speed of Sound&quot;</span><span class="p">},</span>
+        <span class="s2">&quot;battery_voltage&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="s2">&quot;V&quot;</span><span class="p">,</span> <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Battery Voltage&quot;</span><span class="p">},</span>
+    <span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">var_name</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">attr_map</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">var_name</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+            <span class="n">ds</span><span class="p">[</span><span class="n">var_name</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+
+    <span class="c1"># Beam data attributes</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]:</span>
+        <span class="n">vel_var</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;velocity_beam</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">amp_var</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;amplitude_beam</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">corr_var</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;correlation_beam</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="k">if</span> <span class="n">vel_var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+            <span class="n">ds</span><span class="p">[</span><span class="n">vel_var</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="s2">&quot;m/s&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Velocity Beam </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;coordinate_system&quot;</span><span class="p">:</span> <span class="s2">&quot;BEAM&quot;</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">amp_var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+            <span class="n">ds</span><span class="p">[</span><span class="n">amp_var</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                <span class="p">{</span><span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="s2">&quot;counts&quot;</span><span class="p">,</span> <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Amplitude Beam </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">corr_var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+            <span class="n">ds</span><span class="p">[</span><span class="n">corr_var</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                <span class="p">{</span><span class="s2">&quot;units&quot;</span><span class="p">:</span> <span class="s2">&quot;%&quot;</span><span class="p">,</span> <span class="s2">&quot;long_name&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Correlation Beam </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ds</span>
+
+
+<div class="viewcode-block" id="load_nortek_csv_data">
+<a class="viewcode-back" href="../../caldip.html#caldip.readers.load_nortek_csv_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_nortek_csv_data</span><span class="p">(</span>
+    <span class="n">file_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">header_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load Nortek CSV data exported from AquaPro software.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file_path : str or Path</span>
+<span class="sd">        Path to the CSV data file (e.g., &quot;Average Velocity DF3.csv&quot;)</span>
+<span class="sd">    header_file : str, optional</span>
+<span class="sd">        Path to Units.csv file for metadata (optional)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xr.Dataset</span>
+<span class="sd">        Dataset with Nortek CSV data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">file_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CSV file not found: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Read CSV and parse time</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;;&quot;</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;datetime&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;dateTime&quot;</span><span class="p">])</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;datetime&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+
+    <span class="c1"># Extract data variables</span>
+    <span class="n">data_vars</span> <span class="o">=</span> <span class="n">_parse_nortek_csv_columns</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+    <span class="c1"># Create dataset</span>
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span><span class="n">data_vars</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">times</span><span class="p">})</span>
+
+    <span class="c1"># Add global metadata</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;instrument_type&quot;</span><span class="p">:</span> <span class="s2">&quot;Nortek_Aquadopp&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;filename&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">),</span>
+            <span class="s2">&quot;data_format&quot;</span><span class="p">:</span> <span class="s2">&quot;Nortek_CSV_Export&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;coordinate_system&quot;</span><span class="p">:</span> <span class="s2">&quot;BEAM&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Extract serial number</span>
+    <span class="k">if</span> <span class="s2">&quot;serialNumber&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;serial_number&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;serialNumber&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="c1"># Add variable attributes</span>
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">_add_nortek_variable_attributes</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ✅ Nortek CSV: loaded </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">times</span><span class="p">)</span><span class="si">}</span><span class="s2"> samples from </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ds</span></div>
+
+
+
+<div class="viewcode-block" id="sbe37_xmlcon_reader">
+<a class="viewcode-back" href="../../caldip.html#caldip.readers.sbe37_xmlcon_reader">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sbe37_xmlcon_reader</span><span class="p">(</span><span class="n">xmlcon_file</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    DEPRECATED</span>
+<span class="sd">    Parse SBE37 xmlcon file to extract sensor configuration and calibration coefficients.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    xmlcon_file : Union[str, Path]</span>
+<span class="sd">        Path to .xmlcon file</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Dict</span>
+<span class="sd">        Dictionary containing sensor configurations and coefficient objects</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">xml.etree.ElementTree</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ET</span>
+
+    <span class="n">xmlcon_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">xmlcon_file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">xmlcon_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;XMLCON file not found: </span><span class="si">{</span><span class="n">xmlcon_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Parse XML</span>
+    <span class="n">tree</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">xmlcon_path</span><span class="p">)</span>
+    <span class="n">root</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+
+    <span class="n">sensors</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">enabled_sensors</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Find all sensors by index</span>
+    <span class="k">for</span> <span class="n">sensor_elem</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;.//Sensor&quot;</span><span class="p">):</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="n">index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+
+        <span class="c1"># Check what type of sensor this is</span>
+        <span class="n">temp_sensor</span> <span class="o">=</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;TemperatureSensor&quot;</span><span class="p">)</span>
+        <span class="n">cond_sensor</span> <span class="o">=</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;ConductivitySensor&quot;</span><span class="p">)</span>
+        <span class="n">press_sensor</span> <span class="o">=</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;PressureSensor&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">temp_sensor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sensors</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_parse_coefficients</span><span class="p">(</span><span class="n">temp_sensor</span><span class="p">,</span> <span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+            <span class="n">enabled_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">cond_sensor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sensors</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_parse_coefficients</span><span class="p">(</span><span class="n">cond_sensor</span><span class="p">,</span> <span class="s2">&quot;conductivity&quot;</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+            <span class="n">enabled_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;conductivity&quot;</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">press_sensor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sensors</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_parse_coefficients</span><span class="p">(</span><span class="n">press_sensor</span><span class="p">,</span> <span class="s2">&quot;pressure&quot;</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+            <span class="n">enabled_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;pressure&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;sensors&quot;</span><span class="p">:</span> <span class="n">sensors</span><span class="p">,</span>
+        <span class="s2">&quot;enabled_sensors&quot;</span><span class="p">:</span> <span class="n">enabled_sensors</span><span class="p">,</span>
+        <span class="s2">&quot;xmlcon_path&quot;</span><span class="p">:</span> <span class="n">xmlcon_path</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_coefficients</span><span class="p">(</span><span class="n">sensor_elem</span><span class="p">,</span> <span class="n">sensor_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">sensor_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generic function to parse sensor coefficients from XML element.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sensor_elem : xml.etree.ElementTree.Element</span>
+<span class="sd">        XML element containing sensor data</span>
+<span class="sd">    sensor_type : str</span>
+<span class="sd">        Type of sensor (&#39;temperature&#39;, &#39;conductivity&#39;, &#39;pressure&#39;)</span>
+<span class="sd">    sensor_index : int</span>
+<span class="sd">        Sensor index from xmlcon</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Dict</span>
+<span class="sd">        Sensor information with coefficients</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Extract common fields</span>
+    <span class="n">serial_num</span> <span class="o">=</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;SerialNumber&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+    <span class="n">cal_date</span> <span class="o">=</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;CalibrationDate&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+
+    <span class="c1"># Parse all coefficient elements to lowercase keys</span>
+    <span class="n">coef_dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="n">sensor_type</span> <span class="o">==</span> <span class="s2">&quot;conductivity&quot;</span><span class="p">:</span>
+        <span class="c1"># Special handling for conductivity - check UseG_J flag</span>
+        <span class="n">use_g_j_elem</span> <span class="o">=</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;UseG_J&quot;</span><span class="p">)</span>
+        <span class="n">use_g_j</span> <span class="o">=</span> <span class="n">use_g_j_elem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">use_g_j_elem</span><span class="o">.</span><span class="n">text</span> <span class="o">==</span> <span class="s2">&quot;1&quot;</span>
+
+        <span class="k">if</span> <span class="n">use_g_j</span><span class="p">:</span>
+            <span class="c1"># Look for equation=&quot;1&quot; coefficients which contain G,H,I,J</span>
+            <span class="k">for</span> <span class="n">coeffs_elem</span> <span class="ow">in</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;Coefficients&quot;</span><span class="p">):</span>
+                <span class="n">equation_attr</span> <span class="o">=</span> <span class="n">coeffs_elem</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;equation&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">equation_attr</span> <span class="o">==</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">coeffs_elem</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">:</span>
+                            <span class="n">coef_dict</span><span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                    <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Use equation=&quot;0&quot; with A,B,C,D coefficients</span>
+            <span class="k">for</span> <span class="n">coeffs_elem</span> <span class="ow">in</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;Coefficients&quot;</span><span class="p">):</span>
+                <span class="n">equation_attr</span> <span class="o">=</span> <span class="n">coeffs_elem</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;equation&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">equation_attr</span> <span class="o">==</span> <span class="s2">&quot;0&quot;</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">coeffs_elem</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">:</span>
+                            <span class="n">coef_dict</span><span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                    <span class="k">break</span>
+
+        <span class="c1"># Also parse direct children (slope, offset, etc.)</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">sensor_elem</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;slope&quot;</span><span class="p">,</span> <span class="s2">&quot;offset&quot;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">:</span>
+                    <span class="n">coef_dict</span><span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># For temperature and pressure, parse all numeric child elements</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">sensor_elem</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">text</span> <span class="ow">and</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;SerialNumber&quot;</span><span class="p">,</span> <span class="s2">&quot;CalibrationDate&quot;</span><span class="p">]:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">coef_dict</span><span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="c1"># Skip non-numeric elements</span>
+                    <span class="k">continue</span>
+
+    <span class="c1"># Separate seabirdscientific calibration coefficients from slope/offset</span>
+    <span class="n">cal_coeffs</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># Define expected coefficient names for each sensor type</span>
+    <span class="k">if</span> <span class="n">sensor_type</span> <span class="o">==</span> <span class="s2">&quot;temperature&quot;</span><span class="p">:</span>
+        <span class="n">expected_coeffs</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;a0&quot;</span><span class="p">,</span> <span class="s2">&quot;a1&quot;</span><span class="p">,</span> <span class="s2">&quot;a2&quot;</span><span class="p">,</span> <span class="s2">&quot;a3&quot;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">sensor_type</span> <span class="o">==</span> <span class="s2">&quot;conductivity&quot;</span><span class="p">:</span>
+        <span class="n">expected_coeffs</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;g&quot;</span><span class="p">,</span> <span class="s2">&quot;h&quot;</span><span class="p">,</span> <span class="s2">&quot;i&quot;</span><span class="p">,</span> <span class="s2">&quot;j&quot;</span><span class="p">,</span> <span class="s2">&quot;cpcor&quot;</span><span class="p">,</span> <span class="s2">&quot;ctcor&quot;</span><span class="p">,</span> <span class="s2">&quot;wbotc&quot;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">sensor_type</span> <span class="o">==</span> <span class="s2">&quot;pressure&quot;</span><span class="p">:</span>
+        <span class="n">expected_coeffs</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;pa0&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;pa1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;pa2&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptca0&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptca1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptca2&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptcb0&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptcb1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptcb2&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptempa0&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptempa1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptempa2&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">expected_coeffs</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Split coefficients</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">coef_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">expected_coeffs</span><span class="p">:</span>
+            <span class="n">cal_coeffs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">sensor_type</span><span class="p">,</span>
+        <span class="s2">&quot;serial_number&quot;</span><span class="p">:</span> <span class="n">serial_num</span><span class="p">,</span>
+        <span class="s2">&quot;calibration_date&quot;</span><span class="p">:</span> <span class="n">cal_date</span><span class="p">,</span>
+        <span class="s2">&quot;coefficients&quot;</span><span class="p">:</span> <span class="n">cal_coeffs</span><span class="p">,</span>
+        <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="n">metadata</span><span class="p">,</span>
+        <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">sensor_index</span><span class="p">,</span>
+    <span class="p">}</span>
+
+
+<span class="c1"># Removed duplicate sbe37_hex_reader function - using import from .sbe_hex_reader instead</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Eleanor Frajka-Williams.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

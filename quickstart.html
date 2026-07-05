@@ -1,0 +1,223 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quickstart: single cast &mdash; caldip v0.0.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=393fce2e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=1812e922"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Running caldip" href="running.html" />
+    <link rel="prev" title="Installation" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            caldip
+              <img src="_static/caldip_icon.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart: single cast</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#directory-structure">Directory structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-1-generate-a-stub-yaml">Step 1 — Generate a stub YAML</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-2-generate-the-interactive-plot">Step 2 — Generate the interactive plot</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-3-generate-statistics">Step 3 — Generate statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#choosing-the-ctd-sensor-ctd-sensor">Choosing the CTD sensor (<code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span></code>)</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Users guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="running.html">Running caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">YAML Configuration Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Help and reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="http://github.com/eleanorfrajka/caldip">GitHub Repo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="caldip.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">API</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="aboutcaldip.html">About caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bottle_stops.html">Bottle stop detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ / Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="funding.html">Acknowledgments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="funding.html#funding">Funding</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">caldip</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Quickstart: single cast</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/quickstart.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quickstart-single-cast">
+<h1>Quickstart: single cast<a class="headerlink" href="#quickstart-single-cast" title="Link to this heading"></a></h1>
+<p>This guide walks through setting up and running caldip for one calibration dip cast from scratch.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
+<p>Install the package (see <a class="reference internal" href="installation.html"><span class="std std-doc">Installation</span></a>):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements-dev.txt
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="directory-structure">
+<h2>Directory structure<a class="headerlink" href="#directory-structure" title="Link to this heading"></a></h2>
+<p>Each cast needs its own folder containing:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>moor/proc_calib/{cruise_id}/cal_dip/cast{ID}/
+├── {mooring_id}.caldip.yaml        ← you create this
+├── {cast}.cnv                      ← CTD reference cast (1 Hz, SBE processed)
+├── {serial}_{date}.hex             ← one file per SBE37 MicroCAT
+├── {serial}_{date}.mat             ← one file per RBR thermistor
+└── ...
+</pre></div>
+</div>
+<p>All instrument data files must be in the <strong>same folder</strong> as the YAML.
+The <code class="docutils literal notranslate"><span class="pre">directory</span></code> field in the YAML tells caldip where that folder is.</p>
+</section>
+<hr class="docutils" />
+<section id="step-1-generate-a-stub-yaml">
+<h2>Step 1 — Generate a stub YAML<a class="headerlink" href="#step-1-generate-a-stub-yaml" title="Link to this heading"></a></h2>
+<p>Point <code class="docutils literal notranslate"><span class="pre">generate_stub_yaml.py</span></code> at the cast folder and it will scan for recognised instrument files and write a skeleton configuration:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>generate_stub_yaml.py<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/
+</pre></div>
+</div>
+<p>Open the resulting YAML and fill in any fields left as <code class="docutils literal notranslate"><span class="pre">null</span></code> or <code class="docutils literal notranslate"><span class="pre">.nan</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">deployment_time</span></code> and <code class="docutils literal notranslate"><span class="pre">recovery_time</span></code> (from the ship’s CTD log)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">latitude</span></code> / <code class="docutils literal notranslate"><span class="pre">longitude</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">clock_offset</span></code> for any instrument whose clock was not set to UTC before deployment</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ctd_sensors</span></code> — which CTD sensor pair to use (<code class="docutils literal notranslate"><span class="pre">1</span></code> = primary, <code class="docutils literal notranslate"><span class="pre">2</span></code> = secondary)</p></li>
+</ul>
+<p>See the <a class="reference internal" href="configuration.html"><span class="std std-doc">YAML configuration reference</span></a> for a full field description.</p>
+</section>
+<hr class="docutils" />
+<section id="step-2-generate-the-interactive-plot">
+<h2>Step 2 — Generate the interactive plot<a class="headerlink" href="#step-2-generate-the-interactive-plot" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>caldip_plot_all.py<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--output<span class="w"> </span>castM4_plot.html<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--ctd-sensor<span class="w"> </span><span class="m">2</span>
+</pre></div>
+</div>
+<p>This produces a self-contained HTML file you can open in any browser.
+No internet required — the file works at sea.</p>
+<p>If you omit <code class="docutils literal notranslate"><span class="pre">--output</span></code>, the plot opens interactively in your browser instead.</p>
+</section>
+<hr class="docutils" />
+<section id="step-3-generate-statistics">
+<h2>Step 3 — Generate statistics<a class="headerlink" href="#step-3-generate-statistics" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>caldip_check_all.py<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--ctd-sensor<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--output-dir<span class="w"> </span>outputs/
+</pre></div>
+</div>
+<p>This writes two CSV files to <code class="docutils literal notranslate"><span class="pre">outputs/</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">castM4_summary_statistics.csv</span></code> — one row per instrument, averaged across all bottle stops</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">castM4_detailed_statistics.csv</span></code> — one row per instrument per bottle stop</p></li>
+</ul>
+</section>
+<hr class="docutils" />
+<section id="choosing-the-ctd-sensor-ctd-sensor">
+<h2>Choosing the CTD sensor (<code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span></code>)<a class="headerlink" href="#choosing-the-ctd-sensor-ctd-sensor" title="Link to this heading"></a></h2>
+<p>CTD rosettes typically carry two independent sensor packages. Use <code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span> <span class="pre">2</span></code> (secondary) if the primary sensor had problems during the cast. The flag applies to both scripts and must match between plot and statistics runs to keep comparisons consistent.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Flag</p></th>
+<th class="head"><p>Sensor</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span> <span class="pre">1</span></code></p></td>
+<td><p>Primary (default)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span> <span class="pre">2</span></code></p></td>
+<td><p>Secondary</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="running.html" class="btn btn-neutral float-right" title="Running caldip" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Eleanor Frajka-Williams.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

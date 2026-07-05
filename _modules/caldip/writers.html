@@ -1,0 +1,234 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caldip.writers &mdash; caldip v0.0.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=393fce2e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=1812e922"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            caldip
+              <img src="../../_static/caldip_icon.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart: single cast</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Users guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../running.html">Running caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">YAML Configuration Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../outputs.html">Outputs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Help and reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="http://github.com/eleanorfrajka/caldip">GitHub Repo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../caldip.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">API</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../aboutcaldip.html">About caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../bottle_stops.html">Bottle stop detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../faq.html">FAQ / Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../funding.html">Acknowledgments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../funding.html#funding">Funding</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">caldip</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">caldip.writers</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for caldip.writers</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Output formatting functions for caldip processing.</span>
+
+<span class="sd">This module contains functions for formatting and writing caldip analysis results</span>
+<span class="sd">to various output formats (console, CSV, etc.).</span>
+
+<span class="sd">Currently Used Functions:</span>
+<span class="sd">- print_universal_statistics_report() -&gt; None</span>
+<span class="sd">  Print formatted statistics report to console</span>
+
+<span class="sd">These functions handle only output formatting with no calculations.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span>
+
+
+<div class="viewcode-block" id="print_universal_statistics_report">
+<a class="viewcode-back" href="../../caldip.html#caldip.writers.print_universal_statistics_report">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">print_universal_statistics_report</span><span class="p">(</span>
+    <span class="n">stats_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">ctd_sensor</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Print formatted statistics report for universal instrument types.&quot;&quot;&quot;</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;UNIVERSAL CALDIP CHECK REPORT - </span><span class="si">{</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>
+
+    <span class="c1"># CTD statistics</span>
+    <span class="n">ctd_stats</span> <span class="o">=</span> <span class="n">stats_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;ctd_stats&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Timing information</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Timing Information:&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Show all bottle stops if available</span>
+    <span class="k">if</span> <span class="s2">&quot;timing_info&quot;</span> <span class="ow">in</span> <span class="n">ctd_stats</span> <span class="ow">and</span> <span class="s2">&quot;bottle_stops&quot;</span> <span class="ow">in</span> <span class="n">ctd_stats</span><span class="p">[</span><span class="s2">&quot;timing_info&quot;</span><span class="p">]:</span>
+        <span class="n">bottle_stops</span> <span class="o">=</span> <span class="n">ctd_stats</span><span class="p">[</span><span class="s2">&quot;timing_info&quot;</span><span class="p">][</span><span class="s2">&quot;bottle_stops&quot;</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">bottle_stops</span><span class="p">)</span><span class="si">}</span><span class="s2"> bottle stop(s):&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">stop</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">bottle_stops</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Bottle Stop </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Start: </span><span class="si">{</span><span class="n">stop</span><span class="p">[</span><span class="s1">&#39;start_time&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    End: </span><span class="si">{</span><span class="n">stop</span><span class="p">[</span><span class="s1">&#39;end_time&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Duration: </span><span class="si">{</span><span class="n">stop</span><span class="p">[</span><span class="s1">&#39;duration_seconds&#39;</span><span class="p">]</span><span class="o">/</span><span class="mi">60</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> minutes&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Pressure: </span><span class="si">{</span><span class="n">stop</span><span class="p">[</span><span class="s1">&#39;pressure&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> dbar&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Using deepest bottle stop for comparison:&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Bottle stop period to compare:&quot;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Start: </span><span class="si">{</span><span class="n">ctd_stats</span><span class="p">[</span><span class="s1">&#39;comparison_start&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    End: </span><span class="si">{</span><span class="n">ctd_stats</span><span class="p">[</span><span class="s1">&#39;comparison_end&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">CTD Statistics (Sensor </span><span class="si">{</span><span class="n">ctd_sensor</span><span class="si">}</span><span class="s2">) during comparison period:&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;  Mean Pressure: </span><span class="si">{</span><span class="n">ctd_stats</span><span class="p">[</span><span class="s1">&#39;bl_press&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> dbar (std: </span><span class="si">{</span><span class="n">ctd_stats</span><span class="p">[</span><span class="s1">&#39;press_std&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">)&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;  Mean Temperature: </span><span class="si">{</span><span class="n">ctd_stats</span><span class="p">[</span><span class="s1">&#39;ctd_temp&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> °C (std: </span><span class="si">{</span><span class="n">ctd_stats</span><span class="p">[</span><span class="s1">&#39;temp_std&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2">)&quot;</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="s2">&quot;mean_cond&quot;</span> <span class="ow">in</span> <span class="n">ctd_stats</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;  Mean Conductivity: </span><span class="si">{</span><span class="n">ctd_stats</span><span class="p">[</span><span class="s1">&#39;ctd_cond&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> mS/cm (std: </span><span class="si">{</span><span class="n">ctd_stats</span><span class="p">[</span><span class="s1">&#39;cond_std&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Instrument statistics</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Number of Instruments: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">stats_df</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Group by instrument type</span>
+    <span class="n">type_counts</span> <span class="o">=</span> <span class="n">stats_df</span><span class="p">[</span><span class="s2">&quot;instrument_type&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Instrument Types:&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">inst_type</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">type_counts</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  </span><span class="si">{</span><span class="n">inst_type</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Instrument Comparison Statistics:&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;Serial  Type    Samples  Temp Diff (°C)        Cond Diff (mS/cm)     Press Diff (dbar)&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s2">&quot;                         Mean      Std         Mean      Std         Mean      Std&quot;</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">stats_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="c1"># Format conductivity and pressure with proper handling of NaN</span>
+        <span class="n">cond_mean</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;cond_diff&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">8.2f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;cond_diff&quot;</span><span class="p">])</span> <span class="k">else</span> <span class="s2">&quot;     N/A&quot;</span>
+        <span class="p">)</span>
+        <span class="n">cond_std</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;cond_diff_std&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">8.3f</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;cond_diff_std&quot;</span><span class="p">])</span>
+            <span class="k">else</span> <span class="s2">&quot;     N/A&quot;</span>
+        <span class="p">)</span>
+        <span class="n">press_mean</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;press_diff&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">7.2f</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;press_diff&quot;</span><span class="p">])</span>
+            <span class="k">else</span> <span class="s2">&quot;    N/A&quot;</span>
+        <span class="p">)</span>
+        <span class="n">press_std</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;press_diff_std&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">7.2f</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;press_diff_std&quot;</span><span class="p">])</span>
+            <span class="k">else</span> <span class="s2">&quot;    N/A&quot;</span>
+        <span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;serial&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">6s</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;instrument_type&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">6s</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;N&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">6d</span><span class="si">}</span><span class="s2">  &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;temp_diff&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">8.3f</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;temp_diff_std&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">8.4f</span><span class="si">}</span><span class="s2">  &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">cond_mean</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">cond_std</span><span class="si">}</span><span class="s2">  &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">press_mean</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">press_std</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">80</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Eleanor Frajka-Williams.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,767 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caldip.sbe_hex_reader &mdash; caldip v0.0.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=393fce2e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=1812e922"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            caldip
+              <img src="../../_static/caldip_icon.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart: single cast</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Users guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../running.html">Running caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">YAML Configuration Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../outputs.html">Outputs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Help and reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="http://github.com/eleanorfrajka/caldip">GitHub Repo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../caldip.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">API</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../aboutcaldip.html">About caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../bottle_stops.html">Bottle stop detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../faq.html">FAQ / Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../funding.html">Acknowledgments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../funding.html#funding">Funding</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">caldip</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">caldip.sbe_hex_reader</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for caldip.sbe_hex_reader</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Dict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+
+
+<div class="viewcode-block" id="sbe37_xmlcon_reader">
+<a class="viewcode-back" href="../../caldip.html#caldip.sbe_hex_reader.sbe37_xmlcon_reader">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sbe37_xmlcon_reader</span><span class="p">(</span><span class="n">xmlcon_file</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    DEPRECATED</span>
+<span class="sd">    Parse SBE37 xmlcon file to extract sensor configuration and calibration coefficients.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    xmlcon_file : Union[str, Path]</span>
+<span class="sd">        Path to .xmlcon file</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Dict</span>
+<span class="sd">        Dictionary containing sensor configurations and coefficient objects</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">xml.etree.ElementTree</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ET</span>
+
+    <span class="n">xmlcon_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">xmlcon_file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">xmlcon_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;XMLCON file not found: </span><span class="si">{</span><span class="n">xmlcon_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Parse XML</span>
+    <span class="n">tree</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">xmlcon_path</span><span class="p">)</span>
+    <span class="n">root</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+
+    <span class="n">sensors</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">enabled_sensors</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Find all sensors by index</span>
+    <span class="k">for</span> <span class="n">sensor_elem</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;.//Sensor&quot;</span><span class="p">):</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="n">index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+
+        <span class="c1"># Check what type of sensor this is</span>
+        <span class="n">temp_sensor</span> <span class="o">=</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;TemperatureSensor&quot;</span><span class="p">)</span>
+        <span class="n">cond_sensor</span> <span class="o">=</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;ConductivitySensor&quot;</span><span class="p">)</span>
+        <span class="n">press_sensor</span> <span class="o">=</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;PressureSensor&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">temp_sensor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sensors</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_parse_coefficients</span><span class="p">(</span><span class="n">temp_sensor</span><span class="p">,</span> <span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+            <span class="n">enabled_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">cond_sensor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sensors</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_parse_coefficients</span><span class="p">(</span><span class="n">cond_sensor</span><span class="p">,</span> <span class="s2">&quot;conductivity&quot;</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+            <span class="n">enabled_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;conductivity&quot;</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">press_sensor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sensors</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">_parse_coefficients</span><span class="p">(</span><span class="n">press_sensor</span><span class="p">,</span> <span class="s2">&quot;pressure&quot;</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+            <span class="n">enabled_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;pressure&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;sensors&quot;</span><span class="p">:</span> <span class="n">sensors</span><span class="p">,</span>
+        <span class="s2">&quot;enabled_sensors&quot;</span><span class="p">:</span> <span class="n">enabled_sensors</span><span class="p">,</span>
+        <span class="s2">&quot;xmlcon_path&quot;</span><span class="p">:</span> <span class="n">xmlcon_path</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_coefficients</span><span class="p">(</span><span class="n">sensor_elem</span><span class="p">,</span> <span class="n">sensor_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">sensor_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generic function to parse sensor coefficients from XML element.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sensor_elem : xml.etree.ElementTree.Element</span>
+<span class="sd">        XML element containing sensor data</span>
+<span class="sd">    sensor_type : str</span>
+<span class="sd">        Type of sensor (&#39;temperature&#39;, &#39;conductivity&#39;, &#39;pressure&#39;)</span>
+<span class="sd">    sensor_index : int</span>
+<span class="sd">        Sensor index from xmlcon</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Dict</span>
+<span class="sd">        Sensor information with coefficients</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Extract common fields</span>
+    <span class="n">serial_num</span> <span class="o">=</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;SerialNumber&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+    <span class="n">cal_date</span> <span class="o">=</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;CalibrationDate&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+
+    <span class="c1"># Parse all coefficient elements to lowercase keys</span>
+    <span class="n">coef_dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="n">sensor_type</span> <span class="o">==</span> <span class="s2">&quot;conductivity&quot;</span><span class="p">:</span>
+        <span class="c1"># Special handling for conductivity - check UseG_J flag</span>
+        <span class="n">use_g_j_elem</span> <span class="o">=</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;UseG_J&quot;</span><span class="p">)</span>
+        <span class="n">use_g_j</span> <span class="o">=</span> <span class="n">use_g_j_elem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">use_g_j_elem</span><span class="o">.</span><span class="n">text</span> <span class="o">==</span> <span class="s2">&quot;1&quot;</span>
+
+        <span class="k">if</span> <span class="n">use_g_j</span><span class="p">:</span>
+            <span class="c1"># Look for equation=&quot;1&quot; coefficients which contain G,H,I,J</span>
+            <span class="k">for</span> <span class="n">coeffs_elem</span> <span class="ow">in</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;Coefficients&quot;</span><span class="p">):</span>
+                <span class="n">equation_attr</span> <span class="o">=</span> <span class="n">coeffs_elem</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;equation&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">equation_attr</span> <span class="o">==</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">coeffs_elem</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">:</span>
+                            <span class="n">coef_dict</span><span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                    <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Use equation=&quot;0&quot; with A,B,C,D coefficients</span>
+            <span class="k">for</span> <span class="n">coeffs_elem</span> <span class="ow">in</span> <span class="n">sensor_elem</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;Coefficients&quot;</span><span class="p">):</span>
+                <span class="n">equation_attr</span> <span class="o">=</span> <span class="n">coeffs_elem</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;equation&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">equation_attr</span> <span class="o">==</span> <span class="s2">&quot;0&quot;</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">coeffs_elem</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">:</span>
+                            <span class="n">coef_dict</span><span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                    <span class="k">break</span>
+
+        <span class="c1"># Also parse direct children (slope, offset, etc.)</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">sensor_elem</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;slope&quot;</span><span class="p">,</span> <span class="s2">&quot;offset&quot;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">:</span>
+                    <span class="n">coef_dict</span><span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># For temperature and pressure, parse all numeric child elements</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">sensor_elem</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">text</span> <span class="ow">and</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;SerialNumber&quot;</span><span class="p">,</span> <span class="s2">&quot;CalibrationDate&quot;</span><span class="p">]:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">coef_dict</span><span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="c1"># Skip non-numeric elements</span>
+                    <span class="k">continue</span>
+
+    <span class="c1"># Separate seabirdscientific calibration coefficients from slope/offset</span>
+    <span class="n">cal_coeffs</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># Define expected coefficient names for each sensor type</span>
+    <span class="k">if</span> <span class="n">sensor_type</span> <span class="o">==</span> <span class="s2">&quot;temperature&quot;</span><span class="p">:</span>
+        <span class="n">expected_coeffs</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;a0&quot;</span><span class="p">,</span> <span class="s2">&quot;a1&quot;</span><span class="p">,</span> <span class="s2">&quot;a2&quot;</span><span class="p">,</span> <span class="s2">&quot;a3&quot;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">sensor_type</span> <span class="o">==</span> <span class="s2">&quot;conductivity&quot;</span><span class="p">:</span>
+        <span class="n">expected_coeffs</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;g&quot;</span><span class="p">,</span> <span class="s2">&quot;h&quot;</span><span class="p">,</span> <span class="s2">&quot;i&quot;</span><span class="p">,</span> <span class="s2">&quot;j&quot;</span><span class="p">,</span> <span class="s2">&quot;cpcor&quot;</span><span class="p">,</span> <span class="s2">&quot;ctcor&quot;</span><span class="p">,</span> <span class="s2">&quot;wbotc&quot;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">sensor_type</span> <span class="o">==</span> <span class="s2">&quot;pressure&quot;</span><span class="p">:</span>
+        <span class="n">expected_coeffs</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;pa0&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;pa1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;pa2&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptca0&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptca1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptca2&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptcb0&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptcb1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptcb2&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptempa0&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptempa1&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ptempa2&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">expected_coeffs</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Split coefficients</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">coef_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">expected_coeffs</span><span class="p">:</span>
+            <span class="n">cal_coeffs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">sensor_type</span><span class="p">,</span>
+        <span class="s2">&quot;serial_number&quot;</span><span class="p">:</span> <span class="n">serial_num</span><span class="p">,</span>
+        <span class="s2">&quot;calibration_date&quot;</span><span class="p">:</span> <span class="n">cal_date</span><span class="p">,</span>
+        <span class="s2">&quot;coefficients&quot;</span><span class="p">:</span> <span class="n">cal_coeffs</span><span class="p">,</span>
+        <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="n">metadata</span><span class="p">,</span>
+        <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">sensor_index</span><span class="p">,</span>
+    <span class="p">}</span>
+
+
+<div class="viewcode-block" id="parse_hex_header_sensors">
+<a class="viewcode-back" href="../../caldip.html#caldip.sbe_hex_reader.parse_hex_header_sensors">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_hex_header_sensors</span><span class="p">(</span><span class="n">hex_file</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse SBE37 hex file header to extract enabled sensors and calibration coefficients.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    hex_file : Union[str, Path]</span>
+<span class="sd">        Path to .hex file</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Dict</span>
+<span class="sd">        Dictionary with enabled_sensors list and calibration_coefficients</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">xml.etree.ElementTree</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ET</span>
+
+    <span class="n">hex_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">hex_file</span><span class="p">)</span>
+    <span class="n">enabled_sensors</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">calibration_coeffs</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># Read the header and extract XML content</span>
+    <span class="n">header_lines</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">hex_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">):</span>
+                <span class="n">header_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>  <span class="c1"># Remove * prefix</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># End of header, start of data</span>
+                <span class="k">break</span>
+
+    <span class="c1"># Join header lines and try to parse as XML</span>
+    <span class="n">header_xml</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">header_lines</span><span class="p">)</span>
+
+    <span class="c1"># Extract enabled sensors</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">header_lines</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">&quot;&lt;Sensor id=&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;id=&#39;Temperature&#39;&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">enabled_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="s2">&quot;id=&#39;Conductivity&#39;&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">enabled_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;conductivity&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="s2">&quot;id=&#39;Pressure&#39;&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">enabled_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;pressure&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="s2">&quot;id=&#39;Oxygen&#39;&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">enabled_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;oxygen&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Extract calibration coefficients</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># Find CalibrationCoefficients section</span>
+        <span class="n">cal_start</span> <span class="o">=</span> <span class="n">header_xml</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;&lt;CalibrationCoefficients&quot;</span><span class="p">)</span>
+        <span class="n">cal_end</span> <span class="o">=</span> <span class="n">header_xml</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;&lt;/CalibrationCoefficients&gt;&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span>
+            <span class="s2">&quot;&lt;/CalibrationCoefficients&gt;&quot;</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">cal_start</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">cal_end</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">cal_xml</span> <span class="o">=</span> <span class="n">header_xml</span><span class="p">[</span><span class="n">cal_start</span><span class="p">:</span><span class="n">cal_end</span><span class="p">]</span>
+
+            <span class="c1"># Parse calibration XML</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">fromstring</span><span class="p">(</span><span class="n">cal_xml</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">calibration</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;Calibration&quot;</span><span class="p">):</span>
+                <span class="n">sensor_id</span> <span class="o">=</span> <span class="n">calibration</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                <span class="n">cal_format</span> <span class="o">=</span> <span class="n">calibration</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;format&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">sensor_id</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="s2">&quot;conductivity&quot;</span><span class="p">,</span> <span class="s2">&quot;pressure&quot;</span><span class="p">,</span> <span class="s2">&quot;oxygen&quot;</span><span class="p">]:</span>
+                    <span class="n">sensor_coeffs</span> <span class="o">=</span> <span class="p">{}</span>
+
+                    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">calibration</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;A0&quot;</span><span class="p">,</span> <span class="s2">&quot;A1&quot;</span><span class="p">,</span> <span class="s2">&quot;A2&quot;</span><span class="p">,</span> <span class="s2">&quot;A3&quot;</span><span class="p">]:</span>  <span class="c1"># Temperature coeffs</span>
+                            <span class="n">sensor_coeffs</span><span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                        <span class="k">elif</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span> <span class="ow">in</span> <span class="p">[</span>
+                            <span class="s2">&quot;G&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;H&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;I&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;J&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;PCOR&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;TCOR&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;WBOTC&quot;</span><span class="p">,</span>
+                        <span class="p">]:</span>  <span class="c1"># Conductivity coeffs</span>
+                            <span class="c1"># Map to seabirdscientific expected names</span>
+                            <span class="n">key_map</span> <span class="o">=</span> <span class="p">{</span>
+                                <span class="s2">&quot;PCOR&quot;</span><span class="p">:</span> <span class="s2">&quot;cpcor&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;TCOR&quot;</span><span class="p">:</span> <span class="s2">&quot;ctcor&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;WBOTC&quot;</span><span class="p">:</span> <span class="s2">&quot;wbotc&quot;</span><span class="p">,</span>
+                            <span class="p">}</span>
+                            <span class="n">key</span> <span class="o">=</span> <span class="n">key_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+                            <span class="n">sensor_coeffs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                        <span class="k">elif</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;PA&quot;</span><span class="p">):</span>  <span class="c1"># Pressure coeffs</span>
+                            <span class="n">sensor_coeffs</span><span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                        <span class="k">elif</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;PTC&quot;</span><span class="p">):</span>  <span class="c1"># Pressure temp compensation</span>
+                            <span class="n">sensor_coeffs</span><span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                        <span class="k">elif</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;PTEMP&quot;</span><span class="p">):</span>  <span class="c1"># Pressure temp coeffs</span>
+                            <span class="n">sensor_coeffs</span><span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                        <span class="k">elif</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;OX&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span> <span class="ow">in</span> <span class="p">[</span>
+                            <span class="s2">&quot;TAU20&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;NTAU&quot;</span><span class="p">,</span>
+                        <span class="p">]:</span>  <span class="c1"># Oxygen coeffs</span>
+                            <span class="n">sensor_coeffs</span><span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                        <span class="k">elif</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;SerialNum&quot;</span><span class="p">,</span> <span class="s2">&quot;CalDate&quot;</span><span class="p">]:</span>
+                            <span class="n">sensor_coeffs</span><span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="n">child</span><span class="o">.</span><span class="n">text</span>
+
+                    <span class="n">calibration_coeffs</span><span class="p">[</span><span class="n">sensor_id</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s2">&quot;coefficients&quot;</span><span class="p">:</span> <span class="n">sensor_coeffs</span><span class="p">,</span>
+                        <span class="s2">&quot;format&quot;</span><span class="p">:</span> <span class="n">cal_format</span><span class="p">,</span>
+                        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">sensor_id</span><span class="p">,</span>
+                    <span class="p">}</span>
+
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Could not parse calibration coefficients: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;enabled_sensors&quot;</span><span class="p">:</span> <span class="n">enabled_sensors</span><span class="p">,</span>
+        <span class="s2">&quot;calibration_coefficients&quot;</span><span class="p">:</span> <span class="n">calibration_coeffs</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="sbe37_hex_reader">
+<a class="viewcode-back" href="../../caldip.html#caldip.sbe_hex_reader.sbe37_hex_reader">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sbe37_hex_reader</span><span class="p">(</span><span class="n">hex_file</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read SBE37 hex file using seabirdscientific library.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    hex_file : Union[str, Path]</span>
+<span class="sd">        Path to .hex file</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xr.Dataset</span>
+<span class="sd">        Dataset containing temperature, conductivity, pressure, and/or oxygen data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">hex_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">hex_file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">hex_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Hex file not found: </span><span class="si">{</span><span class="n">hex_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Parse sensors and calibration coefficients from hex header</span>
+    <span class="n">header_info</span> <span class="o">=</span> <span class="n">parse_hex_header_sensors</span><span class="p">(</span><span class="n">hex_path</span><span class="p">)</span>
+    <span class="n">enabled_sensors_list</span> <span class="o">=</span> <span class="n">header_info</span><span class="p">[</span><span class="s2">&quot;enabled_sensors&quot;</span><span class="p">]</span>
+    <span class="n">calibration_coeffs</span> <span class="o">=</span> <span class="n">header_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;calibration_coefficients&quot;</span><span class="p">,</span> <span class="p">{})</span>
+
+    <span class="c1"># Fallback: Look for corresponding xmlcon file if header parsing fails</span>
+    <span class="n">xmlcon_info</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">enabled_sensors_list</span><span class="p">:</span>
+        <span class="n">xmlcon_path</span> <span class="o">=</span> <span class="n">hex_path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.xmlcon&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">xmlcon_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="c1"># Try without hex extension</span>
+            <span class="n">xmlcon_path</span> <span class="o">=</span> <span class="n">hex_path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">hex_path</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">.xmlcon&quot;</span>
+
+        <span class="k">if</span> <span class="n">xmlcon_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="n">xmlcon_info</span> <span class="o">=</span> <span class="n">sbe37_xmlcon_reader</span><span class="p">(</span><span class="n">xmlcon_path</span><span class="p">)</span>
+            <span class="n">enabled_sensors_list</span> <span class="o">=</span> <span class="n">xmlcon_info</span><span class="p">[</span><span class="s2">&quot;enabled_sensors&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Could not determine sensor configuration for </span><span class="si">{</span><span class="n">hex_path</span><span class="si">}</span><span class="s2">. No xmlcon file found and header parsing failed.&quot;</span>
+            <span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Detected enabled sensors: </span><span class="si">{</span><span class="n">enabled_sensors_list</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">calibration_coeffs</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found calibration coefficients for: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">calibration_coeffs</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">seabirdscientific.instrument_data</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">id</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
+            <span class="s2">&quot;seabirdscientific package required for SBE37 hex file reading&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Map our sensor types to seabirdscientific sensor types</span>
+    <span class="n">sensor_mapping</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="nb">id</span><span class="o">.</span><span class="n">Sensors</span><span class="o">.</span><span class="n">Temperature</span><span class="p">,</span>
+        <span class="s2">&quot;conductivity&quot;</span><span class="p">:</span> <span class="nb">id</span><span class="o">.</span><span class="n">Sensors</span><span class="o">.</span><span class="n">Conductivity</span><span class="p">,</span>
+        <span class="s2">&quot;pressure&quot;</span><span class="p">:</span> <span class="nb">id</span><span class="o">.</span><span class="n">Sensors</span><span class="o">.</span><span class="n">Pressure</span><span class="p">,</span>
+        <span class="s2">&quot;oxygen&quot;</span><span class="p">:</span> <span class="nb">id</span><span class="o">.</span><span class="n">Sensors</span><span class="o">.</span><span class="n">OPTODE</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="c1"># Build enabled sensors list following the example format</span>
+    <span class="n">enabled_sensors</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Always include basic sensors first</span>
+    <span class="k">if</span> <span class="s2">&quot;temperature&quot;</span> <span class="ow">in</span> <span class="n">enabled_sensors_list</span><span class="p">:</span>
+        <span class="n">enabled_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">id</span><span class="o">.</span><span class="n">Sensors</span><span class="o">.</span><span class="n">Temperature</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">&quot;conductivity&quot;</span> <span class="ow">in</span> <span class="n">enabled_sensors_list</span><span class="p">:</span>
+        <span class="n">enabled_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">id</span><span class="o">.</span><span class="n">Sensors</span><span class="o">.</span><span class="n">Conductivity</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">&quot;pressure&quot;</span> <span class="ow">in</span> <span class="n">enabled_sensors_list</span><span class="p">:</span>
+        <span class="n">enabled_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">id</span><span class="o">.</span><span class="n">Sensors</span><span class="o">.</span><span class="n">Pressure</span><span class="p">)</span>
+
+    <span class="c1"># Add oxygen sensor if detected - use SBE63 format for ODO instruments</span>
+    <span class="k">if</span> <span class="s2">&quot;oxygen&quot;</span> <span class="ow">in</span> <span class="n">enabled_sensors_list</span><span class="p">:</span>
+        <span class="n">enabled_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">id</span><span class="o">.</span><span class="n">Sensors</span><span class="o">.</span><span class="n">SBE63</span><span class="p">)</span>
+        <span class="c1"># Keep using SBE37SM type since SBE63 is handled in the same parsing function</span>
+        <span class="n">instrument_type</span> <span class="o">=</span> <span class="nb">id</span><span class="o">.</span><span class="n">InstrumentType</span><span class="o">.</span><span class="n">SBE37SM</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">instrument_type</span> <span class="o">=</span> <span class="nb">id</span><span class="o">.</span><span class="n">InstrumentType</span><span class="o">.</span><span class="n">SBE37SM</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Using instrument type: </span><span class="si">{</span><span class="n">instrument_type</span><span class="o">.</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Enabled sensors: </span><span class="si">{</span><span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">value</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">enabled_sensors</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Read the hex file</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="nb">id</span><span class="o">.</span><span class="n">read_hex_file</span><span class="p">(</span>
+        <span class="n">filepath</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">hex_path</span><span class="p">),</span>
+        <span class="n">instrument_type</span><span class="o">=</span><span class="n">instrument_type</span><span class="p">,</span>
+        <span class="n">enabled_sensors</span><span class="o">=</span><span class="n">enabled_sensors</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Import conversion functions and coefficient classes</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">seabirdscientific.conversion</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">conv</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">seabirdscientific.cal_coefficients</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+            <span class="n">TemperatureCoefficients</span><span class="p">,</span>
+            <span class="n">ConductivityCoefficients</span><span class="p">,</span>
+            <span class="n">PressureCoefficients</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
+            <span class="s2">&quot;seabirdscientific conversion module required for calibration&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Convert to xarray Dataset</span>
+    <span class="n">data_vars</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># Extract time coordinate from raw data</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;date time&quot;</span><span class="p">])</span>
+    <span class="n">n_samples</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">times</span><span class="p">)</span>
+
+    <span class="c1"># Apply calibration coefficients if available (from header or xmlcon)</span>
+    <span class="k">if</span> <span class="n">calibration_coeffs</span> <span class="ow">or</span> <span class="n">xmlcon_info</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Applying calibration coefficients to convert raw data&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Use header calibration coefficients if available, otherwise fall back to xmlcon</span>
+        <span class="k">if</span> <span class="n">calibration_coeffs</span><span class="p">:</span>
+            <span class="n">sensor_configs</span> <span class="o">=</span> <span class="n">calibration_coeffs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sensor_configs</span> <span class="o">=</span> <span class="n">xmlcon_info</span><span class="p">[</span><span class="s2">&quot;sensors&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Process each sensor type and apply calibrations</span>
+        <span class="k">for</span> <span class="n">sensor_id</span><span class="p">,</span> <span class="n">sensor_info</span> <span class="ow">in</span> <span class="n">sensor_configs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">sensor_type</span> <span class="o">=</span> <span class="n">sensor_info</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span>
+            <span class="n">coeffs</span> <span class="o">=</span> <span class="n">sensor_info</span><span class="p">[</span><span class="s2">&quot;coefficients&quot;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">sensor_type</span> <span class="o">==</span> <span class="s2">&quot;temperature&quot;</span> <span class="ow">and</span> <span class="s2">&quot;temperature&quot;</span> <span class="ow">in</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="c1"># Create temperature coefficients object - filter to only numeric coefficients</span>
+                <span class="n">temp_coeffs_filtered</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
+                    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;a0&quot;</span><span class="p">,</span> <span class="s2">&quot;a1&quot;</span><span class="p">,</span> <span class="s2">&quot;a2&quot;</span><span class="p">,</span> <span class="s2">&quot;a3&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
+                <span class="p">}</span>
+                <span class="n">temp_coefs</span> <span class="o">=</span> <span class="n">TemperatureCoefficients</span><span class="p">(</span><span class="o">**</span><span class="n">temp_coeffs_filtered</span><span class="p">)</span>
+
+                <span class="c1"># Convert raw counts to calibrated temperature</span>
+                <span class="n">temperature</span> <span class="o">=</span> <span class="n">conv</span><span class="o">.</span><span class="n">convert_temperature</span><span class="p">(</span>
+                    <span class="n">temperature_counts_in</span><span class="o">=</span><span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;temperature&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                    <span class="n">coefs</span><span class="o">=</span><span class="n">temp_coefs</span><span class="p">,</span>
+                    <span class="n">standard</span><span class="o">=</span><span class="s2">&quot;ITS90&quot;</span><span class="p">,</span>
+                    <span class="n">units</span><span class="o">=</span><span class="s2">&quot;C&quot;</span><span class="p">,</span>
+                    <span class="n">use_mv_r</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;temp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="n">temperature</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="n">sensor_type</span> <span class="o">==</span> <span class="s2">&quot;conductivity&quot;</span> <span class="ow">and</span> <span class="s2">&quot;conductivity&quot;</span> <span class="ow">in</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="c1"># Create conductivity coefficients object - filter to expected coefficients</span>
+                <span class="n">cond_coeffs_filtered</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
+                    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;g&quot;</span><span class="p">,</span> <span class="s2">&quot;h&quot;</span><span class="p">,</span> <span class="s2">&quot;i&quot;</span><span class="p">,</span> <span class="s2">&quot;j&quot;</span><span class="p">,</span> <span class="s2">&quot;cpcor&quot;</span><span class="p">,</span> <span class="s2">&quot;ctcor&quot;</span><span class="p">,</span> <span class="s2">&quot;wbotc&quot;</span><span class="p">]</span>
+                    <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
+                <span class="p">}</span>
+                <span class="n">cond_coefs</span> <span class="o">=</span> <span class="n">ConductivityCoefficients</span><span class="p">(</span><span class="o">**</span><span class="n">cond_coeffs_filtered</span><span class="p">)</span>
+
+                <span class="c1"># Convert raw counts to calibrated conductivity</span>
+                <span class="c1"># Note: This requires temperature for full conversion</span>
+                <span class="n">temp_values</span> <span class="o">=</span> <span class="n">data_vars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;temp&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)))[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">pressure_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+                    <span class="n">n_samples</span>
+                <span class="p">)</span>  <span class="c1"># Will be updated if pressure is available</span>
+
+                <span class="n">conductivity</span> <span class="o">=</span> <span class="n">conv</span><span class="o">.</span><span class="n">convert_conductivity</span><span class="p">(</span>
+                    <span class="n">conductivity_count</span><span class="o">=</span><span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;conductivity&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                    <span class="n">temperature</span><span class="o">=</span><span class="n">temp_values</span><span class="p">,</span>
+                    <span class="n">pressure</span><span class="o">=</span><span class="n">pressure_values</span><span class="p">,</span>
+                    <span class="n">coefs</span><span class="o">=</span><span class="n">cond_coefs</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="c1"># Convert from S/m to mS/cm (multiply by 10)</span>
+                <span class="n">conductivity_mScm</span> <span class="o">=</span> <span class="n">conductivity</span> <span class="o">*</span> <span class="mf">10.0</span>
+                <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;cond&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="n">conductivity_mScm</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="n">sensor_type</span> <span class="o">==</span> <span class="s2">&quot;pressure&quot;</span> <span class="ow">and</span> <span class="s2">&quot;pressure&quot;</span> <span class="ow">in</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="c1"># Create pressure coefficients object - filter to expected coefficients</span>
+                <span class="n">press_coeffs_filtered</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
+                    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">&quot;pa&quot;</span><span class="p">,</span> <span class="s2">&quot;ptc&quot;</span><span class="p">,</span> <span class="s2">&quot;ptemp&quot;</span><span class="p">))</span>
+                    <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
+                <span class="p">}</span>
+                <span class="n">press_coefs</span> <span class="o">=</span> <span class="n">PressureCoefficients</span><span class="p">(</span><span class="o">**</span><span class="n">press_coeffs_filtered</span><span class="p">)</span>
+
+                <span class="c1"># Convert raw counts to calibrated pressure</span>
+                <span class="c1"># For SBE37, use temperature compensation if available</span>
+                <span class="n">temp_comp_values</span> <span class="o">=</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                    <span class="s2">&quot;temperature compensation&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">temp_comp_values</span><span class="p">,</span> <span class="s2">&quot;values&quot;</span><span class="p">):</span>
+                    <span class="n">temp_comp_values</span> <span class="o">=</span> <span class="n">temp_comp_values</span><span class="o">.</span><span class="n">values</span>
+
+                <span class="n">pressure</span> <span class="o">=</span> <span class="n">conv</span><span class="o">.</span><span class="n">convert_pressure</span><span class="p">(</span>
+                    <span class="n">pressure_count</span><span class="o">=</span><span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;pressure&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                    <span class="n">compensation_voltage</span><span class="o">=</span><span class="n">temp_comp_values</span><span class="p">,</span>
+                    <span class="n">coefs</span><span class="o">=</span><span class="n">press_coefs</span><span class="p">,</span>
+                    <span class="n">units</span><span class="o">=</span><span class="s2">&quot;dbar&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;press&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="n">pressure</span><span class="p">)</span>
+
+            <span class="c1"># Handle oxygen data - apply SBE63 calibration to convert phase to ml/L</span>
+            <span class="k">elif</span> <span class="n">sensor_type</span> <span class="o">==</span> <span class="s2">&quot;oxygen&quot;</span> <span class="ow">and</span> <span class="s2">&quot;SBE63 oxygen phase&quot;</span> <span class="ow">in</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># Import SBE63 oxygen conversion</span>
+                    <span class="kn">from</span><span class="w"> </span><span class="nn">seabirdscientific.cal_coefficients</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+                        <span class="n">Oxygen63Coefficients</span><span class="p">,</span>
+                        <span class="n">Thermistor63Coefficients</span><span class="p">,</span>
+                    <span class="p">)</span>
+
+                    <span class="c1"># Create oxygen coefficients object</span>
+                    <span class="n">oxygen_coeffs_filtered</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s2">&quot;a0&quot;</span><span class="p">:</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;oxa0&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                        <span class="s2">&quot;a1&quot;</span><span class="p">:</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;oxa1&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                        <span class="s2">&quot;a2&quot;</span><span class="p">:</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;oxa2&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                        <span class="s2">&quot;b0&quot;</span><span class="p">:</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;oxb0&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                        <span class="s2">&quot;b1&quot;</span><span class="p">:</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;oxb1&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                        <span class="s2">&quot;c0&quot;</span><span class="p">:</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;oxc0&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                        <span class="s2">&quot;c1&quot;</span><span class="p">:</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;oxc1&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                        <span class="s2">&quot;c2&quot;</span><span class="p">:</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;oxc2&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                        <span class="s2">&quot;e&quot;</span><span class="p">:</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;oxe&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                    <span class="p">}</span>
+                    <span class="n">oxy_coefs</span> <span class="o">=</span> <span class="n">Oxygen63Coefficients</span><span class="p">(</span><span class="o">**</span><span class="n">oxygen_coeffs_filtered</span><span class="p">)</span>
+
+                    <span class="c1"># Create thermistor coefficients object</span>
+                    <span class="n">therm_coeffs_filtered</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s2">&quot;ta0&quot;</span><span class="p">:</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;oxta0&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                        <span class="s2">&quot;ta1&quot;</span><span class="p">:</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;oxta1&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                        <span class="s2">&quot;ta2&quot;</span><span class="p">:</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;oxta2&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                        <span class="s2">&quot;ta3&quot;</span><span class="p">:</span> <span class="n">coeffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;oxta3&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                    <span class="p">}</span>
+                    <span class="n">therm_coefs</span> <span class="o">=</span> <span class="n">Thermistor63Coefficients</span><span class="p">(</span><span class="o">**</span><span class="n">therm_coeffs_filtered</span><span class="p">)</span>
+
+                    <span class="c1"># Get required data for conversion</span>
+                    <span class="n">oxygen_phase</span> <span class="o">=</span> <span class="n">raw_data</span><span class="p">[</span>
+                        <span class="s2">&quot;SBE63 oxygen phase&quot;</span>
+                    <span class="p">]</span><span class="o">.</span><span class="n">values</span>  <span class="c1"># in microseconds</span>
+                    <span class="n">oxygen_temp</span> <span class="o">=</span> <span class="n">raw_data</span><span class="p">[</span>
+                        <span class="s2">&quot;SBE63 oxygen temperature&quot;</span>
+                    <span class="p">]</span><span class="o">.</span><span class="n">values</span>  <span class="c1"># in degrees C</span>
+
+                    <span class="c1"># We need pressure and salinity for full conversion</span>
+                    <span class="k">if</span> <span class="p">(</span>
+                        <span class="s2">&quot;temp&quot;</span> <span class="ow">in</span> <span class="n">data_vars</span>
+                        <span class="ow">and</span> <span class="s2">&quot;cond&quot;</span> <span class="ow">in</span> <span class="n">data_vars</span>
+                        <span class="ow">and</span> <span class="s2">&quot;press&quot;</span> <span class="ow">in</span> <span class="n">data_vars</span>
+                    <span class="p">):</span>
+                        <span class="c1"># Calculate salinity from temp, cond, press (basic approximation)</span>
+                        <span class="c1"># For now, use a typical seawater salinity of 35 PSU</span>
+                        <span class="n">pressure_vals</span> <span class="o">=</span> <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;press&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># Get pressure values</span>
+                        <span class="n">salinity_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span>
+                            <span class="n">pressure_vals</span><span class="p">,</span> <span class="mf">35.0</span>
+                        <span class="p">)</span>  <span class="c1"># Assume 35 PSU</span>
+
+                        <span class="c1"># Convert oxygen phase to ml/L</span>
+                        <span class="n">oxygen_ml_per_l</span> <span class="o">=</span> <span class="n">conv</span><span class="o">.</span><span class="n">convert_sbe63_oxygen</span><span class="p">(</span>
+                            <span class="n">raw_oxygen_phase</span><span class="o">=</span><span class="n">oxygen_phase</span><span class="p">,</span>
+                            <span class="n">thermistor</span><span class="o">=</span><span class="n">oxygen_temp</span><span class="p">,</span>
+                            <span class="n">pressure</span><span class="o">=</span><span class="n">pressure_vals</span><span class="p">,</span>
+                            <span class="n">salinity</span><span class="o">=</span><span class="n">salinity_vals</span><span class="p">,</span>
+                            <span class="n">coefs</span><span class="o">=</span><span class="n">oxy_coefs</span><span class="p">,</span>
+                            <span class="n">thermistor_coefs</span><span class="o">=</span><span class="n">therm_coefs</span><span class="p">,</span>
+                            <span class="n">thermistor_units</span><span class="o">=</span><span class="s2">&quot;C&quot;</span><span class="p">,</span>  <span class="c1"># oxygen_temp is already in Celsius</span>
+                        <span class="p">)</span>
+
+                        <span class="c1"># Convert ml/L to μmol/L for comparison with CTD SBE43 sensors</span>
+                        <span class="c1"># 1 ml/L O2 = 44.66 μmol/L at STP</span>
+                        <span class="n">oxygen_umol_per_l</span> <span class="o">=</span> <span class="n">oxygen_ml_per_l</span> <span class="o">*</span> <span class="mf">44.66</span>
+
+                        <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;oxygen&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="n">oxygen_umol_per_l</span><span class="p">)</span>
+                        <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;oxygen_ml_l&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="n">oxygen_ml_per_l</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c1"># Fallback: use raw data if we don&#39;t have all required variables</span>
+                        <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;oxygen_phase&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="n">oxygen_phase</span><span class="p">)</span>
+                        <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;oxygen_temp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="n">oxygen_temp</span><span class="p">)</span>
+
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Could not apply oxygen calibration: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="c1"># Fallback to raw data</span>
+                    <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;oxygen_phase&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="s2">&quot;time&quot;</span><span class="p">,</span>
+                        <span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;SBE63 oxygen phase&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;oxygen_temp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="s2">&quot;time&quot;</span><span class="p">,</span>
+                        <span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;SBE63 oxygen temperature&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                    <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># No xmlcon file - use raw data directly from seabirdscientific</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No calibration coefficients available - using raw converted data&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Add available sensors from raw_data</span>
+        <span class="k">if</span> <span class="s2">&quot;temperature&quot;</span> <span class="ow">in</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;temp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;temperature&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;conductivity&quot;</span> <span class="ow">in</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;cond&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;conductivity&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;pressure&quot;</span> <span class="ow">in</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;press&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;pressure&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+        <span class="c1"># Handle SBE63 oxygen data (phase and temperature)</span>
+        <span class="k">if</span> <span class="s2">&quot;SBE63 oxygen phase&quot;</span> <span class="ow">in</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;oxygen_phase&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;SBE63 oxygen phase&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;SBE63 oxygen temperature&quot;</span> <span class="ow">in</span> <span class="n">raw_data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">data_vars</span><span class="p">[</span><span class="s2">&quot;oxygen_temp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;time&quot;</span><span class="p">,</span>
+                <span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;SBE63 oxygen temperature&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Create dataset</span>
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span><span class="n">data_vars</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">times</span><span class="p">})</span>
+
+    <span class="c1"># Add units as variable attributes</span>
+    <span class="k">if</span> <span class="s2">&quot;temp&quot;</span> <span class="ow">in</span> <span class="n">data_vars</span><span class="p">:</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;temp&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;degrees_C&quot;</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;temp&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;long_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Temperature&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;cond&quot;</span> <span class="ow">in</span> <span class="n">data_vars</span><span class="p">:</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;cond&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;mS/cm&quot;</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;cond&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;long_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Conductivity&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;press&quot;</span> <span class="ow">in</span> <span class="n">data_vars</span><span class="p">:</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;press&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;dbar&quot;</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;press&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;long_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Pressure&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;oxygen&quot;</span> <span class="ow">in</span> <span class="n">data_vars</span><span class="p">:</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;oxygen&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;umol/L&quot;</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;oxygen&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;long_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Dissolved Oxygen&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;oxygen_ml_l&quot;</span> <span class="ow">in</span> <span class="n">data_vars</span><span class="p">:</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;oxygen_ml_l&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;ml/L&quot;</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;oxygen_ml_l&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;long_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Dissolved Oxygen (ml/L)&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;oxygen_phase&quot;</span> <span class="ow">in</span> <span class="n">data_vars</span><span class="p">:</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;oxygen_phase&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;degrees&quot;</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;oxygen_phase&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;long_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Oxygen Phase&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;oxygen_temp&quot;</span> <span class="ow">in</span> <span class="n">data_vars</span><span class="p">:</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;oxygen_temp&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;degrees_C&quot;</span>
+        <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;oxygen_temp&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;long_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Oxygen Sensor Temperature&quot;</span>
+
+    <span class="c1"># Add metadata</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;source_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">hex_path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">xmlcon_info</span><span class="p">:</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;xmlcon_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">xmlcon_path</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;sensor_detection&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;hex_header&quot;</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;instrument_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;SBE37&quot;</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;data_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;calibrated&quot;</span>
+
+    <span class="c1"># Add sensor information as attributes</span>
+    <span class="k">if</span> <span class="n">xmlcon_info</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">sensor_info</span> <span class="ow">in</span> <span class="n">xmlcon_info</span><span class="p">[</span><span class="s2">&quot;sensors&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">sensor_type</span> <span class="o">=</span> <span class="n">sensor_info</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span>
+            <span class="n">serial</span> <span class="o">=</span> <span class="n">sensor_info</span><span class="p">[</span><span class="s2">&quot;serial_number&quot;</span><span class="p">]</span>
+            <span class="n">cal_date</span> <span class="o">=</span> <span class="n">sensor_info</span><span class="p">[</span><span class="s2">&quot;calibration_date&quot;</span><span class="p">]</span>
+
+            <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">sensor_type</span><span class="si">}</span><span class="s2">_serial&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serial</span>
+            <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">sensor_type</span><span class="si">}</span><span class="s2">_calibration_date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cal_date</span>
+
+    <span class="k">return</span> <span class="n">ds</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Eleanor Frajka-Williams.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
