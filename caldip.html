@@ -60,6 +60,12 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference external" href="http://github.com/eleanorfrajka/caldip">GitHub Repo</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">API</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-caldip.core">core</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#caldip.core.find_bottle_stops"><code class="docutils literal notranslate"><span class="pre">find_bottle_stops()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#caldip.core.stats"><code class="docutils literal notranslate"><span class="pre">stats()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#caldip.core.stats_for_time_period"><code class="docutils literal notranslate"><span class="pre">stats_for_time_period()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#module-caldip.readers">readers</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#caldip.readers.find_config_file"><code class="docutils literal notranslate"><span class="pre">find_config_file()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#caldip.readers.load_config"><code class="docutils literal notranslate"><span class="pre">load_config()</span></code></a></li>
@@ -73,15 +79,16 @@
 <li class="toctree-l3"><a class="reference internal" href="#caldip.readers.sbe37_xmlcon_reader"><code class="docutils literal notranslate"><span class="pre">sbe37_xmlcon_reader()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#caldip-functions">caldip_functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-caldip.scaffold">scaffold</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#caldip.scaffold.generate_stub_yaml"><code class="docutils literal notranslate"><span class="pre">generate_stub_yaml()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#module-caldip.tools">tools</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#caldip.tools.summary_stats"><code class="docutils literal notranslate"><span class="pre">summary_stats()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#caldip.tools.to_xarray"><code class="docutils literal notranslate"><span class="pre">to_xarray()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#caldip.tools.trim_to_deployment"><code class="docutils literal notranslate"><span class="pre">trim_to_deployment()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#writers">writers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#plotters">plotters</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-caldip.sbe_hex_reader">sbe_hex_reader</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#caldip.sbe_hex_reader.parse_hex_header_sensors"><code class="docutils literal notranslate"><span class="pre">parse_hex_header_sensors()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#caldip.sbe_hex_reader.sbe37_hex_reader"><code class="docutils literal notranslate"><span class="pre">sbe37_hex_reader()</span></code></a></li>
@@ -123,6 +130,85 @@
              
   <section id="caldip-api">
 <h1><code class="xref py py-mod docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">API</span></code><a class="headerlink" href="#caldip-api" title="Link to this heading"></a></h1>
+<section id="module-caldip.core">
+<span id="core"></span><h2>core<a class="headerlink" href="#module-caldip.core" title="Link to this heading"></a></h2>
+<p>Functional CalDip Processing Module</p>
+<p>This module provides simple functions for calibration dip processing using
+xarray and numpy.</p>
+<p>Currently Used Functions:
+- find_bottle_stops() -&gt; List[Dict]</p>
+<blockquote>
+<div><p>Detect bottle stops from CTD pressure data (primary algorithm)</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>stats_for_time_period() -&gt; Dict
+Calculate statistics for any dataset within a specified time period</p></li>
+<li><p>stats() -&gt; pd.DataFrame
+Calculate statistics for each bottle stop and each instrument (any type)</p></li>
+</ul>
+<dl class="py function">
+<dt class="sig sig-object py" id="caldip.core.find_bottle_stops">
+<span class="sig-prename descclassname"><span class="pre">caldip.core.</span></span><span class="sig-name descname"><span class="pre">find_bottle_stops</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctd_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold_dbar_per_min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_duration_seconds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">180.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/caldip/core.html#find_bottle_stops"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caldip.core.find_bottle_stops" title="Link to this definition"></a></dt>
+<dd><p>Find bottle stops in CTD data based on pressure rate of change.</p>
+<p>Looks for periods where pressure change rate is &lt; threshold_dbar_per_min
+(typically &lt; 10 dbar/min for bottle stops vs 30-60 dbar/min for normal ops).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctd_data</strong> (<em>xr.Dataset</em>) – CTD dataset with pressure and time variables</p></li>
+<li><p><strong>threshold_dbar_per_min</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum pressure change rate for bottle stops (dbar/min), default 10.0</p></li>
+<li><p><strong>min_duration_seconds</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum duration for valid bottle stops (seconds), default 180.0</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of bottle stop dictionaries with keys:
+- start_idx, end_idx: indices in the data
+- start_time, end_time: timestamps
+- pressure: mean pressure during stop
+- duration_seconds: duration in seconds</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[Dict]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caldip.core.stats">
+<span class="sig-prename descclassname"><span class="pre">caldip.core.</span></span><span class="sig-name descname"><span class="pre">stats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">instrument_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ctd_sensor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold_dbar_per_min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_duration_seconds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">180.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temp_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cond_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">press_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/caldip/core.html#stats"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caldip.core.stats" title="Link to this definition"></a></dt>
+<dd><p>Calculate statistics for each bottle stop and each instrument (any type).</p>
+<p>Returns DataFrame with one row per bottle stop per instrument.</p>
+<p>Quality flag thresholds (<code class="docutils literal notranslate"><span class="pre">temp_threshold</span></code>, <code class="docutils literal notranslate"><span class="pre">cond_threshold</span></code>,
+<code class="docutils literal notranslate"><span class="pre">press_threshold</span></code>) determine when a difference is flagged as
+“reads high/low” vs “OK”.  They can also be set per-cast in the YAML
+under <code class="docutils literal notranslate"><span class="pre">quality_flags:</span> <span class="pre">{temp_threshold:</span> <span class="pre">0.005,</span> <span class="pre">...}</span></code>; explicit
+arguments take precedence over YAML values, which in turn override the
+built-in defaults (±0.005 °C, ±0.02 mS/cm, ±5 dbar).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="caldip.core.stats_for_time_period">
+<span class="sig-prename descclassname"><span class="pre">caldip.core.</span></span><span class="sig-name descname"><span class="pre">stats_for_time_period</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Timestamp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Timestamp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span></span></span><a class="reference internal" href="_modules/caldip/core.html#stats_for_time_period"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caldip.core.stats_for_time_period" title="Link to this definition"></a></dt>
+<dd><p>Calculate statistics for any dataset within a specified time period.  Normally this time period will be 3 minutes long ending 30 seconds before the end of a bottle stop, but this function can be used for any time period and any variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>xr.Dataset</em>) – Dataset to analyze</p></li>
+<li><p><strong>start_time</strong> (<em>pd.Timestamp</em>) – Start of time period</p></li>
+<li><p><strong>end_time</strong> (<em>pd.Timestamp</em>) – End of time period</p></li>
+<li><p><strong>variables</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of variable names to calculate statistics for</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Statistics dictionary with means, stds, and sample count for each variable</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
 <section id="module-caldip.readers">
 <span id="readers"></span><h2>readers<a class="headerlink" href="#module-caldip.readers" title="Link to this heading"></a></h2>
 <p>Universal data loading functions for caldip processing.</p>
@@ -345,8 +431,31 @@ Parse SBE37 xmlcon file to extract sensor configuration and calibration coeffici
 </dd></dl>
 
 </section>
-<section id="caldip-functions">
-<h2>caldip_functions<a class="headerlink" href="#caldip-functions" title="Link to this heading"></a></h2>
+<section id="module-caldip.scaffold">
+<span id="scaffold"></span><h2>scaffold<a class="headerlink" href="#module-caldip.scaffold" title="Link to this heading"></a></h2>
+<p>Scaffold utilities for initialising new caldip cast directories.</p>
+<p>Public API:
+- generate_stub_yaml() — scan a cast directory and write a starter .caldip.yaml</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="caldip.scaffold.generate_stub_yaml">
+<span class="sig-prename descclassname"><span class="pre">caldip.scaffold.</span></span><span class="sig-name descname"><span class="pre">generate_stub_yaml</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">print_only</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span></span></span><a class="reference internal" href="_modules/caldip/scaffold.html#generate_stub_yaml"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caldip.scaffold.generate_stub_yaml" title="Link to this definition"></a></dt>
+<dd><p>Generate a stub YAML configuration for a caldip directory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>directory</strong> (<em>str</em>) – Path to caldip directory (e.g., ‘data/proc_calib/cruise123/cal_dip/castM3’)</p></li>
+<li><p><strong>print_only</strong> (<em>bool</em>) – If True, print to stdout instead of writing file</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Configuration dictionary</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dict</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 <section id="module-caldip.tools">
 <span id="tools"></span><h2>tools<a class="headerlink" href="#module-caldip.tools" title="Link to this heading"></a></h2>
@@ -410,12 +519,6 @@ Uses the deepest bottle stop data for each instrument.</p>
 </dl>
 </dd></dl>
 
-</section>
-<section id="writers">
-<h2>writers<a class="headerlink" href="#writers" title="Link to this heading"></a></h2>
-</section>
-<section id="plotters">
-<h2>plotters<a class="headerlink" href="#plotters" title="Link to this heading"></a></h2>
 </section>
 <section id="module-caldip.sbe_hex_reader">
 <span id="sbe-hex-reader"></span><h2>sbe_hex_reader<a class="headerlink" href="#module-caldip.sbe_hex_reader" title="Link to this heading"></a></h2>

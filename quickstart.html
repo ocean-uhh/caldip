@@ -128,8 +128,8 @@ The <code class="docutils literal notranslate"><span class="pre">directory</span
 <hr class="docutils" />
 <section id="step-1-generate-a-stub-yaml">
 <h2>Step 1 — Generate a stub YAML<a class="headerlink" href="#step-1-generate-a-stub-yaml" title="Link to this heading"></a></h2>
-<p>Point <code class="docutils literal notranslate"><span class="pre">generate_stub_yaml.py</span></code> at the cast folder and it will scan for recognised instrument files and write a skeleton configuration:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>generate_stub_yaml.py<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/
+<p>Point <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">init</span></code> at the cast folder and it will scan for recognised instrument files and write a skeleton configuration:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>caldip<span class="w"> </span>init<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/
 </pre></div>
 </div>
 <p>Open the resulting YAML and fill in any fields left as <code class="docutils literal notranslate"><span class="pre">null</span></code> or <code class="docutils literal notranslate"><span class="pre">.nan</span></code>:</p>
@@ -144,33 +144,42 @@ The <code class="docutils literal notranslate"><span class="pre">directory</span
 <hr class="docutils" />
 <section id="step-2-generate-the-interactive-plot">
 <h2>Step 2 — Generate the interactive plot<a class="headerlink" href="#step-2-generate-the-interactive-plot" title="Link to this heading"></a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>caldip_plot_all.py<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--output<span class="w"> </span>castM4_plot.html<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--ctd-sensor<span class="w"> </span><span class="m">2</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>caldip<span class="w"> </span>plot<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--output<span class="w"> </span>castM4<span class="w"> </span>-o<span class="w"> </span>outputs/
 </pre></div>
 </div>
-<p>This produces a self-contained HTML file you can open in any browser.
+<p>This produces a self-contained HTML file (<code class="docutils literal notranslate"><span class="pre">outputs/castM4_plot.html</span></code>) you can open in any browser.
 No internet required — the file works at sea.</p>
-<p>If you omit <code class="docutils literal notranslate"><span class="pre">--output</span></code>, the plot opens interactively in your browser instead.</p>
+<p>If you omit <code class="docutils literal notranslate"><span class="pre">--output</span></code> and <code class="docutils literal notranslate"><span class="pre">-o</span></code>, the plot opens interactively in your browser instead.</p>
+<p><strong>Inspecting a bottle stop in the plot:</strong> The plot has three synchronised panels (pressure, temperature, conductivity). To check instrument agreement within a single bottle stop:</p>
+<ol class="arabic simple">
+<li><p>Find the bottle stop in the <strong>pressure panel</strong> — it appears as a flat segment flanked by blue (start) and red (end) vertical lines.</p></li>
+<li><p>Click and drag across that flat segment in the pressure panel to zoom in. All three panels zoom together on the time axis.</p></li>
+<li><p>Check that instrument temperatures (and conductivities, if available) lie close to the CTD reference (black) within that window.</p></li>
+<li><p>Double-click anywhere to zoom back out.</p></li>
+</ol>
 </section>
 <hr class="docutils" />
 <section id="step-3-generate-statistics">
 <h2>Step 3 — Generate statistics<a class="headerlink" href="#step-3-generate-statistics" title="Link to this heading"></a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>caldip_check_all.py<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--ctd-sensor<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--output-dir<span class="w"> </span>outputs/
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>caldip<span class="w"> </span>stats<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--ctd-sensor<span class="w"> </span><span class="m">2</span><span class="w"> </span>-o<span class="w"> </span>outputs/
 </pre></div>
 </div>
-<p>This writes two CSV files to <code class="docutils literal notranslate"><span class="pre">outputs/</span></code>:</p>
+<p>This writes three files to <code class="docutils literal notranslate"><span class="pre">outputs/</span></code>:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">castM4_summary_statistics.csv</span></code> — one row per instrument, averaged across all bottle stops</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">castM4_summary_statistics.csv</span></code> — one row per instrument (deepest bottle stop)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">castM4_detailed_statistics.csv</span></code> — one row per instrument per bottle stop</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">castM4_timing.txt</span></code> — bottle stop start/end times and pressures</p></li>
 </ul>
 </section>
 <hr class="docutils" />
 <section id="choosing-the-ctd-sensor-ctd-sensor">
 <h2>Choosing the CTD sensor (<code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span></code>)<a class="headerlink" href="#choosing-the-ctd-sensor-ctd-sensor" title="Link to this heading"></a></h2>
-<p>CTD rosettes typically carry two independent sensor packages. Use <code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span> <span class="pre">2</span></code> (secondary) if the primary sensor had problems during the cast. The flag applies to both scripts and must match between plot and statistics runs to keep comparisons consistent.</p>
+<p>CTD rosettes typically carry two independent sensor packages (primary=1, and secondary=2). Use <code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span> <span class="pre">2</span></code> (secondary) if it is the more accurate sensor package.</p>
+<blockquote>
+<div><p><strong>Important:</strong> <code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span></code> only applies to <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">stats</span></code> — the plot always shows both primary and secondary CTD data. Set <code class="docutils literal notranslate"><span class="pre">ctd_sensors:</span> <span class="pre">2</span></code> in the YAML to make sensor 2 the default for that cast, so you do not have to pass the flag each time.</p>
+</div></blockquote>
 <table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Flag</p></th>
@@ -179,13 +188,16 @@ No internet required — the file works at sea.</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span> <span class="pre">1</span></code></p></td>
-<td><p>Primary (default)</p></td>
+<td><p>Primary (default if not set in YAML)</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span> <span class="pre">2</span></code></p></td>
 <td><p>Secondary</p></td>
 </tr>
 </tbody>
 </table>
+<blockquote>
+<div><p><strong>Rerunning after CTD reprocessing:</strong> If the CTD <code class="docutils literal notranslate"><span class="pre">.cnv</span></code> file is updated (spike removal, pressure correction, salinity calibration, sensor swap), regenerate both the plot and statistics for corrections to be applied to moored instruments.</p>
+</div></blockquote>
 </section>
 </section>
 

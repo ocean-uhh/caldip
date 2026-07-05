@@ -103,19 +103,19 @@
              
   <section id="bottle-stop-detection">
 <h1>Bottle stop detection<a class="headerlink" href="#bottle-stop-detection" title="Link to this heading"></a></h1>
-<p>Bottle stops are periods during a CTD cast when the rosette is held stationary at a fixed depth, allowing instruments to equilibrate before firing a bottle.
-caldip automatically identifies these periods from the CTD pressure record using the algorithm described here.
-The implementation is in <code class="docutils literal notranslate"><span class="pre">caldip/caldip_functions.py:find_bottle_stops()</span></code>.</p>
+<p>Bottle stops are periods during a CTD cast when the rosette is held stationary at a fixed depth (or rather, fixed wire-out), allowing instruments to equilibrate before firing a bottle (usually after about 30 seconds).
+caldip automatically identifies these periods from the CTD pressure record using the algorithm described here.  The period of the bottle stop is normally chosen to be in relatively well-mixed (small changes in temperature and salinity in the vertical) so that even if the ship is heaving up and down a bit, the property changes are small.  The period in the middle of the bottle stop (after initial equilibration, before the rosette starts moving up again) is used as the intercomparison period between the standard CTD on the rosette and the values from the mooring instruments which are attached to the rosette.</p>
+<p>The implementation is in <code class="docutils literal notranslate"><span class="pre">caldip/core.py:find_bottle_stops()</span></code>.</p>
 <hr class="docutils" />
 <section id="overview">
 <h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
 <p>The algorithm works in five stages:</p>
 <ol class="arabic simple">
-<li><p>Define the search region (near and after maximum depth)</p></li>
-<li><p>Scan for low-rate periods using a 60-second forward window</p></li>
-<li><p>Extend each candidate to its natural end using sample-to-sample rates</p></li>
-<li><p>Refine boundaries around the median pressure (±2 dbar)</p></li>
-<li><p>Merge nearby stops, then discard short ones</p></li>
+<li><p>Define the search region (after maximum depth - since bottle stops are normally done on the upcast)</p></li>
+<li><p>Scan for periods with low-rates of heave (slower upward motion) using a 60-second forward window</p></li>
+<li><p>Extend each candidate period to its natural end using sample-to-sample rates</p></li>
+<li><p>Using this initially defined period, determine the median pressure.  Refine the boundaries of the bottle stop period to the time period where the pressure is near the median pressure (±2 dbar)</p></li>
+<li><p>Merge nearby stops (in case a longer bottle stop gets separated into two by this algorithm), then discard short bottle stops.</p></li>
 </ol>
 </section>
 <hr class="docutils" />
@@ -204,13 +204,15 @@ comp_start = comp_end − 2 min
 </tr>
 </tbody>
 </table>
-<p>Both can be overridden on the command line:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>caldip_plot_all.py<span class="w"> </span>castM4/<span class="w"> </span>--threshold<span class="w"> </span><span class="m">8</span>.0<span class="w"> </span>--min-duration<span class="w"> </span><span class="m">240</span>
+<p>Both can be overridden on the command line for either subcommand:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>caldip<span class="w"> </span>plot<span class="w">  </span>castM4/<span class="w"> </span>--threshold<span class="w"> </span><span class="m">8</span>.0<span class="w"> </span>--min-duration<span class="w"> </span><span class="m">240</span>
+caldip<span class="w"> </span>stats<span class="w"> </span>castM4/<span class="w"> </span>--threshold<span class="w"> </span><span class="m">8</span>.0<span class="w"> </span>--min-duration<span class="w"> </span><span class="m">240</span>
 </pre></div>
 </div>
-<p>The <code class="docutils literal notranslate"><span class="pre">--threshold</span></code> and <code class="docutils literal notranslate"><span class="pre">--min-duration</span></code> flags apply to the plot only;
-<code class="docutils literal notranslate"><span class="pre">caldip_check_all.py</span></code> uses the defaults.
-Statistics are always computed over the 2-minute window described above, regardless of threshold settings.</p>
+<blockquote>
+<div><p><strong>Important:</strong> If you change these values, use the same values for both <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">plot</span></code> and <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">stats</span></code>. Different thresholds will produce different bottle stop lists, so the stops shown in the plot will not match those used to compute the statistics.</p>
+</div></blockquote>
+<p>Statistics are computed over the 2-minute comparison window (within the full bottle stop period) described above, regardless of threshold settings.</p>
 </section>
 </section>
 

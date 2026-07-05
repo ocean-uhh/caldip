@@ -119,9 +119,15 @@ performed with CTD profiles and multiple instrument types including MicroCATs an
 <p class="caption" role="heading"><span class="caption-text">Users guide</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="running.html">Running caldip</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="running.html#the-two-main-scripts">The two main scripts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="running.html#caldip-plot-all-py">caldip_plot_all.py</a></li>
-<li class="toctree-l2"><a class="reference internal" href="running.html#caldip-check-all-py">caldip_check_all.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="running.html#the-two-main-commands">The two main commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="running.html#caldip-plot">caldip plot</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="running.html#inspecting-a-bottle-stop-in-the-plot">Inspecting a bottle stop in the plot</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="running.html#caldip-stats">caldip stats</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="running.html#choosing-the-ctd-sensor">Choosing the CTD sensor</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="running.html#batch-processing-a-cruise">Batch processing a cruise</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="running.html#template">Template</a></li>
 <li class="toctree-l3"><a class="reference internal" href="running.html#switching-ctd-sensor">Switching CTD sensor</a></li>
@@ -146,7 +152,10 @@ performed with CTD profiles and multiple instrument types including MicroCATs an
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="outputs.html#interactive-plot">Interactive plot</a></li>
+<li class="toctree-l2"><a class="reference internal" href="outputs.html#interactive-plot">Interactive plot</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="outputs.html#zooming-in-on-a-bottle-stop">Zooming in on a bottle stop</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="outputs.html#statistics-csvs">Statistics CSVs</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="outputs.html#summary-statistics-cast-summary-statistics-csv">Summary statistics (<code class="docutils literal notranslate"><span class="pre">{cast}_summary_statistics.csv</span></code>)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="outputs.html#detailed-statistics-cast-detailed-statistics-csv">Detailed statistics (<code class="docutils literal notranslate"><span class="pre">{cast}_detailed_statistics.csv</span></code>)</a></li>
@@ -164,6 +173,12 @@ performed with CTD profiles and multiple instrument types including MicroCATs an
 <ul>
 <li class="toctree-l1"><a class="reference external" href="http://github.com/eleanorfrajka/caldip">GitHub Repo</a></li>
 <li class="toctree-l1"><a class="reference internal" href="caldip.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">API</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="caldip.html#module-caldip.core">core</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="caldip.html#caldip.core.find_bottle_stops"><code class="docutils literal notranslate"><span class="pre">find_bottle_stops()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="caldip.html#caldip.core.stats"><code class="docutils literal notranslate"><span class="pre">stats()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="caldip.html#caldip.core.stats_for_time_period"><code class="docutils literal notranslate"><span class="pre">stats_for_time_period()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="caldip.html#module-caldip.readers">readers</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="caldip.html#caldip.readers.find_config_file"><code class="docutils literal notranslate"><span class="pre">find_config_file()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="caldip.html#caldip.readers.load_config"><code class="docutils literal notranslate"><span class="pre">load_config()</span></code></a></li>
@@ -177,15 +192,16 @@ performed with CTD profiles and multiple instrument types including MicroCATs an
 <li class="toctree-l3"><a class="reference internal" href="caldip.html#caldip.readers.sbe37_xmlcon_reader"><code class="docutils literal notranslate"><span class="pre">sbe37_xmlcon_reader()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="caldip.html#caldip-functions">caldip_functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="caldip.html#module-caldip.scaffold">scaffold</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="caldip.html#caldip.scaffold.generate_stub_yaml"><code class="docutils literal notranslate"><span class="pre">generate_stub_yaml()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="caldip.html#module-caldip.tools">tools</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="caldip.html#caldip.tools.summary_stats"><code class="docutils literal notranslate"><span class="pre">summary_stats()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="caldip.html#caldip.tools.to_xarray"><code class="docutils literal notranslate"><span class="pre">to_xarray()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="caldip.html#caldip.tools.trim_to_deployment"><code class="docutils literal notranslate"><span class="pre">trim_to_deployment()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="caldip.html#writers">writers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="caldip.html#plotters">plotters</a></li>
 <li class="toctree-l2"><a class="reference internal" href="caldip.html#module-caldip.sbe_hex_reader">sbe_hex_reader</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="caldip.html#caldip.sbe_hex_reader.parse_hex_header_sensors"><code class="docutils literal notranslate"><span class="pre">parse_hex_header_sensors()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="caldip.html#caldip.sbe_hex_reader.sbe37_hex_reader"><code class="docutils literal notranslate"><span class="pre">sbe37_hex_reader()</span></code></a></li>

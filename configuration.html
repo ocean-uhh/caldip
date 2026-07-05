@@ -133,15 +133,14 @@
 <hr class="docutils" />
 <section id="generating-a-stub">
 <h2>Generating a stub<a class="headerlink" href="#generating-a-stub" title="Link to this heading"></a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">generate_stub_yaml.py</span></code> scans a cast directory for recognised instrument files and writes a skeleton YAML:</p>
+<p><code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">init</span></code> scans a cast directory for recognised instrument files and writes a skeleton YAML:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Write YAML to the directory</span>
-python<span class="w"> </span>generate_stub_yaml.py<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/
+caldip<span class="w"> </span>init<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/
 
-<span class="c1"># Print to stdout instead</span>
-python<span class="w"> </span>generate_stub_yaml.py<span class="w"> </span>--print-only<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/
+<span class="c1"># Print to stdout instead (useful for inspection before writing)</span>
+caldip<span class="w"> </span>init<span class="w"> </span>--print-only<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">generate_stub_yamls.sh</span></code> wraps this for batch processing multiple cast directories.</p>
 <p>After generation, open the stub and fill in the fields marked <code class="docutils literal notranslate"><span class="pre">null</span></code> or <code class="docutils literal notranslate"><span class="pre">.nan</span></code>.</p>
 </section>
 <hr class="docutils" />
@@ -288,7 +287,7 @@ python<span class="w"> </span>generate_stub_yaml.py<span class="w"> </span>--pri
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">position</span></code></p></td>
 <td><p>string</p></td>
 <td><p>recommended</p></td>
-<td><p>Position number on mooring frame, e.g. <code class="docutils literal notranslate"><span class="pre">'1'</span></code></p></td>
+<td><p>Position number, e.g. <code class="docutils literal notranslate"><span class="pre">'1'</span></code> - does not affect processing</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">serial</span></code></p></td>
 <td><p>string or integer</p></td>
@@ -298,7 +297,7 @@ python<span class="w"> </span>generate_stub_yaml.py<span class="w"> </span>--pri
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">label</span></code></p></td>
 <td><p>string</p></td>
 <td><p>recommended</p></td>
-<td><p>Human-readable model, e.g. <code class="docutils literal notranslate"><span class="pre">SBE37</span></code>, <code class="docutils literal notranslate"><span class="pre">TR1050</span></code></p></td>
+<td><p>Human-readable model, e.g. <code class="docutils literal notranslate"><span class="pre">MC</span></code> or <code class="docutils literal notranslate"><span class="pre">SBE37</span></code>, <code class="docutils literal notranslate"><span class="pre">Thermistor</span></code> or <code class="docutils literal notranslate"><span class="pre">TR1050</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">instrument</span></code></p></td>
 <td><p>string</p></td>
@@ -374,7 +373,7 @@ python<span class="w"> </span>generate_stub_yaml.py<span class="w"> </span>--pri
 <span class="nt">waterdepth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.nan</span>
 <span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;moor/proc_calib/msm142_2026/cal_dip/castM3/&#39;</span>
 <span class="nt">ctd_file</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;msm_142_1_035_1sec.cnv&#39;</span>
-<span class="nt">ctd_sensors</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="nt">ctd_sensors</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span><span class="w">  </span><span class="c1"># use secondary, 1=primary</span>
 <span class="nt">instruments</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">position</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;1&#39;</span>
 <span class="w">    </span><span class="nt">serial</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;26271&#39;</span>

@@ -33,10 +33,10 @@ The `directory` field in the YAML tells caldip where that folder is.
 
 ## Step 1 — Generate a stub YAML
 
-Point `generate_stub_yaml.py` at the cast folder and it will scan for recognised instrument files and write a skeleton configuration:
+Point `caldip init` at the cast folder and it will scan for recognised instrument files and write a skeleton configuration:
 
 ```bash
-python generate_stub_yaml.py moor/proc_calib/msm142_2026/cal_dip/castM4/
+caldip init moor/proc_calib/msm142_2026/cal_dip/castM4/
 ```
 
 Open the resulting YAML and fill in any fields left as `null` or `.nan`:
@@ -52,37 +52,47 @@ See the [YAML configuration reference](configuration.md) for a full field descri
 ## Step 2 — Generate the interactive plot
 
 ```bash
-python caldip_plot_all.py moor/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml \
-    --output castM4_plot.html \
-    --ctd-sensor 2
+caldip plot moor/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml \
+    --output castM4 -o outputs/
 ```
 
-This produces a self-contained HTML file you can open in any browser.
+This produces a self-contained HTML file (`outputs/castM4_plot.html`) you can open in any browser.
 No internet required — the file works at sea.
 
-If you omit `--output`, the plot opens interactively in your browser instead.
+If you omit `--output` and `-o`, the plot opens interactively in your browser instead.
+
+**Inspecting a bottle stop in the plot:** The plot has three synchronised panels (pressure, temperature, conductivity). To check instrument agreement within a single bottle stop:
+
+1. Find the bottle stop in the **pressure panel** — it appears as a flat segment flanked by blue (start) and red (end) vertical lines.
+2. Click and drag across that flat segment in the pressure panel to zoom in. All three panels zoom together on the time axis.
+3. Check that instrument temperatures (and conductivities, if available) lie close to the CTD reference (black) within that window.
+4. Double-click anywhere to zoom back out.
 
 ---
 
 ## Step 3 — Generate statistics
 
 ```bash
-python caldip_check_all.py moor/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml \
-    --ctd-sensor 2 \
-    --output-dir outputs/
+caldip stats moor/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml \
+    --ctd-sensor 2 -o outputs/
 ```
 
-This writes two CSV files to `outputs/`:
-- `castM4_summary_statistics.csv` — one row per instrument, averaged across all bottle stops
+This writes three files to `outputs/`:
+- `castM4_summary_statistics.csv` — one row per instrument (deepest bottle stop)
 - `castM4_detailed_statistics.csv` — one row per instrument per bottle stop
+- `castM4_timing.txt` — bottle stop start/end times and pressures
 
 ---
 
 ## Choosing the CTD sensor (`--ctd-sensor`)
 
-CTD rosettes typically carry two independent sensor packages. Use `--ctd-sensor 2` (secondary) if the primary sensor had problems during the cast. The flag applies to both scripts and must match between plot and statistics runs to keep comparisons consistent.
+CTD rosettes typically carry two independent sensor packages (primary=1, and secondary=2). Use `--ctd-sensor 2` (secondary) if it is the more accurate sensor package.
+
+> **Important:** `--ctd-sensor` only applies to `caldip stats` — the plot always shows both primary and secondary CTD data. Set `ctd_sensors: 2` in the YAML to make sensor 2 the default for that cast, so you do not have to pass the flag each time.
 
 | Flag | Sensor |
 |------|--------|
-| `--ctd-sensor 1` | Primary (default) |
+| `--ctd-sensor 1` | Primary (default if not set in YAML) |
 | `--ctd-sensor 2` | Secondary |
+
+> **Rerunning after CTD reprocessing:** If the CTD `.cnv` file is updated (spike removal, pressure correction, salinity calibration, sensor swap), regenerate both the plot and statistics for corrections to be applied to moored instruments.
