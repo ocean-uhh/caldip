@@ -54,7 +54,7 @@ print(f"TR1050 {TARGET_SERIAL} raw timestamps (clock_offset=0):")
 print(f"  Start: {tr1050_start_raw}")
 print(f"  End:   {tr1050_end_raw}")
 print(
-    f"  Duration: {(tr1050_end_raw - tr1050_start_raw).total_seconds()/3600:.1f} hours"
+    f"  Duration: {(tr1050_end_raw - tr1050_start_raw).total_seconds() / 3600:.1f} hours"
 )
 print()
 
@@ -93,7 +93,7 @@ if sbe_instruments:
 # ── check coverage with configured offset ─────────────────────────────────────
 print(
     f"Configured clock_offset in YAML: {configured_offset} seconds"
-    f"  ({configured_offset/3600:.2f} hours)"
+    f"  ({configured_offset / 3600:.2f} hours)"
 )
 print()
 
@@ -141,14 +141,14 @@ print()
 offset_to_align_ends = (deployment_end - tr1050_end_raw).total_seconds()
 print(
     f"Offset to align TR1050 end with deployment end: {offset_to_align_ends:.0f}s"
-    f"  ({offset_to_align_ends/3600:.2f} hours)"
+    f"  ({offset_to_align_ends / 3600:.2f} hours)"
 )
 
 if sbe_instruments:
     offset_tr_sbe_start = (sbe_start - tr1050_start_raw).total_seconds()
     print(
         f"Time from TR1050 raw start to SBE37 start:      {offset_tr_sbe_start:.0f}s"
-        f"  ({offset_tr_sbe_start/3600:.2f} hours)"
+        f"  ({offset_tr_sbe_start / 3600:.2f} hours)"
     )
 
 print()

@@ -24,6 +24,7 @@ except ImportError:
 
 def build_parser(subparsers=None):
     kwargs = dict(
+        help="interactive Plotly plot of instruments vs CTD reference",
         description="Interactive Plotly plot of instruments vs CTD reference",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""

@@ -124,8 +124,8 @@ def trim_to_deployment(
         print("No deployment/recovery times in config - skipping trimming")
         return instruments, reference_data
 
-    deployment_time = pd.to_datetime(config["deployment_time"])
-    recovery_time = pd.to_datetime(config["recovery_time"])
+    deployment_time = pd.to_datetime(config["deployment_time"]).to_datetime64()
+    recovery_time = pd.to_datetime(config["recovery_time"]).to_datetime64()
 
     print(f"Trimming data to: {deployment_time} - {recovery_time}")
 

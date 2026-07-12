@@ -8,6 +8,7 @@ from caldip.scaffold import generate_stub_yaml
 
 def build_parser(subparsers=None):
     kwargs = dict(
+        help="generate a stub .caldip.yaml for a cast directory",
         description="Generate a stub .caldip.yaml configuration for a cast directory",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
