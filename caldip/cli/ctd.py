@@ -39,7 +39,10 @@ Examples:
     parser.add_argument(
         "--output-dir",
         "-o",
-        help="Directory to save output files (default: same directory as CTD file)",
+        help=(
+            "Directory to save the HTML plot (default: same directory as the CTD file). "
+            "NetCDF output is always written next to the CTD file so it can be found on reload."
+        ),
     )
     parser.add_argument("--data-dir", help="Override data directory from config")
     parser.add_argument(
@@ -323,6 +326,8 @@ def run(args):
     print(f"\nProcessing CTD file: {ctd_path.name}")
 
     try:
+        # NOTE: reads 'ctd_sensor' (singular). Old YAMLs using 'ctd_sensors' will
+        # silently default to 1 — fix by renaming the key in the YAML.
         ctd_sensor = int(config.get("ctd_sensor", 1))
         ds_raw = load_instrument_data(ctd_path, "ctd-cnv")
         ds_raw = _normalize_ctd_vars(ds_raw, ctd_sensor=ctd_sensor)

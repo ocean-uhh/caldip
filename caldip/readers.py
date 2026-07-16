@@ -415,6 +415,8 @@ def load_reference_data(
                     f"  ✅ Loaded pre-processed CTD from {nc_path.name} ({len(dataset.time)} samples)"
                 )
             else:
+                # NOTE: reads 'ctd_sensor' (singular). Old YAMLs using 'ctd_sensors' will
+                # silently default to 1 — fix by renaming the key in the YAML.
                 ctd_sensor = int(config.get("ctd_sensor", 1))
                 dataset = load_instrument_data(ctd_path, "ctd-cnv")
                 dataset = _normalize_ctd_vars(dataset, ctd_sensor=ctd_sensor)
@@ -548,7 +550,11 @@ def _wild_edit_ctd(ds: "xr.Dataset", config: Dict) -> "xr.Dataset":
         n = int(p_bad.sum())
         if n:
             bad |= p_bad
-            reasons.append(f"{n} pressure out of range [0, {max_p}]")
+            reasons.append(
+                f"{n} pressure < 0"
+                if max_p is None
+                else f"{n} pressure out of range [0, {max_p}]"
+            )
 
     # Temperature check
     if "temperature" in ds.data_vars:
@@ -833,7 +839,7 @@ def _parse_microcat_ascii(file_path: Path) -> xr.Dataset:
                 try:
                     interval_match = line.split("=")[-1].strip().split()[0]
                     metadata["interval_s"] = int(interval_match)
-                except:
+                except (ValueError, IndexError):
                     pass
             elif "System UpLoad Time" in line:
                 try:

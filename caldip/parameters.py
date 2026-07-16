@@ -145,11 +145,6 @@ metadata = {
         "long_name": "Upward velocity",
         "standard_name": "upward_sea_water_velocity",
     },
-    SPEED_OF_SOUND: {
-        "units": "m/s",
-        "long_name": "Speed of sound in sea water",
-        "standard_name": "speed_of_sound_in_sea_water",
-    },
     ECHO_INTENSITY: {
         "units": "dB",
         "long_name": "Echo intensity",

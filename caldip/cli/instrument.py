@@ -237,7 +237,7 @@ def run(args):
         recover_np = pd.to_datetime(recover).to_datetime64()
         mask = (dataset.time.values >= deploy_np) & (dataset.time.values <= recover_np)
         if mask.any():
-            deploy_ds = dataset.sel(time=mask)
+            deploy_ds = dataset.isel(time=mask)
 
     if "nc" in formats:
         want_raw = args.output in ("raw", "both")

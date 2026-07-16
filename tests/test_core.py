@@ -117,12 +117,12 @@ def test_stats_workflow():
         "ctd": {
             "data": xr.Dataset(
                 {
-                    "prDM": ("time", pressure),
-                    "temp1": (
+                    "pressure": ("time", pressure),
+                    "temperature": (
                         "time",
                         np.full(1000, 15.05) + np.random.normal(0, 0.005, 1000),
                     ),
-                    "c1mS/cm": (
+                    "conductivity": (
                         "time",
                         np.full(1000, 35.05) + np.random.normal(0, 0.05, 1000),
                     ),
@@ -138,7 +138,7 @@ def test_stats_workflow():
 
     # Test the main workflow
     try:
-        detailed_stats_df = cf.stats(instruments, reference_data, config, ctd_sensor=1)
+        detailed_stats_df = cf.stats(instruments, reference_data, config)
 
         # Should return a DataFrame with results
         assert not detailed_stats_df.empty
@@ -274,60 +274,22 @@ def test_format_status_reads_high():
         "ctd": {
             "data": xr.Dataset(
                 {
-                    "prDM": ("time", pressure),
-                    "t090C": ("time", np.full(1000, 15.00)),
-                    "c0mS/cm": ("time", np.full(1000, 34.5)),
+                    "pressure": ("time", pressure),
+                    "temperature": ("time", np.full(1000, 15.00)),
+                    "conductivity": ("time", np.full(1000, 34.5)),
                 },
                 coords={"time": times},
             ),
             "config": {},
         }
     }
-    df = cf.stats(instruments, reference_data, {"name": "test"}, ctd_sensor=1)
+    df = cf.stats(instruments, reference_data, {"name": "test"})
     assert not df.empty
     assert df.iloc[0]["temp_status"].startswith("T reads high")
 
 
-def test_ctd_sensor_fallback_variable_names():
-    """Falls back to temp1/cond1 when t090C/c0mS/cm are absent (sensor 1)."""
-    times = pd.date_range("2024-01-01 12:00:00", periods=1000, freq="1s")
-    pressure = np.concatenate(
-        [
-            np.linspace(0, 90, 400),
-            np.full(200, 100),
-            np.linspace(100, 0, 400),
-        ]
-    )
-    instruments = {
-        "S001": {
-            "data": xr.Dataset(
-                {"temperature": ("time", np.full(1000, 4.0))},
-                coords={"time": times},
-            ),
-            "config": {"instrument": "sbe37", "label": "Test"},
-            "type": "sbe37",
-        }
-    }
-    # Use fallback names temp1 / cond1 instead of t090C / c0mS/cm
-    reference_data = {
-        "ctd": {
-            "data": xr.Dataset(
-                {
-                    "prDM": ("time", pressure),
-                    "temp1": ("time", np.full(1000, 4.0)),
-                    "cond1": ("time", np.full(1000, 34.5)),
-                },
-                coords={"time": times},
-            ),
-            "config": {},
-        }
-    }
-    df = cf.stats(instruments, reference_data, {"name": "test"}, ctd_sensor=1)
-    assert not df.empty
-
-
-def test_ctd_sensor_2_fallback_variable_names():
-    """Falls back to temp2/cond2 when t190C/c1mS/cm are absent (sensor 2)."""
+def test_stats_with_canonical_variable_names():
+    """stats() works when reference data uses canonical variable names."""
     times = pd.date_range("2024-01-01 12:00:00", periods=1000, freq="1s")
     pressure = np.concatenate(
         [
@@ -350,14 +312,14 @@ def test_ctd_sensor_2_fallback_variable_names():
         "ctd": {
             "data": xr.Dataset(
                 {
-                    "prDM": ("time", pressure),
-                    "temp2": ("time", np.full(1000, 4.0)),
-                    "cond2": ("time", np.full(1000, 34.5)),
+                    "pressure": ("time", pressure),
+                    "temperature": ("time", np.full(1000, 4.0)),
+                    "conductivity": ("time", np.full(1000, 34.5)),
                 },
                 coords={"time": times},
             ),
             "config": {},
         }
     }
-    df = cf.stats(instruments, reference_data, {"name": "test"}, ctd_sensor=2)
+    df = cf.stats(instruments, reference_data, {"name": "test"})
     assert not df.empty
