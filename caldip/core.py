@@ -52,7 +52,7 @@ def find_bottle_stops(
 
     # Get pressure variable
     pressure_var = None
-    for var in ["prDM", "pressure", "press", "PRES"]:
+    for var in ["pressure", "prDM", "press", "PRES"]:
         if var in ctd_data.data_vars:
             pressure_var = var
             break
@@ -263,7 +263,6 @@ def stats(
     instrument_data: Dict,
     reference_data: Dict,
     config: Dict,
-    ctd_sensor: int = 1,
     threshold_dbar_per_min: float = 10.0,
     min_duration_seconds: float = 180.0,
     temp_threshold: Optional[float] = None,
@@ -311,35 +310,18 @@ def stats(
 
     print(f"Found {len(bottle_stops)} bottle stops for analysis")
 
-    # Get CTD variable names — YAML ctd_vars overrides auto-detection
-    yaml_vars = config.get("ctd_vars", {})
-    if yaml_vars.get("temp"):
-        ctd_temp = yaml_vars["temp"]
-    elif ctd_sensor == 1:
-        ctd_temp = "t090C" if "t090C" in ctd_data else "temp1"
-    else:
-        ctd_temp = "t190C" if "t190C" in ctd_data else "temp2"
+    # CTD variables are canonical names after normalization in load_reference_data
+    ctd_temp = "temperature"
+    ctd_cond = "conductivity"
+    ctd_press = "pressure"
 
-    if yaml_vars.get("cond"):
-        ctd_cond = yaml_vars["cond"]
-    elif ctd_sensor == 1:
-        ctd_cond = "c0mS/cm" if "c0mS/cm" in ctd_data else "cond1"
-    else:
-        ctd_cond = "c1mS/cm" if "c1mS/cm" in ctd_data else "cond2"
-
-    ctd_press = yaml_vars.get("press") or ("prDM" if "prDM" in ctd_data else "press")
-
-    # Validate that the resolved variable names actually exist in the CTD data
-    for var_name, var_label in [(ctd_temp, "temp"), (ctd_press, "press")]:
+    # Validate canonical names exist in the CTD data
+    for var_name, var_label in [(ctd_temp, "temperature"), (ctd_press, "pressure")]:
         if var_name not in ctd_data.data_vars:
-            source = (
-                f"ctd_vars.{var_label}"
-                if yaml_vars.get(var_label)
-                else "auto-detection"
-            )
             raise KeyError(
-                f"CTD variable '{var_name}' (from {source}) not found in CTD data. "
-                f"Available variables: {list(ctd_data.data_vars)}"
+                f"CTD variable '{var_name}' not found. "
+                f"Available variables: {list(ctd_data.data_vars)}\n"
+                f"Run 'caldip ctd <yaml>' to pre-process the CTD file."
             )
 
     # Convert CTD time to numeric for time comparisons
@@ -350,7 +332,6 @@ def stats(
 
     # Loop through each bottle stop
     for stop_num, stop in enumerate(bottle_stops, 1):
-
         # Calculate comparison period (last 2 minutes ending 30 seconds before stop end)
         stop_end_dt = pd.to_datetime(stop["end_time"])
         comp_end = stop_end_dt - pd.Timedelta(seconds=30)

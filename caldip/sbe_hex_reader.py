@@ -339,14 +339,6 @@ def sbe37_hex_reader(hex_file: Union[str, Path]) -> xr.Dataset:
             "seabirdscientific package required for SBE37 hex file reading"
         )
 
-    # Map our sensor types to seabirdscientific sensor types
-    sensor_mapping = {
-        "temperature": id.Sensors.Temperature,
-        "conductivity": id.Sensors.Conductivity,
-        "pressure": id.Sensors.Pressure,
-        "oxygen": id.Sensors.OPTODE,
-    }
-
     # Build enabled sensors list following the example format
     enabled_sensors = []
 

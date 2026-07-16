@@ -2,21 +2,47 @@
 Output formatting functions for caldip processing.
 
 This module contains functions for formatting and writing caldip analysis results
-to various output formats (console, CSV, etc.).
+to various output formats (console, CSV, NetCDF, etc.).
 
 Currently Used Functions:
+- save_instrument_nc() -> bool
+  Save a normalized instrument Dataset to NetCDF, sanitizing un-serializable attrs
 - print_stats_report() -> None
   Print formatted statistics report to console
-
-These functions handle only output formatting with no calculations.
 """
 
+import datetime
 import numpy as np
 import pandas as pd
+import xarray as xr
 from typing import Dict
 
 
-def print_stats_report(stats_df: pd.DataFrame, config: Dict, ctd_sensor: int = 1):
+def save_instrument_nc(ds: xr.Dataset, path, label: str) -> bool:
+    """Save instrument Dataset to NetCDF, converting un-serializable attrs to strings.
+
+    Returns True on success, False on failure.
+    """
+    try:
+        out = ds.copy()
+        cleaned = {}
+        for k, v in out.attrs.items():
+            if v is None:
+                continue
+            if isinstance(v, datetime.datetime):
+                cleaned[k] = v.isoformat()
+            else:
+                cleaned[k] = v
+        out.attrs = cleaned
+        out.to_netcdf(path)
+        print(f"  💾 Saved {label} ({len(ds.time)} samples)")
+        return True
+    except Exception as _e:
+        print(f"  ⚠️  {label} save failed: {_e}")
+        return False
+
+
+def print_stats_report(stats_df: pd.DataFrame, config: Dict):
     """Print formatted statistics report for universal instrument types."""
 
     print("\n" + "=" * 80)
@@ -37,7 +63,7 @@ def print_stats_report(stats_df: pd.DataFrame, config: Dict, ctd_sensor: int = 1
             print(f"\n  Bottle Stop {i}:")
             print(f"    Start: {stop['start_time']}")
             print(f"    End: {stop['end_time']}")
-            print(f"    Duration: {stop['duration_seconds']/60:.1f} minutes")
+            print(f"    Duration: {stop['duration_seconds'] / 60:.1f} minutes")
             print(f"    Pressure: {stop['pressure']:.1f} dbar")
         print("\n  Using deepest bottle stop for comparison:")
     else:
@@ -46,7 +72,7 @@ def print_stats_report(stats_df: pd.DataFrame, config: Dict, ctd_sensor: int = 1
     print(f"    Start: {ctd_stats['comparison_start']}")
     print(f"    End: {ctd_stats['comparison_end']}")
 
-    print(f"\nCTD Statistics (Sensor {ctd_sensor}) during comparison period:")
+    print("\nCTD Statistics during comparison period:")
     print(
         f"  Mean Pressure: {ctd_stats['bl_press']:.1f} dbar (std: {ctd_stats['press_std']:.2f})"
     )

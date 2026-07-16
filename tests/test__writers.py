@@ -56,18 +56,19 @@ def _make_summary_df(with_cond=True, with_press=True, with_bottle_stops=False):
 def test_print_report_runs_without_error(capsys):
     """Report prints without raising exceptions."""
     df = _make_summary_df()
-    writers.print_stats_report(df, {"name": "testCast"}, ctd_sensor=1)
+    writers.print_stats_report(df, {"name": "testCast"})
     out = capsys.readouterr().out
     assert "testCast" in out
     assert "S001" in out
 
 
 def test_print_report_sensor_2(capsys):
-    """Sensor number appears in the header line."""
+    """Report prints cast name and instrument serial."""
     df = _make_summary_df()
-    writers.print_stats_report(df, {"name": "testCast"}, ctd_sensor=2)
+    writers.print_stats_report(df, {"name": "testCast"})
     out = capsys.readouterr().out
-    assert "Sensor 2" in out
+    assert "testCast" in out
+    assert "S001" in out
 
 
 def test_print_report_nan_cond_and_press(capsys):

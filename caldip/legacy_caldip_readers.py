@@ -1,28 +1,27 @@
 """
-Data loading functions for caldip processing.
+Universal data loading functions for caldip processing.
 
-Public API
-----------
-find_config_file(path) -> Path
-    Locate a .caldip.yaml config file given a file or directory path.
-load_config(path) -> Dict
-    Parse a .caldip.yaml configuration file.
-load_instruments_from_config(config, data_dir) -> Dict[str, Dict]
-    Load all instruments listed in a config.  Priority per instrument:
-    _use.nc → _raw.nc (creates _use.nc if absent) → source file
-    (normalizes, applies clock offset, saves both _raw.nc and _use.nc).
-load_reference_data(config, data_dir) -> Dict[str, Dict]
-    Load CTD reference data; reads pre-processed .nc if present.
-resolve_data_dir(config_file, config, override) -> Path
-    Resolve the data directory from config or an explicit override.
+This module provides a unified interface for loading data from different
+instrument types using their file_type specifications.
 
-Internal helpers
-----------------
-load_instrument_data()     — dispatch to format-specific loaders
-_normalize_instrument_vars() — rename raw variables to canonical names
-_normalize_ctd_vars()      — rename CTD variables; selects primary/secondary sensor
-_wild_edit_ctd()           — apply SeaBird wild-edit spike removal
-_resample_1hz()            — resample CTD to 1 Hz medians
+Currently Used Functions:
+- find_config_file() -> Path
+  Find caldip configuration file in directory or use provided file
+- load_config() -> Dict
+  Load YAML configuration files for caldip processing
+- load_instruments_from_config() -> Dict[str, Dict]
+  Load all instruments specified in a caldip configuration
+- load_reference_data() -> Dict[str, Dict]
+  Load CTD reference data from configuration
+- load_instrument_data() -> xr.Dataset
+  Load individual instrument data using appropriate loader (internal utility)
+- load_ctd_data() -> xr.Dataset
+  Load CTD data from SeaBird hex/cnv files
+- load_microcat_data() -> xr.Dataset
+  Load MicroCAT data from SeaBird hex/asc/cnv files
+
+Note: generate_stub_yaml() moved to caldip.scaffold.
+Note: trim_to_deployment() moved to caldip.tools.
 """
 
 import numpy as np
@@ -34,7 +33,6 @@ import yaml
 from datetime import datetime
 import warnings
 import json
-import tempfile
 
 try:
     import seasenselib as sl
@@ -57,61 +55,9 @@ except ImportError:
 
 # Import tools for shared utilities
 from caldip.tools import to_xarray
-from caldip._writers import save_instrument_nc
 
 # Import SBE hex readers
 from .sbe_hex_reader import sbe37_hex_reader
-
-# Conductivity source names that are in S/m and require ×10 to reach mS/cm
-_CONDUCTIVITY_S_PER_M = frozenset({"c0S/m", "c1S/m", "cond0S/m", "cond1S/m"})
-
-# Caldip-specific source names not in seasenselib's parameters.py default_mappings.
-# These supplement (never override) the seasenselib mapping.
-_CALDIP_SUPPLEMENT = {
-    "conductivity": ["cond0S/m", "cond1S/m"],  # seasenselib only has c0S/m, c1S/m
-}
-
-
-def _normalize_instrument_vars(ds: xr.Dataset) -> xr.Dataset:
-    """Rename raw instrument variable names to canonical names using parameters.py mappings.
-
-    Uses caldip/parameters.py (copied from seasenselib) so the mapping stays in sync
-    by copying that file. _CALDIP_SUPPLEMENT fills gaps not yet covered by seasenselib.
-    Conductivity sources in S/m are multiplied by 10 → mS/cm.
-    Any remaining '/' in variable names is replaced with '_per_'.
-    """
-    from caldip.parameters import default_mappings
-
-    # Merge seasenselib mapping with caldip supplement (supplement appended, not prepended)
-    combined = {
-        canonical: list(sources) + _CALDIP_SUPPLEMENT.get(canonical, [])
-        for canonical, sources in default_mappings.items()
-    }
-    # Add any supplement keys that aren't in default_mappings at all
-    for canonical, sources in _CALDIP_SUPPLEMENT.items():
-        if canonical not in combined:
-            combined[canonical] = sources
-
-    renames = {}
-    for canonical, sources in combined.items():
-        if canonical in ds.data_vars:
-            continue  # already canonical
-        for src in sources:
-            if src in ds.data_vars and src not in renames:
-                if src in _CONDUCTIVITY_S_PER_M:
-                    ds = ds.assign({src: ds[src] * 10.0})
-                renames[src] = canonical
-                break
-
-    if renames:
-        ds = ds.rename(renames)
-
-    # Sanitize any remaining '/' (e.g. residual raw names that didn't map)
-    slash_renames = {v: v.replace("/", "_per_") for v in ds.data_vars if "/" in v}
-    if slash_renames:
-        ds = ds.rename(slash_renames)
-
-    return ds
 
 
 def find_config_file(path):
@@ -258,14 +204,7 @@ def load_instruments_from_config(
     data_dir = Path(data_dir)
     instruments = {}
 
-    process_serials = config.get("process_serials")
-    process_set = (
-        {str(s) for s in process_serials} if process_serials is not None else None
-    )
-
     for instrument in config.get("instruments", []):
-        if process_set is not None and str(instrument["serial"]) not in process_set:
-            continue
         serial = str(instrument["serial"])
         filename = instrument["filename"]
         file_type = instrument["file_type"]
@@ -278,55 +217,22 @@ def load_instruments_from_config(
         )
 
         try:
+            # Load the data - pass along any header_file if specified
             load_kwargs = {}
             if "header_file" in instrument:
+                # Construct full path to header file
                 header_file_path = data_dir / instrument["header_file"]
                 load_kwargs["header_file"] = str(header_file_path)
 
-            instr_type = instrument.get("instrument", file_type).lower()
-            nc_use = data_dir / f"caldip_{instr_type}_{serial}_use.nc"
-            nc_raw = data_dir / f"caldip_{instr_type}_{serial}_raw.nc"
+            dataset = load_instrument_data(file_path, file_type, **load_kwargs)
 
-            def _trim_and_save_use(ds):
-                deploy = config.get("deployment_time")
-                recover = config.get("recovery_time")
-                if not (deploy and recover):
-                    return
-                dep_np = pd.to_datetime(deploy).to_datetime64()
-                rec_np = pd.to_datetime(recover).to_datetime64()
-                mask = (ds.time.values >= dep_np) & (ds.time.values <= rec_np)
-                if mask.any():
-                    save_instrument_nc(ds.sel(time=mask), nc_use, "_use.nc")
-
-            # Priority: _use.nc → _raw.nc (if newer than source) → source
-            if nc_use.exists():
-                dataset = xr.open_dataset(nc_use)
-                print(f"  📦 Loaded from _use.nc ({len(dataset.time)} samples)")
-            elif (
-                nc_raw.exists()
-                and file_path.exists()
-                and nc_raw.stat().st_mtime > file_path.stat().st_mtime
-            ):
-                dataset = xr.open_dataset(nc_raw)
-                print(f"  📦 Loaded from _raw.nc ({len(dataset.time)} samples)")
-                # Create _use.nc from _raw.nc if not yet present
-                _trim_and_save_use(dataset)
-            else:
-                # Load from source, normalize, apply clock offset, then save both
-                dataset = load_instrument_data(file_path, file_type, **load_kwargs)
-                dataset = _normalize_instrument_vars(dataset)
-
-                clock_offset_val = instrument.get("clock_offset", 0)
-                if clock_offset_val:
-                    print(
-                        f"  ⏰ Applying clock offset: {clock_offset_val:+.0f} seconds"
-                    )
-                    dataset = dataset.assign_coords(
-                        time=dataset.time + pd.Timedelta(seconds=clock_offset_val)
-                    )
-
-                save_instrument_nc(dataset, nc_raw, "_raw.nc")
-                _trim_and_save_use(dataset)
+            # Apply clock offset if specified (positive offset = add time, negative = subtract time)
+            if "clock_offset" in instrument and instrument["clock_offset"] != 0:
+                clock_offset = instrument["clock_offset"]
+                print(f"  ⏰ Applying clock offset: {clock_offset:+.0f} seconds")
+                dataset = dataset.assign_coords(
+                    time=dataset.time + pd.Timedelta(seconds=clock_offset)
+                )
 
             # Warn if the serial number embedded in the dataset differs from the YAML
             dataset_serial = None
@@ -408,188 +314,16 @@ def load_reference_data(
         print(f"Loading CTD reference {ctd_name}...")
 
         try:
-            nc_path = ctd_path.with_suffix(".nc")
-            if nc_path.exists():
-                dataset = xr.open_dataset(nc_path)
-                print(
-                    f"  ✅ Loaded pre-processed CTD from {nc_path.name} ({len(dataset.time)} samples)"
-                )
-            else:
-                # NOTE: reads 'ctd_sensor' (singular). Old YAMLs using 'ctd_sensors' will
-                # silently default to 1 — fix by renaming the key in the YAML.
-                ctd_sensor = int(config.get("ctd_sensor", 1))
-                dataset = load_instrument_data(ctd_path, "ctd-cnv")
-                dataset = _normalize_ctd_vars(dataset, ctd_sensor=ctd_sensor)
-                dataset = _wild_edit_ctd(dataset, config)
-                dataset = _resample_1hz(dataset)
-                print(f"  ✅ Loaded: {len(dataset.time)} samples")
+            dataset = load_instrument_data(ctd_path, "ctd-cnv")
 
             reference_data[ctd_name] = {"data": dataset, "file": str(ctd_path)}
+
+            print(f"  ✅ Loaded: {len(dataset.time)} samples")
 
         except Exception as e:
             print(f"  ❌ Failed to load CTD: {e}")
 
     return reference_data
-
-
-def _resample_1hz(ds: "xr.Dataset") -> "xr.Dataset":
-    """Downsample CTD data to 1 Hz using a per-second median."""
-    resampled = ds.resample(time="1s").median(keep_attrs=True)
-    n_in, n_out = len(ds.time), len(resampled.time)
-    if n_in != n_out:
-        print(f"  📉 Resampled {n_in} → {n_out} samples (1 Hz median)")
-    return resampled
-
-
-# Canonical CTD variable mapping: (canonical_name, [(source_name, scale_factor), ...])
-# Selected-sensor variables map to 'temperature'/'conductivity'.
-# The other sensor maps to 'temperature_2'/'conductivity_2'.
-# scale_factor converts to canonical units (S/m → mS/cm = ×10).
-_CTD_CANONICAL_S1 = [
-    ("temperature", [("t090C", 1.0), ("t190C", 1.0)]),
-    ("temperature_2", [("t190C", 1.0)]),
-    (
-        "conductivity",
-        [("c0mS/cm", 1.0), ("c0S/m", 10.0), ("c1mS/cm", 1.0), ("c1S/m", 10.0)],
-    ),
-    ("conductivity_2", [("c1mS/cm", 1.0), ("c1S/m", 10.0)]),
-    ("pressure", [("prDM", 1.0), ("prdM", 1.0), ("press", 1.0), ("PRES", 1.0)]),
-    ("salinity", [("sal00", 1.0), ("sal11", 1.0), ("PSAL", 1.0)]),
-    ("oxygen", [("sbeox0ML/L", 1.0), ("sbeox1ML/L", 1.0)]),
-]
-_CTD_CANONICAL_S2 = [
-    ("temperature", [("t190C", 1.0), ("t090C", 1.0)]),
-    ("temperature_2", [("t090C", 1.0)]),
-    (
-        "conductivity",
-        [("c1mS/cm", 1.0), ("c1S/m", 10.0), ("c0mS/cm", 1.0), ("c0S/m", 10.0)],
-    ),
-    ("conductivity_2", [("c0mS/cm", 1.0), ("c0S/m", 10.0)]),
-    ("pressure", [("prDM", 1.0), ("prdM", 1.0), ("press", 1.0), ("PRES", 1.0)]),
-    ("salinity", [("sal00", 1.0), ("sal11", 1.0), ("PSAL", 1.0)]),
-    ("oxygen", [("sbeox0ML/L", 1.0), ("sbeox1ML/L", 1.0)]),
-]
-# Keep _CTD_CANONICAL as an alias used by tests
-_CTD_CANONICAL = _CTD_CANONICAL_S1  # noqa: F841
-
-
-def _normalize_ctd_vars(ds: "xr.Dataset", ctd_sensor: int = 1) -> "xr.Dataset":
-    """
-    Rename CTD variables to canonical names and convert units where needed.
-
-    ctd_sensor=1 (default) uses primary sensor (t090C, c0*) as 'temperature'/'conductivity';
-    secondary sensor becomes 'temperature_2'/'conductivity_2'.
-    ctd_sensor=2 reverses this.
-    Conductivity in S/m is multiplied by 10 to convert to mS/cm.
-    Any remaining variable names containing '/' are sanitized to '_per_'.
-    """
-    canonical = _CTD_CANONICAL_S2 if ctd_sensor == 2 else _CTD_CANONICAL_S1
-    renames = {}
-    conversions = {}
-    for canon_name, sources in canonical:
-        if canon_name in ds.data_vars:
-            continue  # already canonical
-        for src, scale in sources:
-            if src in ds.data_vars and src not in renames:
-                renames[src] = canon_name
-                if scale != 1.0:
-                    conversions[src] = scale
-                break
-
-    # Sanitize any remaining variable names containing '/' (not valid in NetCDF)
-    for var in ds.data_vars:
-        if var not in renames and "/" in var:
-            renames[var] = var.replace("/", "_per_")
-
-    if not renames:
-        return ds
-
-    # Apply unit conversions before renaming
-    updates = {}
-    for src, scale in conversions.items():
-        arr = ds[src].values.astype(float) * scale
-        updates[src] = xr.DataArray(
-            arr, coords=ds[src].coords, dims=ds[src].dims, attrs=ds[src].attrs
-        )
-    if updates:
-        ds = ds.assign(updates)
-
-    ds = ds.rename(renames)
-
-    canonical_renames = {
-        s: d for s, d in renames.items() if not d.endswith("_per_") and "_per_" not in d
-    }
-    parts = [
-        f"{src}→{dst}" + (f" (×{conversions[src]})" if src in conversions else "")
-        for src, dst in canonical_renames.items()
-    ]
-    if parts:
-        print(f"  🔤 Normalized: {', '.join(parts)}")
-    return ds
-
-
-def _wild_edit_ctd(ds: "xr.Dataset", config: Dict) -> "xr.Dataset":
-    """
-    Apply global range checks to CTD reference data (wild-edit / gross-error removal).
-
-    Checks applied (any failure NaNs all variables at that sample):
-      - pressure < 0 or > max_pressure (max_pressure from config, if set)
-      - temperature < -3 or > 40
-      - salinity > 42
-    """
-    bad = np.zeros(len(ds.time), dtype=bool)
-    reasons = []
-
-    # Pressure check (canonical name after _normalize_ctd_vars)
-    if "pressure" in ds.data_vars:
-        pressure = ds["pressure"].values.astype(float)
-        p_bad = pressure < 0
-        max_p = config.get("max_pressure")
-        if max_p is not None:
-            p_bad |= pressure > float(max_p)
-        n = int(p_bad.sum())
-        if n:
-            bad |= p_bad
-            reasons.append(
-                f"{n} pressure < 0"
-                if max_p is None
-                else f"{n} pressure out of range [0, {max_p}]"
-            )
-
-    # Temperature check
-    if "temperature" in ds.data_vars:
-        temp = ds["temperature"].values.astype(float)
-        t_bad = (temp < -3) | (temp > 40)
-        n = int(t_bad.sum())
-        if n:
-            bad |= t_bad
-            reasons.append(f"{n} temperature out of range [-3, 40]")
-
-    # Salinity check
-    if "salinity" in ds.data_vars:
-        sal = ds["salinity"].values.astype(float)
-        s_bad = sal > 42
-        n = int(s_bad.sum())
-        if n:
-            bad |= s_bad
-            reasons.append(f"{n} salinity > 42")
-
-    n_bad = int(bad.sum())
-    if n_bad == 0:
-        return ds
-
-    masked = {}
-    for var in ds.data_vars:
-        arr = ds[var].values.copy().astype(float)
-        arr[bad] = float("nan")
-        masked[var] = xr.DataArray(
-            arr, coords=ds[var].coords, dims=ds[var].dims, attrs=ds[var].attrs
-        )
-
-    result = ds.assign(masked)
-    result.attrs.update(ds.attrs)
-    print(f"  ⚠️  Wild-edit: {n_bad} samples masked — " + "; ".join(reasons))
-    return result
 
 
 def load_ctd_data(file_path: Union[str, Path]) -> xr.Dataset:
@@ -620,20 +354,8 @@ def load_ctd_data(file_path: Union[str, Path]) -> xr.Dataset:
         if not SEABIRD_AVAILABLE:
             raise ImportError("seabirdscientific package required for CNV data loading")
 
-        # Use cnv_to_instrument_data to load CNV files; fall back to latin-1 if UTF-8 fails
-        try:
-            instrument_data = id.cnv_to_instrument_data(str(file_path))
-        except UnicodeDecodeError:
-            content = file_path.read_bytes().decode("latin-1")
-            with tempfile.NamedTemporaryFile(
-                mode="w", encoding="utf-8", suffix=".cnv", delete=False
-            ) as tmp:
-                tmp.write(content)
-                tmp_path = Path(tmp.name)
-            try:
-                instrument_data = id.cnv_to_instrument_data(str(tmp_path))
-            finally:
-                tmp_path.unlink(missing_ok=True)
+        # Use cnv_to_instrument_data to load CNV files
+        instrument_data = id.cnv_to_instrument_data(str(file_path))
         ds = to_xarray(instrument_data)
 
         # Fix time if it's showing year 2000 incorrectly
@@ -641,7 +363,7 @@ def load_ctd_data(file_path: Union[str, Path]) -> xr.Dataset:
         if pd.Timestamp(ds.time.values[0]).year == 2000:
             # Check the raw file for the actual start time
             actual_start = None
-            with open(file_path, "r", encoding="latin-1") as f:
+            with open(file_path, "r") as f:
                 for line in f:
                     if "* NMEA UTC" in line:
                         # Extract date from line like: * NMEA UTC (Time) = Mar 30 2026 21:06:33
@@ -744,52 +466,6 @@ def load_microcat_data(file_path: Union[str, Path]) -> xr.Dataset:
             ds = ds.assign_coords(time=pd.DatetimeIndex(actual_timestamps))
             ds.attrs["time_corrected"] = "Using actual timestamps from timeJV2"
 
-        elif "timeK" in ds.data_vars:
-            # timeK is the SBE instrument's internal clock in seconds since 2000-01-01.
-            # More reliable than start_time + timeS when there are recording gaps.
-            # Corrupted timeK values (zeros, wrap-arounds, random) break the uniform
-            # increment; we keep only the longest block where consecutive timeK values
-            # step by the expected sample interval.
-            import pandas as pd
-            from collections import Counter
-
-            tq = ds["timeK"].values.astype("float64")
-            n = len(tq)
-            valid_mask = np.ones(n, dtype=bool)
-            if n > 1:
-                diffs = np.diff(tq)
-                # Infer sample interval from the most common positive diff (1 s – 1 hr)
-                pos = diffs[(diffs >= 1) & (diffs <= 3600)].astype(int)
-                interval = Counter(pos).most_common(1)[0][0] if len(pos) else 10
-                # A consecutive pair is good if its diff matches the interval
-                good_pair = np.abs(diffs - interval) < 0.5
-                # A sample is valid if it is part of at least one good pair
-                sample_ok = np.zeros(n, dtype=bool)
-                sample_ok[:-1] |= good_pair
-                sample_ok[1:] |= good_pair
-                # Keep only the largest contiguous valid block
-                changes = np.diff(sample_ok.astype(np.int8), prepend=0, append=0)
-                starts = np.where(changes == 1)[0]
-                ends = np.where(changes == -1)[0]
-                if len(starts):
-                    best = int(np.argmax(ends - starts))
-                    valid_mask = np.zeros(n, dtype=bool)
-                    valid_mask[starts[best] : ends[best]] = True
-
-            n_dropped = n - int(valid_mask.sum())
-            if n_dropped:
-                ds = ds.isel(time=valid_mask)
-                tq = tq[valid_mask]
-                print(f"  ⚠️  Dropped {n_dropped} rows with non-sequential timeK values")
-            timestamps = pd.to_datetime(
-                tq * 1e9, unit="ns", origin="2000-01-01", errors="coerce"
-            )
-            ds = ds.assign_coords(time=timestamps)
-            ds.attrs["time_corrected"] = (
-                "Using instrument clock from timeK (seconds since 2000-01-01)"
-            )
-            print(f"  🕐 Time from timeK: {timestamps[0]} → {timestamps[-1]}")
-
     elif file_path.suffix.lower() == ".hex":
         # Parse MicroCAT hex files using calibration data from hex header
         ds = sbe37_hex_reader(file_path)
@@ -839,7 +515,7 @@ def _parse_microcat_ascii(file_path: Path) -> xr.Dataset:
                 try:
                     interval_match = line.split("=")[-1].strip().split()[0]
                     metadata["interval_s"] = int(interval_match)
-                except (ValueError, IndexError):
+                except:
                     pass
             elif "System UpLoad Time" in line:
                 try:

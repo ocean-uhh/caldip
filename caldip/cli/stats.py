@@ -20,13 +20,15 @@ import caldip.core as core
 
 def build_parser(subparsers=None):
     kwargs = dict(
+        help="per-bottle-stop statistics for instruments vs CTD reference",
         description="Per-bottle-stop statistics for instruments vs CTD reference",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   caldip stats data/proc_calib/msm142_2026/cal_dip/castM4/
-  caldip stats castM4/castM4.caldip.yaml --ctd-sensor 2 -o outputs/
+  caldip stats castM4/castM4.caldip.yaml -o outputs/
   caldip stats castM4/castM4.caldip.yaml --output castM4_rev2 -o outputs/
+  caldip stats castM4/castM4.caldip.yaml --ctd-sensor 2
         """,
     )
     if subparsers is not None:
@@ -37,13 +39,6 @@ Examples:
     parser.add_argument(
         "config_path",
         help="Path to .caldip.yaml config file or directory containing config",
-    )
-    parser.add_argument(
-        "--ctd-sensor",
-        type=int,
-        default=None,
-        choices=[1, 2],
-        help="CTD sensor to use (1 or 2); overrides ctd_sensors in YAML (default: 1)",
     )
     parser.add_argument(
         "--output",
@@ -66,6 +61,12 @@ Examples:
         default=180.0,
         help="Minimum bottle stop duration in seconds (default: 180.0)",
     )
+    parser.add_argument(
+        "--ctd-sensor",
+        type=int,
+        choices=[1, 2],
+        help="CTD sensor to use as reference (1=primary, 2=secondary); overrides YAML setting",
+    )
     parser.add_argument("--data-dir", help="Override data directory from config")
     return parser
 
@@ -87,13 +88,8 @@ def run(args):
         return 1
 
     if args.ctd_sensor is not None:
-        ctd_sensor = args.ctd_sensor
-    else:
-        ctd_sensor = int(config.get("ctd_sensors", 1))
-        if ctd_sensor not in (1, 2):
-            print(f"Warning: ctd_sensors={ctd_sensor} in YAML is not 1 or 2; using 1")
-            ctd_sensor = 1
-    print(f"Using CTD sensor: {ctd_sensor}")
+        config["ctd_sensor"] = args.ctd_sensor
+        print(f"CTD sensor overridden to: {args.ctd_sensor}")
 
     data_dir = resolve_data_dir(config_file, config, args.data_dir)
     print(f"Using data directory: {data_dir}")
@@ -137,12 +133,11 @@ def run(args):
             instruments,
             reference_data,
             config,
-            ctd_sensor,
             threshold_dbar_per_min=args.threshold,
             min_duration_seconds=args.min_duration,
         )
         summary_df = summary_stats(detailed_df, config)
-        print_stats_report(summary_df, config, ctd_sensor)
+        print_stats_report(summary_df, config)
     except Exception as e:
         print(f"Error calculating statistics: {e}")
         return 1
@@ -177,12 +172,17 @@ def run(args):
                         else x
                     )
                 )
-        out_df["ctd_sensor_used"] = ctd_sensor
         out_df = out_df.sort_values(
             ["serial", "bl_press"], ascending=[True, False]
         ).reset_index(drop=True)
-        out_df.to_csv(detailed_csv, index=False)
-        print(f"\nSaved detailed statistics to {detailed_csv}")
+        try:
+            out_df.to_csv(detailed_csv, index=False)
+            print(f"\nSaved detailed statistics to {detailed_csv}")
+        except OSError as e:
+            print(f"\n  ⚠️  Could not write {detailed_csv}: {e}")
+            print(
+                "     Try adding -o /local/path/ to write output to a local directory."
+            )
 
     csv_df = summary_df.drop("ctd_stats", axis=1, errors="ignore").copy()
     csv_df = csv_df.rename(
@@ -206,29 +206,38 @@ def run(args):
     ]:
         if col in csv_df.columns:
             csv_df[col] = csv_df[col].round(decimals)
-    csv_df.to_csv(summary_csv, index=False)
-    print(f"Saved summary statistics to {summary_csv}")
+    try:
+        csv_df.to_csv(summary_csv, index=False)
+        print(f"Saved summary statistics to {summary_csv}")
+    except OSError as e:
+        print(f"  ⚠️  Could not write {summary_csv}: {e}")
+        print("     Try adding -o /local/path/ to write output to a local directory.")
 
     bottle_stops = core.find_bottle_stops(
         list(reference_data.values())[0]["data"],
         threshold_dbar_per_min=args.threshold,
         min_duration_seconds=args.min_duration,
     )
-    with open(timing_txt, "w") as f:
-        f.write(f"CALDIP TIMING REPORT - {cast_name}\n")
-        f.write("=" * 60 + "\n\n")
-        if bottle_stops:
-            f.write(f"Found {len(bottle_stops)} bottle stop(s):\n\n")
-            for i, stop in enumerate(bottle_stops, 1):
-                f.write(f"Bottle Stop {i}:\n")
-                f.write(f"  Start: {stop['start_time']}\n")
-                f.write(f"  End: {stop['end_time']}\n")
-                f.write(f"  Duration: {stop['duration_seconds']/60:.1f} minutes\n")
-                f.write(f"  Pressure: {stop['pressure']:.1f} dbar\n\n")
-        else:
-            f.write("No bottle stops detected.\n")
-        f.write(f"\nCTD sensor used: {ctd_sensor}\n")
-    print(f"Saved timing information to {timing_txt}")
+    try:
+        with open(timing_txt, "w") as f:
+            f.write(f"CALDIP TIMING REPORT - {cast_name}\n")
+            f.write("=" * 60 + "\n\n")
+            if bottle_stops:
+                f.write(f"Found {len(bottle_stops)} bottle stop(s):\n\n")
+                for i, stop in enumerate(bottle_stops, 1):
+                    f.write(f"Bottle Stop {i}:\n")
+                    f.write(f"  Start: {stop['start_time']}\n")
+                    f.write(f"  End: {stop['end_time']}\n")
+                    f.write(
+                        f"  Duration: {stop['duration_seconds'] / 60:.1f} minutes\n"
+                    )
+                    f.write(f"  Pressure: {stop['pressure']:.1f} dbar\n\n")
+            else:
+                f.write("No bottle stops detected.\n")
+        print(f"Saved timing information to {timing_txt}")
+    except OSError as e:
+        print(f"  ⚠️  Could not write {timing_txt}: {e}")
+        print("     Try adding -o /local/path/ to write output to a local directory.")
 
     return 0
 

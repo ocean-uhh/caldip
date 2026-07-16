@@ -4,13 +4,19 @@
 
 echo "Generating all available caldip plots and statistics..."
 
+# castB1
+#caldip ctd data/proc_calib/odb_2026/cal_dip/castB1/ --output castB1_ctd -o outputs/ 
+#caldip plot data/proc_calib/odb_2026/cal_dip/castB1/ --output castB1 -o outputs/ --title "castB1: Instruments vs CTD"
+#caldip stats data/proc_calib/odb_2026/cal_dip/castB1/ --output castB1 -o outputs/ 
+#caldip instrument data/proc_calib/odb_2026/cal_dip/castB1/ --serial 7507
+caldip instrument data/proc_calib/odb_2026/cal_dip/castB1/ --serial 26269
 # castM3
 #caldip plot  data/proc_calib/msm142_2026/cal_dip/castM3/ --output castM3 -o outputs/ --title "castM3: Instruments vs CTD"
 #caldip stats data/proc_calib/msm142_2026/cal_dip/castM3/ --output castM3 -o outputs/
 
 # castM4
-caldip plot  data/proc_calib/msm142_2026/cal_dip/castM4/ --output castM4 -o outputs/ --title "castM4: Instruments vs CTD"
-caldip stats data/proc_calib/msm142_2026/cal_dip/castM4/ --output castM4 -o outputs/ --ctd-sensor 2
+#caldip plot  data/proc_calib/msm142_2026/cal_dip/castM4/ --output castM4 -o outputs/ --title "castM4: Instruments vs CTD"
+#caldip stats data/proc_calib/msm142_2026/cal_dip/castM4/ --output castM4 -o outputs/ --ctd-sensor 2
 
 # castM5
 #caldip plot  data/proc_calib/msm142_2026/cal_dip/castM5/ --output castM5 -o outputs/ --title "castM5: Instruments vs CTD"

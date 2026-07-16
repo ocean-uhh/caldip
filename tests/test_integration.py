@@ -92,7 +92,7 @@ def test_end_to_end_analysis():
     assert instruments, "No instruments loaded from fixture"
     assert reference_data, "No reference data loaded from fixture"
 
-    detailed_stats_df = cf.stats(instruments, reference_data, config, ctd_sensor=1)
+    detailed_stats_df = cf.stats(instruments, reference_data, config)
 
     assert not detailed_stats_df.empty
     assert len(detailed_stats_df) > 0

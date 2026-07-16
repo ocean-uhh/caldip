@@ -96,40 +96,29 @@ def plot(
     for serial, info in instrument_data.items():
         ds = info["data"]
 
-        # Check for pressure variables
-        pressure_vars = ["prdM", "pressure", "press", "PRES"]
-        for var in pressure_vars:
-            if var in ds.data_vars:
-                pressure_values.extend(ds[var].values[~np.isnan(ds[var].values)])
-                has_instrument_pressure = True
-                break
+        # Canonical names after _normalize_instrument_vars; oxygen_phase kept as fallback
+        if "pressure" in ds.data_vars:
+            pressure_values.extend(
+                ds["pressure"].values[~np.isnan(ds["pressure"].values)]
+            )
+            has_instrument_pressure = True
 
-        # Check for temperature variables
-        temp_vars = ["tv290C", "temperature", "temp", "TEMP"]
-        for var in temp_vars:
-            if var in ds.data_vars:
-                temperature_values.extend(ds[var].values[~np.isnan(ds[var].values)])
-                break
+        if "temperature" in ds.data_vars:
+            temperature_values.extend(
+                ds["temperature"].values[~np.isnan(ds["temperature"].values)]
+            )
 
-        # Check for conductivity variables - only from instruments that should have conductivity
-        cond_vars = ["cond0mS/cm", "conductivity", "cond", "COND"]
-        for var in cond_vars:
-            if var in ds.data_vars:
-                # Only count conductivity if it has actual values (not just NaN)
-                cond_data = ds[var].values[~np.isnan(ds[var].values)]
-                if len(cond_data) > 0:
-                    conductivity_values.extend(cond_data)
-                    has_conductivity = True
-                break
+        if "conductivity" in ds.data_vars:
+            cond_data = ds["conductivity"].values[~np.isnan(ds["conductivity"].values)]
+            if len(cond_data) > 0:
+                conductivity_values.extend(cond_data)
+                has_conductivity = True
 
-        # Check for oxygen variables - SBE37-ODO sensors
-        oxygen_vars = ["oxygen_phase", "oxygen_temp", "oxygen", "OXYGEN"]
-        for var in oxygen_vars:
-            if var in ds.data_vars:
-                # Only count oxygen if it has actual values (not just NaN)
-                oxygen_data = ds[var].values[~np.isnan(ds[var].values)]
-                if len(oxygen_data) > 0:
-                    oxygen_values.extend(oxygen_data)
+        for oxy_var in ["oxygen", "oxygen_phase"]:
+            if oxy_var in ds.data_vars:
+                oxy_data = ds[oxy_var].values[~np.isnan(ds[oxy_var].values)]
+                if len(oxy_data) > 0:
+                    oxygen_values.extend(oxy_data)
                     has_oxygen = True
                 break
 
@@ -137,38 +126,28 @@ def plot(
     for name, info in reference_data.items():
         ds = info["data"]
 
-        # CTD pressure
-        if "prDM" in ds.data_vars:
-            pressure_values.extend(ds.prDM.values[~np.isnan(ds.prDM.values)])
+        # CTD pressure (canonical name)
+        if "pressure" in ds.data_vars:
+            pressure_values.extend(
+                ds["pressure"].values[~np.isnan(ds["pressure"].values)]
+            )
 
-        # CTD temperatures
-        for temp_var in ["t090C", "t190C", "temp_primary", "temp_secondary"]:
-            if temp_var in ds.data_vars:
-                temperature_values.extend(
-                    ds[temp_var].values[~np.isnan(ds[temp_var].values)]
-                )
+        # CTD temperatures — selected + secondary
+        for tvar in ["temperature", "temperature_2"]:
+            if tvar in ds.data_vars:
+                temperature_values.extend(ds[tvar].values[~np.isnan(ds[tvar].values)])
 
-        # CTD conductivities - only collect values if instruments have conductivity
+        # CTD conductivities — selected + secondary
         if has_conductivity:
-            for cond_var in ["c0mS/cm", "c1mS/cm", "cond_primary", "cond_secondary"]:
-                if cond_var in ds.data_vars:
+            for cvar in ["conductivity", "conductivity_2"]:
+                if cvar in ds.data_vars:
                     conductivity_values.extend(
-                        ds[cond_var].values[~np.isnan(ds[cond_var].values)]
+                        ds[cvar].values[~np.isnan(ds[cvar].values)]
                     )
 
-        # CTD oxygen - only collect values if instruments have oxygen
-        if has_oxygen:
-            for oxy_var in [
-                "sbeox0Mm/L",
-                "sbeox1Mm/L",
-                "oxygen",
-                "oxy_primary",
-                "oxy_secondary",
-            ]:
-                if oxy_var in ds.data_vars:
-                    oxygen_values.extend(
-                        ds[oxy_var].values[~np.isnan(ds[oxy_var].values)]
-                    )
+        # CTD oxygen (canonical name)
+        if has_oxygen and "oxygen" in ds.data_vars:
+            oxygen_values.extend(ds["oxygen"].values[~np.isnan(ds["oxygen"].values)])
 
     def smart_range(values, padding=0.05):
         """Return [min, max] axis range with fractional padding; defaults to [0,1] for empty input."""
@@ -263,78 +242,66 @@ def plot(
         show_legend_on_first_plot = True
 
         # Pressure subplot
-        pressure_vars = ["prdM", "pressure", "press", "PRES"]
-        for var in pressure_vars:
-            if var in ds.data_vars:
-                fig.add_trace(
-                    go.Scatter(
-                        x=ds.time.values,
-                        y=ds[var].values,
-                        mode="lines",
-                        name=legend_name,
-                        line=dict(color=color, width=2, dash=line_dash),
-                        hoverinfo="skip",
-                        legendgroup=serial,
-                        showlegend=show_legend_on_first_plot,
-                    ),
-                    row=PRESSURE_ROW,
-                    col=1,
-                )
-                show_legend_on_first_plot = False
-                break
+        if "pressure" in ds.data_vars:
+            fig.add_trace(
+                go.Scatter(
+                    x=ds.time.values,
+                    y=ds["pressure"].values,
+                    mode="lines",
+                    name=legend_name,
+                    line=dict(color=color, width=2, dash=line_dash),
+                    hoverinfo="skip",
+                    legendgroup=serial,
+                    showlegend=show_legend_on_first_plot,
+                ),
+                row=PRESSURE_ROW,
+                col=1,
+            )
+            show_legend_on_first_plot = False
 
         # Temperature subplot
-        temp_vars = ["tv290C", "temperature", "temp", "TEMP"]
-        for var in temp_vars:
-            if var in ds.data_vars:
-                fig.add_trace(
-                    go.Scatter(
-                        x=ds.time.values,
-                        y=ds[var].values,
-                        mode="lines",
-                        name=legend_name,
-                        line=dict(color=color, width=2, dash=line_dash),
-                        hoverinfo="skip",
-                        legendgroup=serial,
-                        showlegend=show_legend_on_first_plot,
-                    ),
-                    row=TEMPERATURE_ROW,
-                    col=1,
-                )
-                show_legend_on_first_plot = False
-                break
+        if "temperature" in ds.data_vars:
+            fig.add_trace(
+                go.Scatter(
+                    x=ds.time.values,
+                    y=ds["temperature"].values,
+                    mode="lines",
+                    name=legend_name,
+                    line=dict(color=color, width=2, dash=line_dash),
+                    hoverinfo="skip",
+                    legendgroup=serial,
+                    showlegend=show_legend_on_first_plot,
+                ),
+                row=TEMPERATURE_ROW,
+                col=1,
+            )
+            show_legend_on_first_plot = False
 
         # Conductivity subplot (if conductivity subplot exists)
-        if has_conductivity:
-            cond_vars = ["cond0mS/cm", "conductivity", "cond", "COND"]
-            for var in cond_vars:
-                if var in ds.data_vars:
-                    fig.add_trace(
-                        go.Scatter(
-                            x=ds.time.values,
-                            y=ds[var].values,
-                            mode="lines",
-                            name=legend_name,
-                            line=dict(color=color, width=2, dash=line_dash),
-                            hoverinfo="skip",
-                            legendgroup=serial,
-                            showlegend=False,
-                        ),
-                        row=CONDUCTIVITY_ROW,
-                        col=1,
-                    )
-                    break
+        if has_conductivity and "conductivity" in ds.data_vars:
+            fig.add_trace(
+                go.Scatter(
+                    x=ds.time.values,
+                    y=ds["conductivity"].values,
+                    mode="lines",
+                    name=legend_name,
+                    line=dict(color=color, width=2, dash=line_dash),
+                    hoverinfo="skip",
+                    legendgroup=serial,
+                    showlegend=False,
+                ),
+                row=CONDUCTIVITY_ROW,
+                col=1,
+            )
 
-        # Oxygen subplot (if oxygen subplot exists)
+        # Oxygen subplot (if oxygen subplot exists); oxygen_phase kept as fallback
         if has_oxygen:
-            # Plot oxygen phase (primary oxygen measurement for SBE37-ODO)
-            oxygen_vars = ["oxygen_phase", "oxygen", "OXYGEN"]
-            for var in oxygen_vars:
-                if var in ds.data_vars:
+            for oxy_var in ["oxygen", "oxygen_phase"]:
+                if oxy_var in ds.data_vars:
                     fig.add_trace(
                         go.Scatter(
                             x=ds.time.values,
-                            y=ds[var].values,
+                            y=ds[oxy_var].values,
                             mode="lines",
                             name=legend_name,
                             line=dict(color=color, width=2, dash=line_dash),
@@ -357,102 +324,83 @@ def plot(
 
         current_row = 1
 
-        # Reference pressure
-        if "prDM" in ds.data_vars:
+        # Reference pressure (canonical name)
+        if "pressure" in ds.data_vars:
             fig.add_trace(
                 go.Scatter(
                     x=ds.time.values,
-                    y=ds.prDM.values,
+                    y=ds["pressure"].values,
                     mode="lines",
                     name=f"CTD {name}",
                     line=dict(color=ref_color, width=3),
                     hoverinfo="skip",
                     legendgroup=f"ctd_{name}",
-                    showlegend=False,  # Don't show CTD pressure in legend
+                    showlegend=False,
                 ),
                 row=PRESSURE_ROW,
                 col=1,
             )
 
-        # Reference temperatures
-        temp_vars = ["t090C", "t190C", "temp_primary", "temp_secondary"]
-        temp_sensors = [var for var in temp_vars if var in ds.data_vars]
+        # Reference temperatures — selected sensor ('temperature') + secondary ('temperature_2')
+        for tvar, tlabel, tcolor, twidth in [
+            ("temperature", "CTD T1", "black", 3),
+            ("temperature_2", "CTD T2", "gray", 2),
+        ]:
+            if tvar in ds.data_vars:
+                fig.add_trace(
+                    go.Scatter(
+                        x=ds.time.values,
+                        y=ds[tvar].values,
+                        mode="lines",
+                        name=tlabel,
+                        line=dict(color=tcolor, width=twidth),
+                        hoverinfo="skip",
+                        legendgroup=f"ctd_{tvar}",
+                        showlegend=True,
+                    ),
+                    row=TEMPERATURE_ROW,
+                    col=1,
+                )
+        show_ref_legend = False
 
-        for j, temp_var in enumerate(temp_sensors[:2]):  # Max 2 temperature sensors
-            sensor_color = "black" if j == 0 else "gray"
-            sensor_name = "CTD primary" if j == 0 else "CTD secondary"
+        # Reference conductivities — selected ('conductivity') + secondary ('conductivity_2')
+        if has_conductivity:
+            for cvar, clabel, ccolor, cwidth in [
+                ("conductivity", "CTD C1", "black", 3),
+                ("conductivity_2", "CTD C2", "gray", 2),
+            ]:
+                if cvar in ds.data_vars:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=ds.time.values,
+                            y=ds[cvar].values,
+                            mode="lines",
+                            name=clabel,
+                            line=dict(color=ccolor, width=cwidth),
+                            hoverinfo="skip",
+                            legendgroup=f"ctd_{cvar}",
+                            showlegend=True,
+                        ),
+                        row=CONDUCTIVITY_ROW,
+                        col=1,
+                    )
 
+        # CTD oxygen (canonical name)
+        if has_oxygen and "oxygen" in ds.data_vars:
             fig.add_trace(
                 go.Scatter(
                     x=ds.time.values,
-                    y=ds[temp_var].values,
+                    y=ds["oxygen"].values,
                     mode="lines",
-                    name=sensor_name,
-                    line=dict(color=sensor_color, width=3),
+                    name="CTD O2",
+                    line=dict(color="black", width=3),
                     hoverinfo="skip",
-                    legendgroup=f"ctd_t{j+1}",
-                    showlegend=(show_ref_legend and j < 2),
+                    legendgroup="ctd_o",
+                    showlegend=False,
                 ),
-                row=TEMPERATURE_ROW,
+                row=OXYGEN_ROW,
                 col=1,
             )
-            show_ref_legend = False  # Only show legend for first temperature sensor
-
-        # Reference conductivities
-        if has_conductivity:
-            cond_vars = ["c0mS/cm", "c1mS/cm", "cond_primary", "cond_secondary"]
-            cond_sensors = [var for var in cond_vars if var in ds.data_vars]
-
-            for j, cond_var in enumerate(
-                cond_sensors[:2]
-            ):  # Max 2 conductivity sensors
-                sensor_color = "black" if j == 0 else "gray"
-                sensor_name = "CTD C1" if j == 0 else "CTD C2"
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=ds.time.values,
-                        y=ds[cond_var].values,
-                        mode="lines",
-                        name=sensor_name,
-                        line=dict(color=sensor_color, width=3),
-                        hoverinfo="skip",
-                        legendgroup=f"ctd_c{j+1}",
-                        showlegend=False,  # Don't repeat CTD in legend for conductivity
-                    ),
-                    row=CONDUCTIVITY_ROW,
-                    col=1,
-                )
-
-        # CTD Oxygen sensors
-        if has_oxygen:
-            oxy_vars = [
-                "sbeox0Mm/L",
-                "sbeox1Mm/L",
-                "oxygen",
-                "oxy_primary",
-                "oxy_secondary",
-            ]
-            oxy_sensors = [var for var in oxy_vars if var in ds.data_vars]
-
-            for j, oxy_var in enumerate(oxy_sensors[:2]):  # Max 2 oxygen sensors
-                sensor_color = "black" if j == 0 else "gray"
-                sensor_name = "CTD O2-1" if j == 0 else "CTD O2-2"
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=ds.time.values,
-                        y=ds[oxy_var].values,
-                        mode="lines",
-                        name=sensor_name,
-                        line=dict(color=sensor_color, width=3),
-                        hoverinfo="skip",
-                        legendgroup=f"ctd_o{j+1}",
-                        showlegend=False,  # Don't repeat CTD in legend for oxygen
-                    ),
-                    row=OXYGEN_ROW,
-                    col=1,
-                )
 
     # Update y-axis labels and ranges
     fig.update_yaxes(
