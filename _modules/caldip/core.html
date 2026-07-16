@@ -145,7 +145,7 @@
 
     <span class="c1"># Get pressure variable</span>
     <span class="n">pressure_var</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;prDM&quot;</span><span class="p">,</span> <span class="s2">&quot;pressure&quot;</span><span class="p">,</span> <span class="s2">&quot;press&quot;</span><span class="p">,</span> <span class="s2">&quot;PRES&quot;</span><span class="p">]:</span>
+    <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;pressure&quot;</span><span class="p">,</span> <span class="s2">&quot;prDM&quot;</span><span class="p">,</span> <span class="s2">&quot;press&quot;</span><span class="p">,</span> <span class="s2">&quot;PRES&quot;</span><span class="p">]:</span>
         <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ctd_data</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
             <span class="n">pressure_var</span> <span class="o">=</span> <span class="n">var</span>
             <span class="k">break</span>
@@ -362,7 +362,6 @@
     <span class="n">instrument_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span>
     <span class="n">reference_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span>
-    <span class="n">ctd_sensor</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="n">threshold_dbar_per_min</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
     <span class="n">min_duration_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">180.0</span><span class="p">,</span>
     <span class="n">temp_threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -410,35 +409,18 @@
 
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">bottle_stops</span><span class="p">)</span><span class="si">}</span><span class="s2"> bottle stops for analysis&quot;</span><span class="p">)</span>
 
-    <span class="c1"># Get CTD variable names — YAML ctd_vars overrides auto-detection</span>
-    <span class="n">yaml_vars</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ctd_vars&quot;</span><span class="p">,</span> <span class="p">{})</span>
-    <span class="k">if</span> <span class="n">yaml_vars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;temp&quot;</span><span class="p">):</span>
-        <span class="n">ctd_temp</span> <span class="o">=</span> <span class="n">yaml_vars</span><span class="p">[</span><span class="s2">&quot;temp&quot;</span><span class="p">]</span>
-    <span class="k">elif</span> <span class="n">ctd_sensor</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">ctd_temp</span> <span class="o">=</span> <span class="s2">&quot;t090C&quot;</span> <span class="k">if</span> <span class="s2">&quot;t090C&quot;</span> <span class="ow">in</span> <span class="n">ctd_data</span> <span class="k">else</span> <span class="s2">&quot;temp1&quot;</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">ctd_temp</span> <span class="o">=</span> <span class="s2">&quot;t190C&quot;</span> <span class="k">if</span> <span class="s2">&quot;t190C&quot;</span> <span class="ow">in</span> <span class="n">ctd_data</span> <span class="k">else</span> <span class="s2">&quot;temp2&quot;</span>
+    <span class="c1"># CTD variables are canonical names after normalization in load_reference_data</span>
+    <span class="n">ctd_temp</span> <span class="o">=</span> <span class="s2">&quot;temperature&quot;</span>
+    <span class="n">ctd_cond</span> <span class="o">=</span> <span class="s2">&quot;conductivity&quot;</span>
+    <span class="n">ctd_press</span> <span class="o">=</span> <span class="s2">&quot;pressure&quot;</span>
 
-    <span class="k">if</span> <span class="n">yaml_vars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cond&quot;</span><span class="p">):</span>
-        <span class="n">ctd_cond</span> <span class="o">=</span> <span class="n">yaml_vars</span><span class="p">[</span><span class="s2">&quot;cond&quot;</span><span class="p">]</span>
-    <span class="k">elif</span> <span class="n">ctd_sensor</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">ctd_cond</span> <span class="o">=</span> <span class="s2">&quot;c0mS/cm&quot;</span> <span class="k">if</span> <span class="s2">&quot;c0mS/cm&quot;</span> <span class="ow">in</span> <span class="n">ctd_data</span> <span class="k">else</span> <span class="s2">&quot;cond1&quot;</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">ctd_cond</span> <span class="o">=</span> <span class="s2">&quot;c1mS/cm&quot;</span> <span class="k">if</span> <span class="s2">&quot;c1mS/cm&quot;</span> <span class="ow">in</span> <span class="n">ctd_data</span> <span class="k">else</span> <span class="s2">&quot;cond2&quot;</span>
-
-    <span class="n">ctd_press</span> <span class="o">=</span> <span class="n">yaml_vars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;press&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="s2">&quot;prDM&quot;</span> <span class="k">if</span> <span class="s2">&quot;prDM&quot;</span> <span class="ow">in</span> <span class="n">ctd_data</span> <span class="k">else</span> <span class="s2">&quot;press&quot;</span><span class="p">)</span>
-
-    <span class="c1"># Validate that the resolved variable names actually exist in the CTD data</span>
-    <span class="k">for</span> <span class="n">var_name</span><span class="p">,</span> <span class="n">var_label</span> <span class="ow">in</span> <span class="p">[(</span><span class="n">ctd_temp</span><span class="p">,</span> <span class="s2">&quot;temp&quot;</span><span class="p">),</span> <span class="p">(</span><span class="n">ctd_press</span><span class="p">,</span> <span class="s2">&quot;press&quot;</span><span class="p">)]:</span>
+    <span class="c1"># Validate canonical names exist in the CTD data</span>
+    <span class="k">for</span> <span class="n">var_name</span><span class="p">,</span> <span class="n">var_label</span> <span class="ow">in</span> <span class="p">[(</span><span class="n">ctd_temp</span><span class="p">,</span> <span class="s2">&quot;temperature&quot;</span><span class="p">),</span> <span class="p">(</span><span class="n">ctd_press</span><span class="p">,</span> <span class="s2">&quot;pressure&quot;</span><span class="p">)]:</span>
         <span class="k">if</span> <span class="n">var_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ctd_data</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
-            <span class="n">source</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;ctd_vars.</span><span class="si">{</span><span class="n">var_label</span><span class="si">}</span><span class="s2">&quot;</span>
-                <span class="k">if</span> <span class="n">yaml_vars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">var_label</span><span class="p">)</span>
-                <span class="k">else</span> <span class="s2">&quot;auto-detection&quot;</span>
-            <span class="p">)</span>
             <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;CTD variable &#39;</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2">&#39; (from </span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">) not found in CTD data. &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;Available variables: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">ctd_data</span><span class="o">.</span><span class="n">data_vars</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;CTD variable &#39;</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2">&#39; not found. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Available variables: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">ctd_data</span><span class="o">.</span><span class="n">data_vars</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Run &#39;caldip ctd &lt;yaml&gt;&#39; to pre-process the CTD file.&quot;</span>
             <span class="p">)</span>
 
     <span class="c1"># Convert CTD time to numeric for time comparisons</span>
@@ -449,7 +431,6 @@
 
     <span class="c1"># Loop through each bottle stop</span>
     <span class="k">for</span> <span class="n">stop_num</span><span class="p">,</span> <span class="n">stop</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">bottle_stops</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
-
         <span class="c1"># Calculate comparison period (last 2 minutes ending 30 seconds before stop end)</span>
         <span class="n">stop_end_dt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">stop</span><span class="p">[</span><span class="s2">&quot;end_time&quot;</span><span class="p">])</span>
         <span class="n">comp_end</span> <span class="o">=</span> <span class="n">stop_end_dt</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>

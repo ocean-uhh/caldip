@@ -220,8 +220,8 @@
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No deployment/recovery times in config - skipping trimming&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">instruments</span><span class="p">,</span> <span class="n">reference_data</span>
 
-    <span class="n">deployment_time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;deployment_time&quot;</span><span class="p">])</span>
-    <span class="n">recovery_time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;recovery_time&quot;</span><span class="p">])</span>
+    <span class="n">deployment_time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;deployment_time&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">to_datetime64</span><span class="p">()</span>
+    <span class="n">recovery_time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;recovery_time&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">to_datetime64</span><span class="p">()</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Trimming data to: </span><span class="si">{</span><span class="n">deployment_time</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">recovery_time</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 

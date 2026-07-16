@@ -67,6 +67,8 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#module-caldip.readers">readers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#public-api">Public API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#internal-helpers">Internal helpers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#caldip.readers.find_config_file"><code class="docutils literal notranslate"><span class="pre">find_config_file()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#caldip.readers.load_config"><code class="docutils literal notranslate"><span class="pre">load_config()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#caldip.readers.load_ctd_data"><code class="docutils literal notranslate"><span class="pre">load_ctd_data()</span></code></a></li>
@@ -175,7 +177,7 @@ Calculate statistics for each bottle stop and each instrument (any type)</p></li
 
 <dl class="py function">
 <dt class="sig sig-object py" id="caldip.core.stats">
-<span class="sig-prename descclassname"><span class="pre">caldip.core.</span></span><span class="sig-name descname"><span class="pre">stats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">instrument_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ctd_sensor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold_dbar_per_min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_duration_seconds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">180.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temp_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cond_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">press_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/caldip/core.html#stats"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caldip.core.stats" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">caldip.core.</span></span><span class="sig-name descname"><span class="pre">stats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">instrument_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold_dbar_per_min</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_duration_seconds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">180.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temp_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cond_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">press_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/caldip/core.html#stats"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caldip.core.stats" title="Link to this definition"></a></dt>
 <dd><p>Calculate statistics for each bottle stop and each instrument (any type).</p>
 <p>Returns DataFrame with one row per bottle stop per instrument.</p>
 <p>Quality flag thresholds (<code class="docutils literal notranslate"><span class="pre">temp_threshold</span></code>, <code class="docutils literal notranslate"><span class="pre">cond_threshold</span></code>,
@@ -211,30 +213,32 @@ built-in defaults (±0.005 °C, ±0.02 mS/cm, ±5 dbar).</p>
 </section>
 <section id="module-caldip.readers">
 <span id="readers"></span><h2>readers<a class="headerlink" href="#module-caldip.readers" title="Link to this heading"></a></h2>
-<p>Universal data loading functions for caldip processing.</p>
-<p>This module provides a unified interface for loading data from different
-instrument types using their file_type specifications.</p>
-<p>Currently Used Functions:
-- find_config_file() -&gt; Path</p>
-<blockquote>
-<div><p>Find caldip configuration file in directory or use provided file</p>
-</div></blockquote>
-<ul class="simple">
-<li><p>load_config() -&gt; Dict
-Load YAML configuration files for caldip processing</p></li>
-<li><p>load_instruments_from_config() -&gt; Dict[str, Dict]
-Load all instruments specified in a caldip configuration</p></li>
-<li><p>load_reference_data() -&gt; Dict[str, Dict]
-Load CTD reference data from configuration</p></li>
-<li><p>load_instrument_data() -&gt; xr.Dataset
-Load individual instrument data using appropriate loader (internal utility)</p></li>
-<li><p>load_ctd_data() -&gt; xr.Dataset
-Load CTD data from SeaBird hex/cnv files</p></li>
-<li><p>load_microcat_data() -&gt; xr.Dataset
-Load MicroCAT data from SeaBird hex/asc/cnv files</p></li>
-</ul>
-<p>Note: generate_stub_yaml() moved to caldip.scaffold.
-Note: trim_to_deployment() moved to caldip.tools.</p>
+<p>Data loading functions for caldip processing.</p>
+<section id="public-api">
+<h3>Public API<a class="headerlink" href="#public-api" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>find_config_file(path) -&gt; Path</dt><dd><p>Locate a .caldip.yaml config file given a file or directory path.</p>
+</dd>
+<dt>load_config(path) -&gt; Dict</dt><dd><p>Parse a .caldip.yaml configuration file.</p>
+</dd>
+<dt>load_instruments_from_config(config, data_dir) -&gt; Dict[str, Dict]</dt><dd><p>Load all instruments listed in a config.  Priority per instrument:
+_use.nc → _raw.nc (creates _use.nc if absent) → source file
+(normalizes, applies clock offset, saves both _raw.nc and _use.nc).</p>
+</dd>
+<dt>load_reference_data(config, data_dir) -&gt; Dict[str, Dict]</dt><dd><p>Load CTD reference data; reads pre-processed .nc if present.</p>
+</dd>
+<dt>resolve_data_dir(config_file, config, override) -&gt; Path</dt><dd><p>Resolve the data directory from config or an explicit override.</p>
+</dd>
+</dl>
+</section>
+<section id="internal-helpers">
+<h3>Internal helpers<a class="headerlink" href="#internal-helpers" title="Link to this heading"></a></h3>
+<p>load_instrument_data()     — dispatch to format-specific loaders
+_normalize_instrument_vars() — rename raw variables to canonical names
+_normalize_ctd_vars()      — rename CTD variables; selects primary/secondary sensor
+_wild_edit_ctd()           — apply SeaBird wild-edit spike removal
+_resample_1hz()            — resample CTD to 1 Hz medians</p>
+</section>
 <dl class="py function">
 <dt class="sig sig-object py" id="caldip.readers.find_config_file">
 <span class="sig-prename descclassname"><span class="pre">caldip.readers.</span></span><span class="sig-name descname"><span class="pre">find_config_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/caldip/readers.html#find_config_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#caldip.readers.find_config_file" title="Link to this definition"></a></dt>

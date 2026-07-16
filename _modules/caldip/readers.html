@@ -90,29 +90,30 @@
              
   <h1>Source code for caldip.readers</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Universal data loading functions for caldip processing.</span>
+<span class="sd">Data loading functions for caldip processing.</span>
 
-<span class="sd">This module provides a unified interface for loading data from different</span>
-<span class="sd">instrument types using their file_type specifications.</span>
+<span class="sd">Public API</span>
+<span class="sd">----------</span>
+<span class="sd">find_config_file(path) -&gt; Path</span>
+<span class="sd">    Locate a .caldip.yaml config file given a file or directory path.</span>
+<span class="sd">load_config(path) -&gt; Dict</span>
+<span class="sd">    Parse a .caldip.yaml configuration file.</span>
+<span class="sd">load_instruments_from_config(config, data_dir) -&gt; Dict[str, Dict]</span>
+<span class="sd">    Load all instruments listed in a config.  Priority per instrument:</span>
+<span class="sd">    _use.nc → _raw.nc (creates _use.nc if absent) → source file</span>
+<span class="sd">    (normalizes, applies clock offset, saves both _raw.nc and _use.nc).</span>
+<span class="sd">load_reference_data(config, data_dir) -&gt; Dict[str, Dict]</span>
+<span class="sd">    Load CTD reference data; reads pre-processed .nc if present.</span>
+<span class="sd">resolve_data_dir(config_file, config, override) -&gt; Path</span>
+<span class="sd">    Resolve the data directory from config or an explicit override.</span>
 
-<span class="sd">Currently Used Functions:</span>
-<span class="sd">- find_config_file() -&gt; Path</span>
-<span class="sd">  Find caldip configuration file in directory or use provided file</span>
-<span class="sd">- load_config() -&gt; Dict</span>
-<span class="sd">  Load YAML configuration files for caldip processing</span>
-<span class="sd">- load_instruments_from_config() -&gt; Dict[str, Dict]</span>
-<span class="sd">  Load all instruments specified in a caldip configuration</span>
-<span class="sd">- load_reference_data() -&gt; Dict[str, Dict]</span>
-<span class="sd">  Load CTD reference data from configuration</span>
-<span class="sd">- load_instrument_data() -&gt; xr.Dataset</span>
-<span class="sd">  Load individual instrument data using appropriate loader (internal utility)</span>
-<span class="sd">- load_ctd_data() -&gt; xr.Dataset</span>
-<span class="sd">  Load CTD data from SeaBird hex/cnv files</span>
-<span class="sd">- load_microcat_data() -&gt; xr.Dataset</span>
-<span class="sd">  Load MicroCAT data from SeaBird hex/asc/cnv files</span>
-
-<span class="sd">Note: generate_stub_yaml() moved to caldip.scaffold.</span>
-<span class="sd">Note: trim_to_deployment() moved to caldip.tools.</span>
+<span class="sd">Internal helpers</span>
+<span class="sd">----------------</span>
+<span class="sd">load_instrument_data()     — dispatch to format-specific loaders</span>
+<span class="sd">_normalize_instrument_vars() — rename raw variables to canonical names</span>
+<span class="sd">_normalize_ctd_vars()      — rename CTD variables; selects primary/secondary sensor</span>
+<span class="sd">_wild_edit_ctd()           — apply SeaBird wild-edit spike removal</span>
+<span class="sd">_resample_1hz()            — resample CTD to 1 Hz medians</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -124,6 +125,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
 
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">seasenselib</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sl</span>
@@ -146,9 +148,61 @@
 
 <span class="c1"># Import tools for shared utilities</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">caldip.tools</span><span class="w"> </span><span class="kn">import</span> <span class="n">to_xarray</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">caldip._writers</span><span class="w"> </span><span class="kn">import</span> <span class="n">save_instrument_nc</span>
 
 <span class="c1"># Import SBE hex readers</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.sbe_hex_reader</span><span class="w"> </span><span class="kn">import</span> <span class="n">sbe37_hex_reader</span>
+
+<span class="c1"># Conductivity source names that are in S/m and require ×10 to reach mS/cm</span>
+<span class="n">_CONDUCTIVITY_S_PER_M</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;c0S/m&quot;</span><span class="p">,</span> <span class="s2">&quot;c1S/m&quot;</span><span class="p">,</span> <span class="s2">&quot;cond0S/m&quot;</span><span class="p">,</span> <span class="s2">&quot;cond1S/m&quot;</span><span class="p">})</span>
+
+<span class="c1"># Caldip-specific source names not in seasenselib&#39;s parameters.py default_mappings.</span>
+<span class="c1"># These supplement (never override) the seasenselib mapping.</span>
+<span class="n">_CALDIP_SUPPLEMENT</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;conductivity&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;cond0S/m&quot;</span><span class="p">,</span> <span class="s2">&quot;cond1S/m&quot;</span><span class="p">],</span>  <span class="c1"># seasenselib only has c0S/m, c1S/m</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_instrument_vars</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Rename raw instrument variable names to canonical names using parameters.py mappings.</span>
+
+<span class="sd">    Uses caldip/parameters.py (copied from seasenselib) so the mapping stays in sync</span>
+<span class="sd">    by copying that file. _CALDIP_SUPPLEMENT fills gaps not yet covered by seasenselib.</span>
+<span class="sd">    Conductivity sources in S/m are multiplied by 10 → mS/cm.</span>
+<span class="sd">    Any remaining &#39;/&#39; in variable names is replaced with &#39;_per_&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">caldip.parameters</span><span class="w"> </span><span class="kn">import</span> <span class="n">default_mappings</span>
+
+    <span class="c1"># Merge seasenselib mapping with caldip supplement (supplement appended, not prepended)</span>
+    <span class="n">combined</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">canonical</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span> <span class="o">+</span> <span class="n">_CALDIP_SUPPLEMENT</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">canonical</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="k">for</span> <span class="n">canonical</span><span class="p">,</span> <span class="n">sources</span> <span class="ow">in</span> <span class="n">default_mappings</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="p">}</span>
+    <span class="c1"># Add any supplement keys that aren&#39;t in default_mappings at all</span>
+    <span class="k">for</span> <span class="n">canonical</span><span class="p">,</span> <span class="n">sources</span> <span class="ow">in</span> <span class="n">_CALDIP_SUPPLEMENT</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">canonical</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">combined</span><span class="p">:</span>
+            <span class="n">combined</span><span class="p">[</span><span class="n">canonical</span><span class="p">]</span> <span class="o">=</span> <span class="n">sources</span>
+
+    <span class="n">renames</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">canonical</span><span class="p">,</span> <span class="n">sources</span> <span class="ow">in</span> <span class="n">combined</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">canonical</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+            <span class="k">continue</span>  <span class="c1"># already canonical</span>
+        <span class="k">for</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span> <span class="ow">and</span> <span class="n">src</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">renames</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">_CONDUCTIVITY_S_PER_M</span><span class="p">:</span>
+                    <span class="n">ds</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">assign</span><span class="p">({</span><span class="n">src</span><span class="p">:</span> <span class="n">ds</span><span class="p">[</span><span class="n">src</span><span class="p">]</span> <span class="o">*</span> <span class="mf">10.0</span><span class="p">})</span>
+                <span class="n">renames</span><span class="p">[</span><span class="n">src</span><span class="p">]</span> <span class="o">=</span> <span class="n">canonical</span>
+                <span class="k">break</span>
+
+    <span class="k">if</span> <span class="n">renames</span><span class="p">:</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">renames</span><span class="p">)</span>
+
+    <span class="c1"># Sanitize any remaining &#39;/&#39; (e.g. residual raw names that didn&#39;t map)</span>
+    <span class="n">slash_renames</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="s2">&quot;_per_&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span> <span class="k">if</span> <span class="s2">&quot;/&quot;</span> <span class="ow">in</span> <span class="n">v</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">slash_renames</span><span class="p">:</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">slash_renames</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ds</span>
 
 
 <div class="viewcode-block" id="find_config_file">
@@ -309,7 +363,14 @@
     <span class="n">data_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
     <span class="n">instruments</span> <span class="o">=</span> <span class="p">{}</span>
 
+    <span class="n">process_serials</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;process_serials&quot;</span><span class="p">)</span>
+    <span class="n">process_set</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">process_serials</span><span class="p">}</span> <span class="k">if</span> <span class="n">process_serials</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="p">)</span>
+
     <span class="k">for</span> <span class="n">instrument</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;instruments&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+        <span class="k">if</span> <span class="n">process_set</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">str</span><span class="p">(</span><span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;serial&quot;</span><span class="p">])</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">process_set</span><span class="p">:</span>
+            <span class="k">continue</span>
         <span class="n">serial</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;serial&quot;</span><span class="p">])</span>
         <span class="n">filename</span> <span class="o">=</span> <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;filename&quot;</span><span class="p">]</span>
         <span class="n">file_type</span> <span class="o">=</span> <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;file_type&quot;</span><span class="p">]</span>
@@ -322,22 +383,55 @@
         <span class="p">)</span>
 
         <span class="k">try</span><span class="p">:</span>
-            <span class="c1"># Load the data - pass along any header_file if specified</span>
             <span class="n">load_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">if</span> <span class="s2">&quot;header_file&quot;</span> <span class="ow">in</span> <span class="n">instrument</span><span class="p">:</span>
-                <span class="c1"># Construct full path to header file</span>
                 <span class="n">header_file_path</span> <span class="o">=</span> <span class="n">data_dir</span> <span class="o">/</span> <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;header_file&quot;</span><span class="p">]</span>
                 <span class="n">load_kwargs</span><span class="p">[</span><span class="s2">&quot;header_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">header_file_path</span><span class="p">)</span>
 
-            <span class="n">dataset</span> <span class="o">=</span> <span class="n">load_instrument_data</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">file_type</span><span class="p">,</span> <span class="o">**</span><span class="n">load_kwargs</span><span class="p">)</span>
+            <span class="n">instr_type</span> <span class="o">=</span> <span class="n">instrument</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;instrument&quot;</span><span class="p">,</span> <span class="n">file_type</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            <span class="n">nc_use</span> <span class="o">=</span> <span class="n">data_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;caldip_</span><span class="si">{</span><span class="n">instr_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">serial</span><span class="si">}</span><span class="s2">_use.nc&quot;</span>
+            <span class="n">nc_raw</span> <span class="o">=</span> <span class="n">data_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;caldip_</span><span class="si">{</span><span class="n">instr_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">serial</span><span class="si">}</span><span class="s2">_raw.nc&quot;</span>
 
-            <span class="c1"># Apply clock offset if specified (positive offset = add time, negative = subtract time)</span>
-            <span class="k">if</span> <span class="s2">&quot;clock_offset&quot;</span> <span class="ow">in</span> <span class="n">instrument</span> <span class="ow">and</span> <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;clock_offset&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">clock_offset</span> <span class="o">=</span> <span class="n">instrument</span><span class="p">[</span><span class="s2">&quot;clock_offset&quot;</span><span class="p">]</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ⏰ Applying clock offset: </span><span class="si">{</span><span class="n">clock_offset</span><span class="si">:</span><span class="s2">+.0f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
-                <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span>
-                    <span class="n">time</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">clock_offset</span><span class="p">)</span>
-                <span class="p">)</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">_trim_and_save_use</span><span class="p">(</span><span class="n">ds</span><span class="p">):</span>
+                <span class="n">deploy</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;deployment_time&quot;</span><span class="p">)</span>
+                <span class="n">recover</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;recovery_time&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">deploy</span> <span class="ow">and</span> <span class="n">recover</span><span class="p">):</span>
+                    <span class="k">return</span>
+                <span class="n">dep_np</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">deploy</span><span class="p">)</span><span class="o">.</span><span class="n">to_datetime64</span><span class="p">()</span>
+                <span class="n">rec_np</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">recover</span><span class="p">)</span><span class="o">.</span><span class="n">to_datetime64</span><span class="p">()</span>
+                <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span> <span class="o">&gt;=</span> <span class="n">dep_np</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span> <span class="o">&lt;=</span> <span class="n">rec_np</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">mask</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                    <span class="n">save_instrument_nc</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">mask</span><span class="p">),</span> <span class="n">nc_use</span><span class="p">,</span> <span class="s2">&quot;_use.nc&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Priority: _use.nc → _raw.nc (if newer than source) → source</span>
+            <span class="k">if</span> <span class="n">nc_use</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="n">dataset</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">nc_use</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  📦 Loaded from _use.nc (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span><span class="p">)</span><span class="si">}</span><span class="s2"> samples)&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="p">(</span>
+                <span class="n">nc_raw</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+                <span class="ow">and</span> <span class="n">file_path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+                <span class="ow">and</span> <span class="n">nc_raw</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_mtime</span> <span class="o">&gt;</span> <span class="n">file_path</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_mtime</span>
+            <span class="p">):</span>
+                <span class="n">dataset</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">nc_raw</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  📦 Loaded from _raw.nc (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span><span class="p">)</span><span class="si">}</span><span class="s2"> samples)&quot;</span><span class="p">)</span>
+                <span class="c1"># Create _use.nc from _raw.nc if not yet present</span>
+                <span class="n">_trim_and_save_use</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Load from source, normalize, apply clock offset, then save both</span>
+                <span class="n">dataset</span> <span class="o">=</span> <span class="n">load_instrument_data</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">file_type</span><span class="p">,</span> <span class="o">**</span><span class="n">load_kwargs</span><span class="p">)</span>
+                <span class="n">dataset</span> <span class="o">=</span> <span class="n">_normalize_instrument_vars</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+
+                <span class="n">clock_offset_val</span> <span class="o">=</span> <span class="n">instrument</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;clock_offset&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">clock_offset_val</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;  ⏰ Applying clock offset: </span><span class="si">{</span><span class="n">clock_offset_val</span><span class="si">:</span><span class="s2">+.0f</span><span class="si">}</span><span class="s2"> seconds&quot;</span>
+                    <span class="p">)</span>
+                    <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span>
+                        <span class="n">time</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">clock_offset_val</span><span class="p">)</span>
+                    <span class="p">)</span>
+
+                <span class="n">save_instrument_nc</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">nc_raw</span><span class="p">,</span> <span class="s2">&quot;_raw.nc&quot;</span><span class="p">)</span>
+                <span class="n">_trim_and_save_use</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
 
             <span class="c1"># Warn if the serial number embedded in the dataset differs from the YAML</span>
             <span class="n">dataset_serial</span> <span class="o">=</span> <span class="kc">None</span>
@@ -422,17 +516,189 @@
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading CTD reference </span><span class="si">{</span><span class="n">ctd_name</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
 
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">dataset</span> <span class="o">=</span> <span class="n">load_instrument_data</span><span class="p">(</span><span class="n">ctd_path</span><span class="p">,</span> <span class="s2">&quot;ctd-cnv&quot;</span><span class="p">)</span>
+            <span class="n">nc_path</span> <span class="o">=</span> <span class="n">ctd_path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.nc&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">nc_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="n">dataset</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">nc_path</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;  ✅ Loaded pre-processed CTD from </span><span class="si">{</span><span class="n">nc_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span><span class="p">)</span><span class="si">}</span><span class="s2"> samples)&quot;</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># NOTE: reads &#39;ctd_sensor&#39; (singular). Old YAMLs using &#39;ctd_sensors&#39; will</span>
+                <span class="c1"># silently default to 1 — fix by renaming the key in the YAML.</span>
+                <span class="n">ctd_sensor</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ctd_sensor&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+                <span class="n">dataset</span> <span class="o">=</span> <span class="n">load_instrument_data</span><span class="p">(</span><span class="n">ctd_path</span><span class="p">,</span> <span class="s2">&quot;ctd-cnv&quot;</span><span class="p">)</span>
+                <span class="n">dataset</span> <span class="o">=</span> <span class="n">_normalize_ctd_vars</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">ctd_sensor</span><span class="o">=</span><span class="n">ctd_sensor</span><span class="p">)</span>
+                <span class="n">dataset</span> <span class="o">=</span> <span class="n">_wild_edit_ctd</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+                <span class="n">dataset</span> <span class="o">=</span> <span class="n">_resample_1hz</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ✅ Loaded: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span><span class="p">)</span><span class="si">}</span><span class="s2"> samples&quot;</span><span class="p">)</span>
 
             <span class="n">reference_data</span><span class="p">[</span><span class="n">ctd_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">dataset</span><span class="p">,</span> <span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">ctd_path</span><span class="p">)}</span>
-
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ✅ Loaded: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span><span class="p">)</span><span class="si">}</span><span class="s2"> samples&quot;</span><span class="p">)</span>
 
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ❌ Failed to load CTD: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">reference_data</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_resample_1hz</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="s2">&quot;xr.Dataset&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;xr.Dataset&quot;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Downsample CTD data to 1 Hz using a per-second median.&quot;&quot;&quot;</span>
+    <span class="n">resampled</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="s2">&quot;1s&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">keep_attrs</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">n_in</span><span class="p">,</span> <span class="n">n_out</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">resampled</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_in</span> <span class="o">!=</span> <span class="n">n_out</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  📉 Resampled </span><span class="si">{</span><span class="n">n_in</span><span class="si">}</span><span class="s2"> → </span><span class="si">{</span><span class="n">n_out</span><span class="si">}</span><span class="s2"> samples (1 Hz median)&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">resampled</span>
+
+
+<span class="c1"># Canonical CTD variable mapping: (canonical_name, [(source_name, scale_factor), ...])</span>
+<span class="c1"># Selected-sensor variables map to &#39;temperature&#39;/&#39;conductivity&#39;.</span>
+<span class="c1"># The other sensor maps to &#39;temperature_2&#39;/&#39;conductivity_2&#39;.</span>
+<span class="c1"># scale_factor converts to canonical units (S/m → mS/cm = ×10).</span>
+<span class="n">_CTD_CANONICAL_S1</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;t090C&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;t190C&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)]),</span>
+    <span class="p">(</span><span class="s2">&quot;temperature_2&quot;</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;t190C&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)]),</span>
+    <span class="p">(</span>
+        <span class="s2">&quot;conductivity&quot;</span><span class="p">,</span>
+        <span class="p">[(</span><span class="s2">&quot;c0mS/cm&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;c0S/m&quot;</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;c1mS/cm&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;c1S/m&quot;</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">)],</span>
+    <span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;conductivity_2&quot;</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;c1mS/cm&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;c1S/m&quot;</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">)]),</span>
+    <span class="p">(</span><span class="s2">&quot;pressure&quot;</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;prDM&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;prdM&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;press&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;PRES&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)]),</span>
+    <span class="p">(</span><span class="s2">&quot;salinity&quot;</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;sal00&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;sal11&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;PSAL&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)]),</span>
+    <span class="p">(</span><span class="s2">&quot;oxygen&quot;</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;sbeox0ML/L&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;sbeox1ML/L&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)]),</span>
+<span class="p">]</span>
+<span class="n">_CTD_CANONICAL_S2</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;t190C&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;t090C&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)]),</span>
+    <span class="p">(</span><span class="s2">&quot;temperature_2&quot;</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;t090C&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)]),</span>
+    <span class="p">(</span>
+        <span class="s2">&quot;conductivity&quot;</span><span class="p">,</span>
+        <span class="p">[(</span><span class="s2">&quot;c1mS/cm&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;c1S/m&quot;</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;c0mS/cm&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;c0S/m&quot;</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">)],</span>
+    <span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;conductivity_2&quot;</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;c0mS/cm&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;c0S/m&quot;</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">)]),</span>
+    <span class="p">(</span><span class="s2">&quot;pressure&quot;</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;prDM&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;prdM&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;press&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;PRES&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)]),</span>
+    <span class="p">(</span><span class="s2">&quot;salinity&quot;</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;sal00&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;sal11&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;PSAL&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)]),</span>
+    <span class="p">(</span><span class="s2">&quot;oxygen&quot;</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;sbeox0ML/L&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;sbeox1ML/L&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)]),</span>
+<span class="p">]</span>
+<span class="c1"># Keep _CTD_CANONICAL as an alias used by tests</span>
+<span class="n">_CTD_CANONICAL</span> <span class="o">=</span> <span class="n">_CTD_CANONICAL_S1</span>  <span class="c1"># noqa: F841</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_ctd_vars</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="s2">&quot;xr.Dataset&quot;</span><span class="p">,</span> <span class="n">ctd_sensor</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;xr.Dataset&quot;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Rename CTD variables to canonical names and convert units where needed.</span>
+
+<span class="sd">    ctd_sensor=1 (default) uses primary sensor (t090C, c0*) as &#39;temperature&#39;/&#39;conductivity&#39;;</span>
+<span class="sd">    secondary sensor becomes &#39;temperature_2&#39;/&#39;conductivity_2&#39;.</span>
+<span class="sd">    ctd_sensor=2 reverses this.</span>
+<span class="sd">    Conductivity in S/m is multiplied by 10 to convert to mS/cm.</span>
+<span class="sd">    Any remaining variable names containing &#39;/&#39; are sanitized to &#39;_per_&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">canonical</span> <span class="o">=</span> <span class="n">_CTD_CANONICAL_S2</span> <span class="k">if</span> <span class="n">ctd_sensor</span> <span class="o">==</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">_CTD_CANONICAL_S1</span>
+    <span class="n">renames</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">conversions</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">canon_name</span><span class="p">,</span> <span class="n">sources</span> <span class="ow">in</span> <span class="n">canonical</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">canon_name</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+            <span class="k">continue</span>  <span class="c1"># already canonical</span>
+        <span class="k">for</span> <span class="n">src</span><span class="p">,</span> <span class="n">scale</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span> <span class="ow">and</span> <span class="n">src</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">renames</span><span class="p">:</span>
+                <span class="n">renames</span><span class="p">[</span><span class="n">src</span><span class="p">]</span> <span class="o">=</span> <span class="n">canon_name</span>
+                <span class="k">if</span> <span class="n">scale</span> <span class="o">!=</span> <span class="mf">1.0</span><span class="p">:</span>
+                    <span class="n">conversions</span><span class="p">[</span><span class="n">src</span><span class="p">]</span> <span class="o">=</span> <span class="n">scale</span>
+                <span class="k">break</span>
+
+    <span class="c1"># Sanitize any remaining variable names containing &#39;/&#39; (not valid in NetCDF)</span>
+    <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">var</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">renames</span> <span class="ow">and</span> <span class="s2">&quot;/&quot;</span> <span class="ow">in</span> <span class="n">var</span><span class="p">:</span>
+            <span class="n">renames</span><span class="p">[</span><span class="n">var</span><span class="p">]</span> <span class="o">=</span> <span class="n">var</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="s2">&quot;_per_&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">renames</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ds</span>
+
+    <span class="c1"># Apply unit conversions before renaming</span>
+    <span class="n">updates</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">src</span><span class="p">,</span> <span class="n">scale</span> <span class="ow">in</span> <span class="n">conversions</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="n">src</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale</span>
+        <span class="n">updates</span><span class="p">[</span><span class="n">src</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+            <span class="n">arr</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="n">ds</span><span class="p">[</span><span class="n">src</span><span class="p">]</span><span class="o">.</span><span class="n">coords</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="n">ds</span><span class="p">[</span><span class="n">src</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">ds</span><span class="p">[</span><span class="n">src</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">updates</span><span class="p">:</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">updates</span><span class="p">)</span>
+
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">renames</span><span class="p">)</span>
+
+    <span class="n">canonical_renames</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">s</span><span class="p">:</span> <span class="n">d</span> <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">renames</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">d</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;_per_&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;_per_&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">d</span>
+    <span class="p">}</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">src</span><span class="si">}</span><span class="s2">→</span><span class="si">{</span><span class="n">dst</span><span class="si">}</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot; (×</span><span class="si">{</span><span class="n">conversions</span><span class="p">[</span><span class="n">src</span><span class="p">]</span><span class="si">}</span><span class="s2">)&quot;</span> <span class="k">if</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">conversions</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">src</span><span class="p">,</span> <span class="n">dst</span> <span class="ow">in</span> <span class="n">canonical_renames</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="p">]</span>
+    <span class="k">if</span> <span class="n">parts</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  🔤 Normalized: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ds</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_wild_edit_ctd</span><span class="p">(</span><span class="n">ds</span><span class="p">:</span> <span class="s2">&quot;xr.Dataset&quot;</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;xr.Dataset&quot;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Apply global range checks to CTD reference data (wild-edit / gross-error removal).</span>
+
+<span class="sd">    Checks applied (any failure NaNs all variables at that sample):</span>
+<span class="sd">      - pressure &lt; 0 or &gt; max_pressure (max_pressure from config, if set)</span>
+<span class="sd">      - temperature &lt; -3 or &gt; 40</span>
+<span class="sd">      - salinity &gt; 42</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">bad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">reasons</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Pressure check (canonical name after _normalize_ctd_vars)</span>
+    <span class="k">if</span> <span class="s2">&quot;pressure&quot;</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+        <span class="n">pressure</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;pressure&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">p_bad</span> <span class="o">=</span> <span class="n">pressure</span> <span class="o">&lt;</span> <span class="mi">0</span>
+        <span class="n">max_p</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;max_pressure&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">max_p</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">p_bad</span> <span class="o">|=</span> <span class="n">pressure</span> <span class="o">&gt;</span> <span class="nb">float</span><span class="p">(</span><span class="n">max_p</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">p_bad</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">n</span><span class="p">:</span>
+            <span class="n">bad</span> <span class="o">|=</span> <span class="n">p_bad</span>
+            <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> pressure &lt; 0&quot;</span>
+                <span class="k">if</span> <span class="n">max_p</span> <span class="ow">is</span> <span class="kc">None</span>
+                <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> pressure out of range [0, </span><span class="si">{</span><span class="n">max_p</span><span class="si">}</span><span class="s2">]&quot;</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Temperature check</span>
+    <span class="k">if</span> <span class="s2">&quot;temperature&quot;</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;temperature&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">t_bad</span> <span class="o">=</span> <span class="p">(</span><span class="n">temp</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mi">3</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">temp</span> <span class="o">&gt;</span> <span class="mi">40</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">t_bad</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">n</span><span class="p">:</span>
+            <span class="n">bad</span> <span class="o">|=</span> <span class="n">t_bad</span>
+            <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> temperature out of range [-3, 40]&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Salinity check</span>
+    <span class="k">if</span> <span class="s2">&quot;salinity&quot;</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+        <span class="n">sal</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;salinity&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">s_bad</span> <span class="o">=</span> <span class="n">sal</span> <span class="o">&gt;</span> <span class="mi">42</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">s_bad</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">n</span><span class="p">:</span>
+            <span class="n">bad</span> <span class="o">|=</span> <span class="n">s_bad</span>
+            <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> salinity &gt; 42&quot;</span><span class="p">)</span>
+
+    <span class="n">n_bad</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">bad</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">n_bad</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ds</span>
+
+    <span class="n">masked</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">arr</span><span class="p">[</span><span class="n">bad</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span>
+        <span class="n">masked</span><span class="p">[</span><span class="n">var</span><span class="p">]</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+            <span class="n">arr</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">coords</span><span class="p">,</span> <span class="n">dims</span><span class="o">=</span><span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">dims</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">ds</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span>
+        <span class="p">)</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">masked</span><span class="p">)</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ⚠️  Wild-edit: </span><span class="si">{</span><span class="n">n_bad</span><span class="si">}</span><span class="s2"> samples masked — &quot;</span> <span class="o">+</span> <span class="s2">&quot;; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">reasons</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">result</span>
 
 
 <div class="viewcode-block" id="load_ctd_data">
@@ -465,8 +731,20 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">SEABIRD_AVAILABLE</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;seabirdscientific package required for CNV data loading&quot;</span><span class="p">)</span>
 
-        <span class="c1"># Use cnv_to_instrument_data to load CNV files</span>
-        <span class="n">instrument_data</span> <span class="o">=</span> <span class="nb">id</span><span class="o">.</span><span class="n">cnv_to_instrument_data</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">))</span>
+        <span class="c1"># Use cnv_to_instrument_data to load CNV files; fall back to latin-1 if UTF-8 fails</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">instrument_data</span> <span class="o">=</span> <span class="nb">id</span><span class="o">.</span><span class="n">cnv_to_instrument_data</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">UnicodeDecodeError</span><span class="p">:</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="n">file_path</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;latin-1&quot;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span>
+                <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;.cnv&quot;</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">False</span>
+            <span class="p">)</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+                <span class="n">tmp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+                <span class="n">tmp_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">instrument_data</span> <span class="o">=</span> <span class="nb">id</span><span class="o">.</span><span class="n">cnv_to_instrument_data</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">))</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="n">tmp_path</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">ds</span> <span class="o">=</span> <span class="n">to_xarray</span><span class="p">(</span><span class="n">instrument_data</span><span class="p">)</span>
 
         <span class="c1"># Fix time if it&#39;s showing year 2000 incorrectly</span>
@@ -474,7 +752,7 @@
         <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">year</span> <span class="o">==</span> <span class="mi">2000</span><span class="p">:</span>
             <span class="c1"># Check the raw file for the actual start time</span>
             <span class="n">actual_start</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;latin-1&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
                     <span class="k">if</span> <span class="s2">&quot;* NMEA UTC&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
                         <span class="c1"># Extract date from line like: * NMEA UTC (Time) = Mar 30 2026 21:06:33</span>
@@ -580,6 +858,52 @@
             <span class="n">ds</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">actual_timestamps</span><span class="p">))</span>
             <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;time_corrected&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Using actual timestamps from timeJV2&quot;</span>
 
+        <span class="k">elif</span> <span class="s2">&quot;timeK&quot;</span> <span class="ow">in</span> <span class="n">ds</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+            <span class="c1"># timeK is the SBE instrument&#39;s internal clock in seconds since 2000-01-01.</span>
+            <span class="c1"># More reliable than start_time + timeS when there are recording gaps.</span>
+            <span class="c1"># Corrupted timeK values (zeros, wrap-arounds, random) break the uniform</span>
+            <span class="c1"># increment; we keep only the longest block where consecutive timeK values</span>
+            <span class="c1"># step by the expected sample interval.</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span>
+
+            <span class="n">tq</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;timeK&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;float64&quot;</span><span class="p">)</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tq</span><span class="p">)</span>
+            <span class="n">valid_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">diffs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">tq</span><span class="p">)</span>
+                <span class="c1"># Infer sample interval from the most common positive diff (1 s – 1 hr)</span>
+                <span class="n">pos</span> <span class="o">=</span> <span class="n">diffs</span><span class="p">[(</span><span class="n">diffs</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">diffs</span> <span class="o">&lt;=</span> <span class="mi">3600</span><span class="p">)]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+                <span class="n">interval</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span><span class="o">.</span><span class="n">most_common</span><span class="p">(</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span> <span class="k">else</span> <span class="mi">10</span>
+                <span class="c1"># A consecutive pair is good if its diff matches the interval</span>
+                <span class="n">good_pair</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">diffs</span> <span class="o">-</span> <span class="n">interval</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.5</span>
+                <span class="c1"># A sample is valid if it is part of at least one good pair</span>
+                <span class="n">sample_ok</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+                <span class="n">sample_ok</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">|=</span> <span class="n">good_pair</span>
+                <span class="n">sample_ok</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">|=</span> <span class="n">good_pair</span>
+                <span class="c1"># Keep only the largest contiguous valid block</span>
+                <span class="n">changes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">sample_ok</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">),</span> <span class="n">prepend</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">append</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">starts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">changes</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">ends</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">changes</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">starts</span><span class="p">):</span>
+                    <span class="n">best</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">ends</span> <span class="o">-</span> <span class="n">starts</span><span class="p">))</span>
+                    <span class="n">valid_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+                    <span class="n">valid_mask</span><span class="p">[</span><span class="n">starts</span><span class="p">[</span><span class="n">best</span><span class="p">]</span> <span class="p">:</span> <span class="n">ends</span><span class="p">[</span><span class="n">best</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">True</span>
+
+            <span class="n">n_dropped</span> <span class="o">=</span> <span class="n">n</span> <span class="o">-</span> <span class="nb">int</span><span class="p">(</span><span class="n">valid_mask</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">n_dropped</span><span class="p">:</span>
+                <span class="n">ds</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">isel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">valid_mask</span><span class="p">)</span>
+                <span class="n">tq</span> <span class="o">=</span> <span class="n">tq</span><span class="p">[</span><span class="n">valid_mask</span><span class="p">]</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ⚠️  Dropped </span><span class="si">{</span><span class="n">n_dropped</span><span class="si">}</span><span class="s2"> rows with non-sequential timeK values&quot;</span><span class="p">)</span>
+            <span class="n">timestamps</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span>
+                <span class="n">tq</span> <span class="o">*</span> <span class="mf">1e9</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;ns&quot;</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="s2">&quot;2000-01-01&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;coerce&quot;</span>
+            <span class="p">)</span>
+            <span class="n">ds</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">timestamps</span><span class="p">)</span>
+            <span class="n">ds</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;time_corrected&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;Using instrument clock from timeK (seconds since 2000-01-01)&quot;</span>
+            <span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  🕐 Time from timeK: </span><span class="si">{</span><span class="n">timestamps</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> → </span><span class="si">{</span><span class="n">timestamps</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
     <span class="k">elif</span> <span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.hex&quot;</span><span class="p">:</span>
         <span class="c1"># Parse MicroCAT hex files using calibration data from hex header</span>
         <span class="n">ds</span> <span class="o">=</span> <span class="n">sbe37_hex_reader</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
@@ -630,7 +954,7 @@
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">interval_match</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
                     <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;interval_s&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">interval_match</span><span class="p">)</span>
-                <span class="k">except</span><span class="p">:</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span>
                     <span class="k">pass</span>
             <span class="k">elif</span> <span class="s2">&quot;System UpLoad Time&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
                 <span class="k">try</span><span class="p">:</span>
