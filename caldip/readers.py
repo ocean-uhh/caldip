@@ -207,7 +207,10 @@ def load_instrument_data(
 
     # Route to appropriate loader based on file_type
     if file_type in ["sbe-cnv", "sbe-asc", "sbe-hex"]:
-        return load_microcat_data(file_path, **kwargs)
+        if SEASENSELIB_AVAILABLE:
+            return sl.read(file_path, **kwargs)
+        else:
+            return load_microcat_data(file_path, **kwargs)
 
     elif file_type == "rbr-rsk":
         if not SEASENSELIB_AVAILABLE:
@@ -218,7 +221,10 @@ def load_instrument_data(
         return load_ctd_data(file_path, **kwargs)
 
     elif file_type == "nortek-csv":
-        return load_nortek_csv_data(file_path, **kwargs)
+        if SEASENSELIB_AVAILABLE:
+            return sl.read(file_path, **kwargs)
+        else:
+            return load_nortek_csv_data(file_path, **kwargs)
 
     else:
         # For all other file types, pass to seasenselib with any additional kwargs
