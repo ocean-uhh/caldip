@@ -28,7 +28,7 @@ def plot(
     title: str = "Caldip Data Comparison",
     show_bottle_stops: bool = True,
     bottle_stop_params: Optional[Dict] = None,
-    variables: Optional[List[str]] = None,
+    optional_variables: Optional[list[str] | str] = None,
 ) -> Optional[object]:
     """
     Create interactive caldip comparison plot with dynamic panels based on requested variables.
@@ -50,7 +50,7 @@ def plot(
     bottle_stop_params : dict, optional
         Parameters for bottle stop detection:
         {'threshold_dbar_per_min': 30.0, 'min_duration_seconds': 120.0}
-    variables : list of str, optional
+    optional_variables : list of str or str, optional
         List of base variable names to plot dynamically (e.g., ['pressure', 'temperature', 'conductivity', 'oxygen']).
         Variables with a '_2' suffix (e.g., 'temperature_2') are automatically grouped with their primary panel.
 
@@ -63,9 +63,13 @@ def plot(
         print("Plotly not available - cannot create interactive plot")
         return None
 
-    # Default base variables if none provided
-    if variables is None:
-        variables = ["pressure", "temperature", "conductivity", "oxygen"]
+    # Default base variables, additional ones appended
+    variables = ["pressure", "temperature", "conductivity", "oxygen"]
+    if optional_variables is not None:
+        if isinstance(optional_variables, str):
+            optional_variables = [optional_variables]
+        for var in optional_variables:
+            variables.append(var)
 
     # Set default bottle stop parameters
     if bottle_stop_params is None:
