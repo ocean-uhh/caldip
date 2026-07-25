@@ -21,54 +21,48 @@ except ImportError:
 # Import caldip functions
 import caldip.core as cf
 
-
 def plot(
     instrument_data: Dict[str, Dict],
     reference_data: Dict[str, Dict],
+    optional_variables: Optional[list[str]] = None,
     config: Optional[Dict] = None,
     title: str = "Caldip Data Comparison",
     show_bottle_stops: bool = True,
     bottle_stop_params: Optional[Dict] = None,
 ) -> Optional[object]:
     """
-    Create interactive caldip comparison plot for any instrument types.
+    Create interactive caldip comparison plot with dynamic optional variables.
 
     Subplot layout:
-    - Row 1: Pressure
-    - Row 2: Temperature
-    - Row 3: Conductivity (if available)
-
-    This function replaces the instrument-specific plotting functions with a
-    universal approach that works for MicroCATs, RBRs, and other instruments.
-
-    Parameters
-    ----------
-    instrument_data : dict
-        Dictionary of instrument data by serial number:
-        {serial: {'data': xr.Dataset, 'config': dict, 'type': str}}
-    reference_data : dict
-        Dictionary of reference (CTD) data by name:
-        {name: {'data': xr.Dataset, 'file': str}}
-    config : dict, optional
-        Configuration dictionary with deployment_time and recovery_time
-    title : str, optional
-        Plot title
-    show_bottle_stops : bool, optional
-        Whether to show bottle stop markers (default True)
-    bottle_stop_params : dict, optional
-        Parameters for bottle stop detection:
-        {'threshold_dbar_per_min': 30.0, 'min_duration_seconds': 120.0}
-
-    Returns
-    -------
-    plotly.graph_objects.Figure or None
-        Interactive plot figure, or None if plotly not available
+    - Row 1: Pressure (Default)
+    - Row 2: Temperature (Default)
+    - Rows 3+: Optional variables (including conductivity, oxygen, etc., if specified or available)
     """
-    # Subplot row assignments (can be changed here if needed)
+    # Ensure optional_variables is a list if passed as string or None
+    if optional_variables is None:
+        optional_variables = []
+    elif isinstance(optional_variables, str):
+        optional_variables = [optional_variables]
+
+    # Ensure 'conductivity' and 'oxygen' (or 'oxygen_phase') are included if requested/available
+    # If the user wants them strictly optional, we check if they exist or if they are explicitly passed.
+    # To treat them as optional variables, we can make sure they append smoothly if present in datasets.
+    
+    # Subplot base row assignments (Pressure and Temperature are fixed at the top)
     PRESSURE_ROW = 1
     TEMPERATURE_ROW = 2
-    CONDUCTIVITY_ROW = 3
-    OXYGEN_ROW = 4
+
+    # Dynamically assign row indices for optional variables starting after Row 2
+    next_row = 3
+    optional_rows = {}
+    
+    # Standard mandatory set to check against custom ones
+    standard_optional_candidates = ["conductivity", "oxygen"]
+    
+    # Combine user-defined optional variables with standard optional ones if they exist in the data
+    # or let the user explicitly list what they want. Here we automatically include standard ones 
+    # if they are present in the data datasets, or you can pass them explicitly via `optional_variables`.
+    all_possible_optionals = list(set(optional_variables + standard_optional_candidates))
 
     if not PLOTLY_AVAILABLE:
         print("Plotly not available - cannot create interactive plot")
@@ -84,70 +78,53 @@ def plot(
     # Collect all data values for y-axis range calculation
     pressure_values = []
     temperature_values = []
-    conductivity_values = []
-    oxygen_values = []
+    
+    # Dynamic storage for values and availability of all optional fields
+    active_optionals = []
+    optional_values = {}
+    optional_has_data = {}
 
-    # Determine if we have pressure data from instruments (vs temperature-only)
-    has_instrument_pressure = False
-    has_conductivity = False
-    has_oxygen = False
+    # Pre-scan instrument and reference data to see which optional variables actually contain data
+    all_data_sources = list(instrument_data.values()) + list(reference_data.values())
+    
+    for var in all_possible_optionals:
+        var_values = []
+        for info in all_data_sources:
+            ds = info["data"]
+            # Handle standard oxygen naming flexibility
+            target_vars = [var]
+            if var == "oxygen":
+                target_vars = ["oxygen", "oxygen_phase"]
+                
+            for tv in target_vars:
+                if tv in ds.data_vars:
+                    val = ds[tv].values[~np.isnan(ds[tv].values)]
+                    if len(val) > 0:
+                        var_values.extend(val)
+        
+        # Keep variable active if it was explicitly requested OR if it's a standard one with valid data
+        is_explicitly_requested = var in optional_variables
+        is_standard_with_data = var in standard_optional_candidates and len(var_values) > 0
+        
+        if is_explicitly_requested or is_standard_with_data:
+            if var not in active_optionals:
+                active_optionals.append(var)
+            optional_values[var] = var_values
 
-    # Collect instrument values and determine plot structure
-    for serial, info in instrument_data.items():
+    # Assign row indices for all active optional variables
+    for var in active_optionals:
+        optional_rows[var] = next_row
+        next_row += 1
+
+    # Collect core pressure and temperature values
+    for info in all_data_sources:
         ds = info["data"]
-
-        # Canonical names after _normalize_instrument_vars; oxygen_phase kept as fallback
         if "pressure" in ds.data_vars:
-            pressure_values.extend(
-                ds["pressure"].values[~np.isnan(ds["pressure"].values)]
-            )
-            has_instrument_pressure = True
-
-        if "temperature" in ds.data_vars:
-            temperature_values.extend(
-                ds["temperature"].values[~np.isnan(ds["temperature"].values)]
-            )
-
-        if "conductivity" in ds.data_vars:
-            cond_data = ds["conductivity"].values[~np.isnan(ds["conductivity"].values)]
-            if len(cond_data) > 0:
-                conductivity_values.extend(cond_data)
-                has_conductivity = True
-
-        for oxy_var in ["oxygen", "oxygen_phase"]:
-            if oxy_var in ds.data_vars:
-                oxy_data = ds[oxy_var].values[~np.isnan(ds[oxy_var].values)]
-                if len(oxy_data) > 0:
-                    oxygen_values.extend(oxy_data)
-                    has_oxygen = True
-                break
-
-    # Collect reference data values
-    for name, info in reference_data.items():
-        ds = info["data"]
-
-        # CTD pressure (canonical name)
-        if "pressure" in ds.data_vars:
-            pressure_values.extend(
-                ds["pressure"].values[~np.isnan(ds["pressure"].values)]
-            )
-
-        # CTD temperatures — selected + secondary
+            pressure_values.extend(ds["pressure"].values[~np.isnan(ds["pressure"].values)])
+        
         for tvar in ["temperature", "temperature_2"]:
             if tvar in ds.data_vars:
                 temperature_values.extend(ds[tvar].values[~np.isnan(ds[tvar].values)])
-
-        # CTD conductivities — selected + secondary
-        if has_conductivity:
-            for cvar in ["conductivity", "conductivity_2"]:
-                if cvar in ds.data_vars:
-                    conductivity_values.extend(
-                        ds[cvar].values[~np.isnan(ds[cvar].values)]
-                    )
-
-        # CTD oxygen (canonical name)
-        if has_oxygen and "oxygen" in ds.data_vars:
-            oxygen_values.extend(ds["oxygen"].values[~np.isnan(ds["oxygen"].values)])
 
     def smart_range(values, padding=0.05):
         """Return [min, max] axis range with fractional padding; defaults to [0,1] for empty input."""
@@ -160,38 +137,30 @@ def plot(
 
     pressure_range = smart_range(pressure_values)
     temperature_range = smart_range(temperature_values)
-    conductivity_range = smart_range(conductivity_values)
-    oxygen_range = smart_range(oxygen_values)
+    optional_ranges = {var: smart_range(optional_values.get(var, [])) for var in active_optionals}
 
-    # Dynamic subplot structure - 2-4 subplots
+    # Dynamic subplot structure setup
     subplot_titles = []
     row_heights = []
 
-    # Get CTD reference name for title
     ctd_name = list(reference_data.keys())[0] if reference_data else "CTD"
 
-    # Subplot 1: Always pressure (with main title)
+    # Subplot 1: Pressure
     subplot_titles.append(f"{title} / CTD {ctd_name}")
     row_heights.append(1)
 
-    # Subplot 2: Always temperature (no title)
+    # Subplot 2: Temperature
     subplot_titles.append("")
     row_heights.append(1)
 
-    # Subplot 3: Conductivity if any instruments have it (no title)
-    if has_conductivity:
-        subplot_titles.append("")
-        row_heights.append(1)
-
-    # Subplot 4: Oxygen if any instruments have it (no title)
-    if has_oxygen:
+    # Subplots 3+: Active Optional Variables
+    for var in active_optionals:
         subplot_titles.append("")
         row_heights.append(1)
 
     # Normalize row heights
     total_height = sum(row_heights)
     row_heights = [h / total_height for h in row_heights]
-
     n_rows = len(subplot_titles)
 
     # Create subplots
@@ -208,11 +177,7 @@ def plot(
     instrument_serials = list(instrument_data.keys())
     base_colors = pc.qualitative.Plotly + pc.qualitative.D3 + pc.qualitative.G10
 
-    color_map = {}
-    for i, serial in enumerate(instrument_serials):
-        color_map[serial] = base_colors[i % len(base_colors)]
-
-    current_row = 1
+    color_map = {serial: base_colors[i % len(base_colors)] for i, serial in enumerate(instrument_serials)}
 
     # Plot instrument data
     for serial, info in instrument_data.items():
@@ -220,24 +185,16 @@ def plot(
         color = color_map[serial]
         instrument_label = info["config"].get("label", "Unknown")
 
-        # Create smart legend labels and line styles
         instrument_type = info["config"].get("instrument", "").lower()
         if instrument_type == "sbe" or "sbe" in instrument_label.lower():
             legend_name = f"MC {serial}"
-            line_dash = "solid"  # MicroCATs get solid lines
+            line_dash = "solid"
         elif instrument_type == "rbr":
-            if "solo" in instrument_label.lower():
-                legend_name = f"solo {serial}"
-                line_dash = "dash"  # RBR thermistors get dashed lines
-            elif "tr" in instrument_label.lower():
-                legend_name = f"TR {serial}"
-                line_dash = "dash"  # RBR thermistors get dashed lines
-            else:
-                legend_name = f"RBR {serial}"
-                line_dash = "dash"  # Default RBR get dashed lines
+            line_dash = "dash"
+            legend_name = f"{instrument_label} {serial}" if ("solo" in instrument_label.lower() or "tr" in instrument_label.lower()) else f"RBR {serial}"
         else:
             legend_name = f"{serial}"
-            line_dash = "solid"  # Default to solid
+            line_dash = "solid"
 
         show_legend_on_first_plot = True
 
@@ -277,31 +234,18 @@ def plot(
             )
             show_legend_on_first_plot = False
 
-        # Conductivity subplot (if conductivity subplot exists)
-        if has_conductivity and "conductivity" in ds.data_vars:
-            fig.add_trace(
-                go.Scatter(
-                    x=ds.time.values,
-                    y=ds["conductivity"].values,
-                    mode="lines",
-                    name=legend_name,
-                    line=dict(color=color, width=2, dash=line_dash),
-                    hoverinfo="skip",
-                    legendgroup=serial,
-                    showlegend=False,
-                ),
-                row=CONDUCTIVITY_ROW,
-                col=1,
-            )
-
-        # Oxygen subplot (if oxygen subplot exists); oxygen_phase kept as fallback
-        if has_oxygen:
-            for oxy_var in ["oxygen", "oxygen_phase"]:
-                if oxy_var in ds.data_vars:
+        # Optional variables subplots (instrument)
+        for var in active_optionals:
+            target_vars = [var]
+            if var == "oxygen":
+                target_vars = ["oxygen", "oxygen_phase"]
+                
+            for tv in target_vars:
+                if tv in ds.data_vars:
                     fig.add_trace(
                         go.Scatter(
                             x=ds.time.values,
-                            y=ds[oxy_var].values,
+                            y=ds[tv].values,
                             mode="lines",
                             name=legend_name,
                             line=dict(color=color, width=2, dash=line_dash),
@@ -309,7 +253,7 @@ def plot(
                             legendgroup=serial,
                             showlegend=False,
                         ),
-                        row=OXYGEN_ROW,
+                        row=optional_rows[var],
                         col=1,
                     )
                     break
@@ -318,13 +262,8 @@ def plot(
     ref_colors = ["black", "gray", "darkred", "darkblue"]
     for i, (name, info) in enumerate(reference_data.items()):
         ds = info["data"]
-        ref_color = ref_colors[i % len(ref_colors)]
 
-        show_ref_legend = i == 0  # Only show legend for first reference
-
-        current_row = 1
-
-        # Reference pressure (canonical name)
+        # Reference pressure
         if "pressure" in ds.data_vars:
             fig.add_trace(
                 go.Scatter(
@@ -332,7 +271,7 @@ def plot(
                     y=ds["pressure"].values,
                     mode="lines",
                     name=f"CTD {name}",
-                    line=dict(color=ref_color, width=3),
+                    line=dict(color=ref_colors[i % len(ref_colors)], width=3),
                     hoverinfo="skip",
                     legendgroup=f"ctd_{name}",
                     showlegend=False,
@@ -341,7 +280,7 @@ def plot(
                 col=1,
             )
 
-        # Reference temperatures — selected sensor ('temperature') + secondary ('temperature_2')
+        # Reference temperatures
         for tvar, tlabel, tcolor, twidth in [
             ("temperature", "CTD T1", "black", 3),
             ("temperature_2", "CTD T2", "gray", 2),
@@ -361,80 +300,51 @@ def plot(
                     row=TEMPERATURE_ROW,
                     col=1,
                 )
-        show_ref_legend = False
 
-        # Reference conductivities — selected ('conductivity') + secondary ('conductivity_2')
-        if has_conductivity:
-            for cvar, clabel, ccolor, cwidth in [
-                ("conductivity", "CTD C1", "black", 3),
-                ("conductivity_2", "CTD C2", "gray", 2),
-            ]:
-                if cvar in ds.data_vars:
+        # Reference optional variables
+        for var in active_optionals:
+            target_vars = [var]
+            if var == "oxygen":
+                target_vars = ["oxygen", "oxygen_phase"]
+                
+            for tv in target_vars:
+                if tv in ds.data_vars:
                     fig.add_trace(
                         go.Scatter(
                             x=ds.time.values,
-                            y=ds[cvar].values,
+                            y=ds[tv].values,
                             mode="lines",
-                            name=clabel,
-                            line=dict(color=ccolor, width=cwidth),
+                            name=f"CTD {var}",
+                            line=dict(color="black", width=3),
                             hoverinfo="skip",
-                            legendgroup=f"ctd_{cvar}",
-                            showlegend=True,
                         ),
-                        row=CONDUCTIVITY_ROW,
+                        row=optional_rows[var],
                         col=1,
                     )
+                    break
 
-        # CTD oxygen (canonical name)
-        if has_oxygen and "oxygen" in ds.data_vars:
-            fig.add_trace(
-                go.Scatter(
-                    x=ds.time.values,
-                    y=ds["oxygen"].values,
-                    mode="lines",
-                    name="CTD O2",
-                    line=dict(color="black", width=3),
-                    hoverinfo="skip",
-                    legendgroup="ctd_o",
-                    showlegend=False,
-                ),
-                row=OXYGEN_ROW,
-                col=1,
-            )
+    # Update y-axis labels and ranges for core parameters
+    fig.update_yaxes(range=pressure_range, title_text="Pressure (dbar)", row=PRESSURE_ROW, col=1)
+    fig.update_yaxes(range=temperature_range, title_text="Temperature (°C)", row=TEMPERATURE_ROW, col=1)
 
-    # Update y-axis labels and ranges
-    fig.update_yaxes(
-        range=pressure_range, title_text="Pressure (dbar)", row=PRESSURE_ROW, col=1
-    )
-    fig.update_yaxes(
-        range=temperature_range,
-        title_text="Temperature (°C)",
-        row=TEMPERATURE_ROW,
-        col=1,
-    )
-
-    if has_conductivity:
+    # Update y-axes for active optional variables dynamically with smart formatting
+    for var in active_optionals:
+        unit_label = "mS/cm" if "conductivity" in var else ("μmol/L | phase°" if "oxygen" in var else "")
+        title_text = f"{var.replace('_', ' ').title()} ({unit_label})" if unit_label else var.replace('_', ' ').title()
+        
         fig.update_yaxes(
-            range=conductivity_range,
-            title_text="Conductivity (mS/cm)",
-            row=CONDUCTIVITY_ROW,
+            range=optional_ranges[var],
+            title_text=title_text,
+            row=optional_rows[var],
             col=1,
         )
 
-    if has_oxygen:
-        fig.update_yaxes(
-            range=oxygen_range,
-            title_text="Oxygen (μmol/L | phase°)",
-            row=OXYGEN_ROW,
-            col=1,
-        )
-
-    # Update x-axis (remove titles, keep tick labels)
+    # Update x-axis
     for row in range(1, n_rows + 1):
         fig.update_xaxes(title_text="", showticklabels=True, row=row, col=1)
 
     fig.update_layout(
-        height=300 * n_rows + 100,  # Scale height based on number of subplots
+        height=300 * n_rows + 100,
         hovermode=False,
         showlegend=True,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
@@ -450,13 +360,11 @@ def plot(
         recovery_time = pd.to_datetime(config["recovery_time"])
         fig.update_xaxes(range=[deployment_time, recovery_time])
 
-    # Add bottle stop markers if requested
+    # Add bottle stop markers if requested (spanning all dynamic rows)
     if show_bottle_stops and reference_data:
-        # Get the first reference dataset for bottle stop detection
         ref_name = list(reference_data.keys())[0]
         ref_ds = reference_data[ref_name]["data"]
 
-        # Find bottle stops using the configurable parameters
         bottle_stops = cf.find_bottle_stops(
             ref_ds,
             threshold_dbar_per_min=bottle_stop_params["threshold_dbar_per_min"],
@@ -464,87 +372,41 @@ def plot(
         )
 
         if bottle_stops:
-            print(f"\\nFound {len(bottle_stops)} bottle stops:")
-
-            # Add bottle stop markers to all subplots
-            for i, stop in enumerate(bottle_stops, 1):
-                print(
-                    f"  Stop {i}: {stop['start_time']} to {stop['end_time']} "
-                    f"({stop['duration_seconds']:.0f}s) at {stop['pressure']:.1f} dbar"
-                )
-
-                # Calculate comparison period (2 minutes ending 30 seconds before bottle stop end)
+            for stop in bottle_stops:
                 end_dt = pd.to_datetime(stop["end_time"])
                 comp_end = end_dt - pd.Timedelta(seconds=30)
                 comp_start = comp_end - pd.Timedelta(minutes=2)
 
-                # Add vertical lines to all subplot rows
                 for row in range(1, n_rows + 1):
-                    # Get appropriate y-range for this subplot
+                    # Map row to appropriate range reference
                     if row == PRESSURE_ROW:
                         y_range = pressure_range
                     elif row == TEMPERATURE_ROW:
                         y_range = temperature_range
-                    elif row == CONDUCTIVITY_ROW:
-                        y_range = conductivity_range
-                    elif row == OXYGEN_ROW:
-                        y_range = oxygen_range
                     else:
-                        y_range = temperature_range  # Default
+                        y_range = temperature_range
+                        for var, opt_r in optional_rows.items():
+                            if opt_r == row:
+                                y_range = optional_ranges[var]
 
-                    # Start of bottle stop (blue)
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[stop["start_time"], stop["start_time"]],
-                            y=y_range,
-                            mode="lines",
-                            line=dict(color="blue", width=2),
-                            showlegend=False,
-                            hoverinfo="skip",
-                        ),
-                        row=row,
-                        col=1,
-                    )
-
-                    # End of bottle stop (red)
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[stop["end_time"], stop["end_time"]],
-                            y=y_range,
-                            mode="lines",
-                            line=dict(color="red", width=2),
-                            showlegend=False,
-                            hoverinfo="skip",
-                        ),
-                        row=row,
-                        col=1,
-                    )
-
-                    # Comparison period boundaries (black dotted)
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[comp_start, comp_start],
-                            y=y_range,
-                            mode="lines",
-                            line=dict(color="black", width=1, dash="dot"),
-                            showlegend=False,
-                            hoverinfo="skip",
-                        ),
-                        row=row,
-                        col=1,
-                    )
-
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[comp_end, comp_end],
-                            y=y_range,
-                            mode="lines",
-                            line=dict(color="black", width=1, dash="dot"),
-                            showlegend=False,
-                            hoverinfo="skip",
-                        ),
-                        row=row,
-                        col=1,
-                    )
+                    # Draw boundaries across all subplots
+                    for x_val, color, dash in [
+                        (stop["start_time"], "blue", "solid"),
+                        (stop["end_time"], "red", "solid"),
+                        (comp_start, "black", "dot"),
+                        (comp_end, "black", "dot")
+                    ]:
+                        fig.add_trace(
+                            go.Scatter(
+                                x=[x_val, x_val],
+                                y=y_range,
+                                mode="lines",
+                                line=dict(color=color, width=1 if dash=="dot" else 2, dash=dash),
+                                showlegend=False,
+                                hoverinfo="skip",
+                            ),
+                            row=row,
+                            col=1,
+                        )
 
     return fig
