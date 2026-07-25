@@ -456,6 +456,7 @@ _CTD_CANONICAL_S1 = [
     ("pressure", [("prDM", 1.0), ("prdM", 1.0), ("press", 1.0), ("PRES", 1.0)]),
     ("salinity", [("sal00", 1.0), ("sal11", 1.0), ("PSAL", 1.0)]),
     ("oxygen", [("sbeox0ML/L", 1.0), ("sbeox1ML/L", 1.0)]),
+    ("turbidity", [("turbWETntu0", 1.0)]),
 ]
 _CTD_CANONICAL_S2 = [
     ("temperature", [("t190C", 1.0), ("t090C", 1.0)]),
@@ -468,6 +469,7 @@ _CTD_CANONICAL_S2 = [
     ("pressure", [("prDM", 1.0), ("prdM", 1.0), ("press", 1.0), ("PRES", 1.0)]),
     ("salinity", [("sal00", 1.0), ("sal11", 1.0), ("PSAL", 1.0)]),
     ("oxygen", [("sbeox0ML/L", 1.0), ("sbeox1ML/L", 1.0)]),
+    ("turbidity", [("turbWETntu0", 1.0)]),
 ]
 # Keep _CTD_CANONICAL as an alias used by tests
 _CTD_CANONICAL = _CTD_CANONICAL_S1  # noqa: F841
