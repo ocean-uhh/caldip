@@ -13,6 +13,7 @@ from caldip.readers import (
 )
 from caldip.tools import trim_to_deployment
 from caldip._plot import plot
+from caldip.config import parameters as params
 
 try:
     import plotly.graph_objects as go  # noqa: F401
@@ -63,14 +64,20 @@ Examples:
     parser.add_argument(
         "--threshold",
         type=float,
-        default=10.0,
-        help="Bottle stop detection threshold in dbar/min (default: 10.0)",
+        default=params.BOTTLE_STOP_THRESHOLD_DBAR_PER_MIN,
+        help=(
+            "Bottle stop detection threshold in dbar/min "
+            f"(default: {params.BOTTLE_STOP_THRESHOLD_DBAR_PER_MIN})"
+        ),
     )
     parser.add_argument(
         "--min-duration",
         type=float,
-        default=180.0,
-        help="Minimum bottle stop duration in seconds (default: 180.0)",
+        default=params.BOTTLE_STOP_MIN_DURATION_SECONDS,
+        help=(
+            "Minimum bottle stop duration in seconds "
+            f"(default: {params.BOTTLE_STOP_MIN_DURATION_SECONDS})"
+        ),
     )
     parser.add_argument(
         "--show",
