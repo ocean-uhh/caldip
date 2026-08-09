@@ -76,7 +76,7 @@ After generation, open the stub and fill in the fields marked `null` or `.nan`.
 |-------|------|----------|-------------|
 | `directory` | string | yes | Path to cast folder (relative to repo root or absolute) |
 | `ctd_file` | string | yes | CTD `.cnv` filename |
-| `ctd_sensors` | integer | recommended | Which sensor pair to use: `1` (primary) or `2` (secondary) |
+| `ctd_sensor` | integer | recommended | Which sensor pair to use: `1` (primary) or `2` (secondary) |
 | `ctd_vars` | mapping | optional | Override CTD variable names (see below) |
 
 #### `ctd_vars` — overriding CTD variable names
@@ -90,7 +90,7 @@ ctd_vars:
   press: "PRES"   # replaces prDM (optional; auto-detected if absent)
 ```
 
-Only set the fields that differ. Omitting a field keeps the default auto-detection for that variable. The override applies to whichever sensor is selected via `ctd_sensors` or `--ctd-sensor`.
+Only set the fields that differ. Omitting a field keeps the default auto-detection for that variable. The override applies to whichever sensor is selected via `ctd_sensor` or `--ctd-sensor`.
 
 > **When do you need this?** Run `caldip stats` and check whether the temperature difference column is NaN for all bottle stops. If so, open the `.cnv` file in a text editor, find the variable name list near the top of the header, and add the correct names here.
 
@@ -136,7 +136,7 @@ longitude: -48.8285
 waterdepth: .nan
 directory: 'moor/proc_calib/msm142_2026/cal_dip/castM3/'
 ctd_file: 'msm_142_1_035_1sec.cnv'
-ctd_sensors: 2  # use secondary, 1=primary
+ctd_sensor: 2  # use secondary, 1=primary
 instruments:
   - position: '1'
     serial: '26271'
@@ -170,7 +170,7 @@ longitude: -48.4535
 waterdepth: .nan
 directory: 'moor/proc_calib/msm142_2026/cal_dip/castM4/'
 ctd_file: 'msm_142_1_032_1sec.cnv'
-ctd_sensors: 2
+ctd_sensor: 2
 instruments:
   - position: '1'
     serial: 013874

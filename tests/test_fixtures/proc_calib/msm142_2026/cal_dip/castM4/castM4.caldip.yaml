@@ -11,7 +11,7 @@ ship: FS MSMerian
 cruise: msm142
 directory: 'data/proc_calib/msm142_2026/cal_dip/castM4/'
 ctd_file: 'msm_142_1_032_1sec.cnv'
-ctd_sensors: 2
+ctd_sensor: 2
 instruments:
 - position: '1'
   serial: 013874
