@@ -16,12 +16,31 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from pathlib import Path
-from typing import Dict, Union
+from typing import Any, Dict, Union
+
+# Raw SBE CNV time auxiliary variables dropped before NC write.
+# These are raw columns passed through unchanged by seasenselib; the proper
+# datetime coordinate is 'time'. timeS triggers an xarray FutureWarning
+# (units='seconds' on a non-decoded variable will change semantics in a
+# future xarray release).
+_SBE_AUX_VARS: frozenset = frozenset({"timeS", "timeJ", "scan"})
 
 
-def _clean_attrs(attrs: dict) -> dict:
-    """Drop None and convert datetime.datetime values for NetCDF serialization."""
-    cleaned = {}
+def _clean_attrs(attrs: Dict[str, Any]) -> Dict[str, Any]:
+    """Drop None values and convert datetimes for NetCDF serialization.
+
+    Parameters
+    ----------
+    attrs : dict
+        Attribute dict from an xarray Dataset or DataArray.
+
+    Returns
+    -------
+    dict
+        Copy of attrs with None values removed and datetime.datetime values
+        converted to ISO 8601 strings.
+    """
+    cleaned: Dict[str, Any] = {}
     for k, v in attrs.items():
         if v is None:
             continue
@@ -33,34 +52,38 @@ def _clean_attrs(attrs: dict) -> dict:
 
 
 def save_instrument_nc(ds: xr.Dataset, path: Union[str, Path], label: str) -> bool:
-    """Save instrument Dataset to NetCDF, converting un-serializable attrs to strings.
+    """Save instrument Dataset to NetCDF, sanitizing un-serializable attributes.
 
-    Returns True on success, False on failure.
+    Drops SBE raw time auxiliary variables (timeS, timeJ, scan) which are
+    superseded by the time coordinate and trigger an xarray FutureWarning.
+    Cleans None values and datetime objects from variable and dataset attrs
+    before writing.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Instrument Dataset as returned by sl.read() or loaded from NC cache.
+    path : str or Path
+        Output NetCDF file path.
+    label : str
+        Human-readable label for log messages (e.g. ``'SBE 13840 raw'``).
+
+    Returns
+    -------
+    bool
+        True on success, False if an error occurred during write.
     """
-    # -----------------------------------------------------------------------
-    # DROP RAW SBE TIME AUXILIARIES
-    # These variables are raw columns from SeaBird CNV files, passed through
-    # unchanged by seasenselib.  The proper datetime coordinate is 'time'.
-    # - timeS: elapsed seconds since recording start; its units='seconds' attr
-    #   triggers an xarray FutureWarning (will break in a future xarray release)
-    # - timeJ: instrument julian-day clock (alternative SBE time axis)
-    # - scan:  sequential scan counter
-    # To restore them, remove this block and regenerate any cached NC files.
-    # -----------------------------------------------------------------------
-    _SBE_AUX_VARS = {"timeS", "timeJ", "scan"}
     try:
-        out = ds.copy()
-        vars_to_drop = [v for v in out.data_vars if v in _SBE_AUX_VARS]
-        if vars_to_drop:
-            out = out.drop_vars(vars_to_drop)
+        vars_to_drop = [v for v in ds.data_vars if v in _SBE_AUX_VARS]
+        out = ds.drop_vars(vars_to_drop)
         out.attrs = _clean_attrs(out.attrs)
         for var in list(out.data_vars) + list(out.coords):
             out[var].attrs = _clean_attrs(out[var].attrs)
         out.to_netcdf(path)
         print(f"  💾 Saved {label} ({len(ds.time)} samples)")
         return True
-    except Exception as _e:
-        print(f"  ⚠️  {label} save failed: {_e}")
+    except (OSError, ValueError) as e:
+        print(f"  ⚠️  {label} save failed: {e}")
         return False
 
 

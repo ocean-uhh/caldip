@@ -68,7 +68,7 @@ _CONDUCTIVITY_S_PER_M = frozenset({"c0S/m", "c1S/m", "cond0S/m", "cond1S/m"})
 # Map caldip YAML file_type keys to seasenselib format keys where they differ.
 # 'sbe-asc' is a deprecated caldip alias for the seasenselib 'sbe-ascii' key;
 # kept here so existing YAML configs don't break. Use 'sbe-ascii' in new configs.
-_SL_FORMAT_MAP: dict = {"sbe-asc": "sbe-ascii"}
+_SL_FORMAT_MAP: dict[str, str] = {"sbe-asc": "sbe-ascii"}
 
 # Caldip-specific source names not in seasenselib's parameters.py default_mappings.
 # These supplement (never override) the seasenselib mapping.
@@ -78,12 +78,12 @@ _CALDIP_SUPPLEMENT = {
 
 
 def _normalize_conductivity(ds: xr.Dataset) -> xr.Dataset:
-    """Convert conductivity to mS/cm and ensure the canonical variable name.
+    """Convert conductivity to mS/cm where sl.read() returns S/m units.
 
-    sl.read() output varies by format: some leave the raw column name (e.g.
-    'cond0S/m') and some rename to 'conductivity' but retain S/m units.
-    This function handles both cases, modelled on oceanarray's
-    _normalize_conductivity() with an additional units-attribute check.
+    sl.read() always renames conductivity columns (cond0S/m, cond0mS/cm, etc.)
+    to 'conductivity' via its mapping pipeline (parameters.py default_mappings
+    and format_mappings) before returning. The resulting variable retains the
+    original S/m unit attribute, so this function checks and converts.
 
     Parameters
     ----------
@@ -93,19 +93,12 @@ def _normalize_conductivity(ds: xr.Dataset) -> xr.Dataset:
     Returns
     -------
     xr.Dataset
-        Dataset with conductivity in mS/cm named 'conductivity'.
+        Dataset with conductivity in mS/cm, or unchanged if no conductivity
+        variable is present.
     """
-    # Case 1: sl.read() left the raw S/m column name intact.
-    if "cond0S/m" in ds.data_vars:
-        data = ds["cond0S/m"] * 10.0
-        data.attrs = dict(ds["cond0S/m"].attrs)
-        data.attrs["units"] = "mS/cm"
-        ds = ds.drop_vars("cond0S/m").assign(conductivity=data)
-    elif "cond0mS/cm" in ds.data_vars:
-        ds = ds.rename({"cond0mS/cm": "conductivity"})
-
-    # Case 2: sl.read() already renamed to 'conductivity' but kept S/m units.
-    # Unit strings observed from sl.read(): 'S m-1', 'S/m', 'Siemens/m'.
+    # sl.read() renames all conductivity columns to 'conductivity' but keeps
+    # the original S/m unit attribute. Unit strings observed: 'S m-1', 'S/m',
+    # 'Siemens/m'.
     if "conductivity" in ds.data_vars:
         units = ds["conductivity"].attrs.get("units", "")
         if units.lower() in ("s/m", "siemens/m", "s m-1", "s·m-1"):
@@ -257,7 +250,7 @@ def load_instrument_data(
         if not SEASENSELIB_AVAILABLE:
             raise ImportError(f"seasenselib is required for '{file_type}' data loading")
         sl_format = _SL_FORMAT_MAP.get(file_type, file_type)
-        ds = sl.read(str(file_path), file_format=sl_format)
+        ds = sl.read(str(file_path), file_format=sl_format, **kwargs)
         return _normalize_conductivity(ds)
 
 

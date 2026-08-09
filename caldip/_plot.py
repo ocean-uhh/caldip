@@ -212,8 +212,6 @@ def plot(
     for i, serial in enumerate(instrument_serials):
         color_map[serial] = base_colors[i % len(base_colors)]
 
-    _current_row = 1
-
     # Plot instrument data
     for serial, info in instrument_data.items():
         ds = info["data"]
@@ -320,10 +318,6 @@ def plot(
         ds = info["data"]
         ref_color = ref_colors[i % len(ref_colors)]
 
-        _show_ref_legend = i == 0  # Only show legend for first reference
-
-        _current_row = 1
-
         # Reference pressure (canonical name)
         if "pressure" in ds.data_vars:
             fig.add_trace(
@@ -361,8 +355,6 @@ def plot(
                     row=TEMPERATURE_ROW,
                     col=1,
                 )
-        _show_ref_legend = False
-
         # Reference conductivities — selected ('conductivity') + secondary ('conductivity_2')
         if has_conductivity:
             for cvar, clabel, ccolor, cwidth in [
