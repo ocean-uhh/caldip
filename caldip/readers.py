@@ -108,6 +108,36 @@ def _normalize_conductivity(ds: xr.Dataset) -> xr.Dataset:
     return ds
 
 
+def _read_ctd_sensor(config: Dict) -> int:
+    """Return the CTD sensor number from config, accepting the deprecated plural key.
+
+    The canonical key is ``ctd_sensor`` (integer, 1 or 2). Older YAML files use
+    ``ctd_sensors`` (plural); that key is read with a DeprecationWarning and
+    will be removed in a future release. Defaults to 1 (primary sensor) if
+    neither key is present.
+
+    Parameters
+    ----------
+    config : dict
+        Parsed YAML config dict.
+
+    Returns
+    -------
+    int
+        CTD sensor number (1 = primary, 2 = secondary).
+    """
+    if "ctd_sensor" in config:
+        return int(config["ctd_sensor"])
+    if "ctd_sensors" in config:
+        warnings.warn(
+            "YAML key 'ctd_sensors' is deprecated; rename to 'ctd_sensor'.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return int(config["ctd_sensors"])
+    return 1
+
+
 def _normalize_instrument_vars(ds: xr.Dataset) -> xr.Dataset:
     """Rename raw instrument variable names to canonical names using parameters.py mappings.
 
@@ -400,26 +430,34 @@ def load_instruments_from_config(
 def load_reference_data(
     config: Dict, data_dir: Optional[Union[str, Path]] = None
 ) -> Dict[str, Dict]:
-    """
-    Load CTD reference data from config.
+    """Load CTD reference data from config.
+
+    If a pre-processed NetCDF cache (``{ctd_file}.nc``) exists, it is loaded
+    directly. The cached file must have been built with the same ``ctd_sensor``
+    value as the current config; if the stored ``ctd_sensor`` attribute
+    disagrees with the requested value, a ``ValueError`` is raised so the
+    user knows to delete the cache and re-run ``caldip ctd``.
 
     Parameters
     ----------
     config : dict
-        Caldip configuration dictionary
+        Caldip configuration dictionary. The ``ctd_sensor`` key (integer,
+        1 = primary, 2 = secondary) selects the CTD sensor pair; the
+        deprecated ``ctd_sensors`` key is accepted with a warning.
     data_dir : str or Path, optional
-        Base directory for data files. If None, uses config['directory']
+        Base directory for data files. If None, uses ``config['directory']``.
 
     Returns
     -------
     dict
-        Dictionary with CTD data:
-        {
-            'ctd_name': {
-                'data': xr.Dataset,
-                'file': str
-            }
-        }
+        Dictionary with CTD data keyed by CTD file stem:
+        ``{ctd_name: {'data': xr.Dataset, 'file': str}}``.
+
+    Raises
+    ------
+    ValueError
+        If a cached NetCDF exists but was built with a different
+        ``ctd_sensor`` than requested.
     """
     if data_dir is None:
         data_dir = config.get("directory", ".")
@@ -435,25 +473,33 @@ def load_reference_data(
 
         print(f"Loading CTD reference {ctd_name}...")
 
+        nc_path = ctd_path.with_suffix(".nc")
+        requested_sensor = _read_ctd_sensor(config)
+
         try:
-            nc_path = ctd_path.with_suffix(".nc")
             if nc_path.exists():
                 dataset = xr.open_dataset(nc_path)
+                cached_sensor = int(dataset.attrs.get("ctd_sensor", 1))
+                if cached_sensor != requested_sensor:
+                    raise ValueError(
+                        f"Cached CTD '{nc_path.name}' was built with ctd_sensor={cached_sensor} "
+                        f"but config (or --ctd-sensor) requests sensor {requested_sensor}. "
+                        f"Delete {nc_path.name} and re-run 'caldip ctd' to rebuild."
+                    )
                 print(
                     f"  ✅ Loaded pre-processed CTD from {nc_path.name} ({len(dataset.time)} samples)"
                 )
             else:
-                # NOTE: reads 'ctd_sensor' (singular). Old YAMLs using 'ctd_sensors' will
-                # silently default to 1 — fix by renaming the key in the YAML.
-                ctd_sensor = int(config.get("ctd_sensor", 1))
                 dataset = load_instrument_data(ctd_path, "ctd-cnv")
-                dataset = _normalize_ctd_vars(dataset, ctd_sensor=ctd_sensor)
+                dataset = _normalize_ctd_vars(dataset, ctd_sensor=requested_sensor)
                 dataset = _wild_edit_ctd(dataset, config)
                 dataset = _resample_1hz(dataset)
                 print(f"  ✅ Loaded: {len(dataset.time)} samples")
 
             reference_data[ctd_name] = {"data": dataset, "file": str(ctd_path)}
 
+        except ValueError:
+            raise
         except Exception as e:
             print(f"  ❌ Failed to load CTD: {e}")
 

@@ -13,6 +13,7 @@ from caldip.readers import (
     _normalize_ctd_vars,
     _wild_edit_ctd,
     _resample_1hz,
+    _read_ctd_sensor,
 )
 
 
@@ -326,9 +327,7 @@ def run(args):
     print(f"\nProcessing CTD file: {ctd_path.name}")
 
     try:
-        # NOTE: reads 'ctd_sensor' (singular). Old YAMLs using 'ctd_sensors' will
-        # silently default to 1 — fix by renaming the key in the YAML.
-        ctd_sensor = int(config.get("ctd_sensor", 1))
+        ctd_sensor = _read_ctd_sensor(config)
         ds_raw = load_instrument_data(ctd_path, "ctd-cnv")
         ds_raw = _normalize_ctd_vars(ds_raw, ctd_sensor=ctd_sensor)
         ds_edited = _wild_edit_ctd(ds_raw, config)
@@ -349,6 +348,7 @@ def run(args):
         try:
             save_ds = ds_processed.copy()
             save_ds.attrs = {k: v for k, v in save_ds.attrs.items() if v is not None}
+            save_ds.attrs["ctd_sensor"] = ctd_sensor
             save_ds.to_netcdf(nc_path)
             print(f"  Saved: {nc_path}")
         except Exception as e:
