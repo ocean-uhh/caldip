@@ -70,15 +70,6 @@ _CONDUCTIVITY_S_PER_M = frozenset({"c0S/m", "c1S/m", "cond0S/m", "cond1S/m"})
 # kept here so existing YAML configs don't break. Use 'sbe-ascii' in new configs.
 _SL_FORMAT_MAP: dict = {"sbe-asc": "sbe-ascii"}
 
-# file_type values that use caldip's internal legacy readers instead of sl.read().
-# These exist as workarounds for formats not yet fully supported by seasenselib:
-#   sbe-hex-cd  — SBE37 hex files with TxRealTime=no (memory-logging mode);
-#                 seasenselib only supports TxRealTime=yes (realtime mode).
-#   sbe-ascii-cd — SBE37 ASCII files via caldip's _parse_microcat_ascii();
-#                  use when sl.read('sbe-ascii') is unavailable or misbehaves.
-# Remove a key from this set once seasenselib fully supports that format.
-_CALDIP_LEGACY_TYPES = frozenset({"sbe-hex-cd", "sbe-ascii-cd"})
-
 # Caldip-specific source names not in seasenselib's parameters.py default_mappings.
 # These supplement (never override) the seasenselib mapping.
 _CALDIP_SUPPLEMENT = {
@@ -236,10 +227,8 @@ def load_instrument_data(
     file_path : str or Path
         Path to the data file
     file_type : str
-        Type of file format. Seasenselib-routed keys: 'sbe-cnv', 'sbe-ascii',
-        'sbe-hex', 'rbr-rsk', 'nortek-csv'. Caldip legacy keys
-        (workarounds for formats not yet fully supported by seasenselib):
-        'sbe-hex-cd' (SBE37 hex TxRealTime=no), 'sbe-ascii-cd' (SBE37 ASCII).
+        Seasenselib format key (e.g. 'sbe-cnv', 'sbe-ascii', 'sbe-hex', 'rbr-rsk',
+        'nortek-csv'). 'sbe-asc' is accepted as a deprecated alias for 'sbe-ascii'.
     **kwargs
         Additional arguments passed to the specific loader
 
@@ -263,10 +252,6 @@ def load_instrument_data(
     # Route to appropriate loader based on file_type
     if file_type == "ctd-cnv":
         return load_ctd_data(file_path, **kwargs)
-
-    elif file_type in _CALDIP_LEGACY_TYPES:
-        # Caldip-internal workaround readers — see _CALDIP_LEGACY_TYPES for rationale.
-        return load_microcat_data(file_path, **kwargs)
 
     else:
         if not SEASENSELIB_AVAILABLE:
