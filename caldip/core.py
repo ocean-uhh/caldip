@@ -18,26 +18,30 @@ import pandas as pd
 import xarray as xr
 from typing import Dict, List, Optional
 
+from caldip.config import parameters as params
+
 
 def find_bottle_stops(
     ctd_data: xr.Dataset,
-    threshold_dbar_per_min: float = 10.0,
-    min_duration_seconds: float = 180.0,
+    threshold_dbar_per_min: float = params.BOTTLE_STOP_THRESHOLD_DBAR_PER_MIN,
+    min_duration_seconds: float = params.BOTTLE_STOP_MIN_DURATION_SECONDS,
 ) -> List[Dict]:
     """
     Find bottle stops in CTD data based on pressure rate of change.
 
     Looks for periods where pressure change rate is < threshold_dbar_per_min
-    (typically < 10 dbar/min for bottle stops vs 30-60 dbar/min for normal ops).
+    (typically < 15 dbar/min for bottle stops vs 30-60 dbar/min for normal ops).
 
     Parameters
     ----------
     ctd_data : xr.Dataset
         CTD dataset with pressure and time variables
     threshold_dbar_per_min : float, optional
-        Maximum pressure change rate for bottle stops (dbar/min), default 10.0
+        Maximum pressure change rate for bottle stops (dbar/min). Defaults to
+        ``caldip.config.parameters.BOTTLE_STOP_THRESHOLD_DBAR_PER_MIN``.
     min_duration_seconds : float, optional
-        Minimum duration for valid bottle stops (seconds), default 180.0
+        Minimum duration for valid bottle stops (seconds). Defaults to
+        ``caldip.config.parameters.BOTTLE_STOP_MIN_DURATION_SECONDS``.
 
     Returns
     -------
@@ -263,8 +267,8 @@ def stats(
     instrument_data: Dict,
     reference_data: Dict,
     config: Dict,
-    threshold_dbar_per_min: float = 10.0,
-    min_duration_seconds: float = 180.0,
+    threshold_dbar_per_min: float = params.BOTTLE_STOP_THRESHOLD_DBAR_PER_MIN,
+    min_duration_seconds: float = params.BOTTLE_STOP_MIN_DURATION_SECONDS,
     temp_threshold: Optional[float] = None,
     cond_threshold: Optional[float] = None,
     press_threshold: Optional[float] = None,

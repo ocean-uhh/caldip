@@ -20,6 +20,7 @@ except ImportError:
 
 # Import caldip functions
 import caldip.core as cf
+from caldip.config import parameters as params
 
 
 def plot(
@@ -56,8 +57,10 @@ def plot(
     show_bottle_stops : bool, optional
         Whether to show bottle stop markers (default True)
     bottle_stop_params : dict, optional
-        Parameters for bottle stop detection:
-        {'threshold_dbar_per_min': 30.0, 'min_duration_seconds': 120.0}
+        Parameters for bottle stop detection. Defaults to the shared values in
+        ``caldip.config.parameters`` so the figure and the stats table detect
+        the same stops:
+        {'threshold_dbar_per_min': ..., 'min_duration_seconds': ...}
 
     Returns
     -------
@@ -74,11 +77,12 @@ def plot(
         print("Plotly not available - cannot create interactive plot")
         return None
 
-    # Set default bottle stop parameters
+    # Set default bottle stop parameters (shared source of truth with core.py
+    # so the figure and the stats table detect the same stops)
     if bottle_stop_params is None:
         bottle_stop_params = {
-            "threshold_dbar_per_min": 30.0,
-            "min_duration_seconds": 120.0,
+            "threshold_dbar_per_min": params.BOTTLE_STOP_THRESHOLD_DBAR_PER_MIN,
+            "min_duration_seconds": params.BOTTLE_STOP_MIN_DURATION_SECONDS,
         }
 
     # Collect all data values for y-axis range calculation
