@@ -430,26 +430,34 @@ def load_instruments_from_config(
 def load_reference_data(
     config: Dict, data_dir: Optional[Union[str, Path]] = None
 ) -> Dict[str, Dict]:
-    """
-    Load CTD reference data from config.
+    """Load CTD reference data from config.
+
+    If a pre-processed NetCDF cache (``{ctd_file}.nc``) exists, it is loaded
+    directly. The cached file must have been built with the same ``ctd_sensor``
+    value as the current config; if the stored ``ctd_sensor`` attribute
+    disagrees with the requested value, a ``ValueError`` is raised so the
+    user knows to delete the cache and re-run ``caldip ctd``.
 
     Parameters
     ----------
     config : dict
-        Caldip configuration dictionary
+        Caldip configuration dictionary. The ``ctd_sensor`` key (integer,
+        1 = primary, 2 = secondary) selects the CTD sensor pair; the
+        deprecated ``ctd_sensors`` key is accepted with a warning.
     data_dir : str or Path, optional
-        Base directory for data files. If None, uses config['directory']
+        Base directory for data files. If None, uses ``config['directory']``.
 
     Returns
     -------
     dict
-        Dictionary with CTD data:
-        {
-            'ctd_name': {
-                'data': xr.Dataset,
-                'file': str
-            }
-        }
+        Dictionary with CTD data keyed by CTD file stem:
+        ``{ctd_name: {'data': xr.Dataset, 'file': str}}``.
+
+    Raises
+    ------
+    ValueError
+        If a cached NetCDF exists but was built with a different
+        ``ctd_sensor`` than requested.
     """
     if data_dir is None:
         data_dir = config.get("directory", ".")
