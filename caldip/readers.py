@@ -65,11 +65,63 @@ from .sbe_hex_reader import sbe37_hex_reader
 # Conductivity source names that are in S/m and require ×10 to reach mS/cm
 _CONDUCTIVITY_S_PER_M = frozenset({"c0S/m", "c1S/m", "cond0S/m", "cond1S/m"})
 
+# Map caldip YAML file_type keys to seasenselib format keys where they differ.
+# 'sbe-asc' is a deprecated caldip alias for the seasenselib 'sbe-ascii' key;
+# kept here so existing YAML configs don't break. Use 'sbe-ascii' in new configs.
+_SL_FORMAT_MAP: dict = {"sbe-asc": "sbe-ascii"}
+
+# file_type values that use caldip's internal legacy readers instead of sl.read().
+# These exist as workarounds for formats not yet fully supported by seasenselib:
+#   sbe-hex-cd  — SBE37 hex files with TxRealTime=no (memory-logging mode);
+#                 seasenselib only supports TxRealTime=yes (realtime mode).
+#   sbe-ascii-cd — SBE37 ASCII files via caldip's _parse_microcat_ascii();
+#                  use when sl.read('sbe-ascii') is unavailable or misbehaves.
+# Remove a key from this set once seasenselib fully supports that format.
+_CALDIP_LEGACY_TYPES = frozenset({"sbe-hex-cd", "sbe-ascii-cd"})
+
 # Caldip-specific source names not in seasenselib's parameters.py default_mappings.
 # These supplement (never override) the seasenselib mapping.
 _CALDIP_SUPPLEMENT = {
     "conductivity": ["cond0S/m", "cond1S/m"],  # seasenselib only has c0S/m, c1S/m
 }
+
+
+def _normalize_conductivity(ds: xr.Dataset) -> xr.Dataset:
+    """Convert conductivity to mS/cm and ensure the canonical variable name.
+
+    sl.read() output varies by format: some leave the raw column name (e.g.
+    'cond0S/m') and some rename to 'conductivity' but retain S/m units.
+    This function handles both cases, modelled on oceanarray's
+    _normalize_conductivity() with an additional units-attribute check.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset as returned by sl.read().
+
+    Returns
+    -------
+    xr.Dataset
+        Dataset with conductivity in mS/cm named 'conductivity'.
+    """
+    # Case 1: sl.read() left the raw S/m column name intact.
+    if "cond0S/m" in ds.data_vars:
+        data = ds["cond0S/m"] * 10.0
+        data.attrs = dict(ds["cond0S/m"].attrs)
+        data.attrs["units"] = "mS/cm"
+        ds = ds.drop_vars("cond0S/m").assign(conductivity=data)
+    elif "cond0mS/cm" in ds.data_vars:
+        ds = ds.rename({"cond0mS/cm": "conductivity"})
+
+    # Case 2: sl.read() already renamed to 'conductivity' but kept S/m units.
+    # Unit strings observed from sl.read(): 'S m-1', 'S/m', 'Siemens/m'.
+    if "conductivity" in ds.data_vars:
+        units = ds["conductivity"].attrs.get("units", "")
+        if units.lower() in ("s/m", "siemens/m", "s m-1", "s·m-1"):
+            ds["conductivity"] = ds["conductivity"] * 10.0
+            ds["conductivity"].attrs["units"] = "mS/cm"
+
+    return ds
 
 
 def _normalize_instrument_vars(ds: xr.Dataset) -> xr.Dataset:
@@ -184,7 +236,10 @@ def load_instrument_data(
     file_path : str or Path
         Path to the data file
     file_type : str
-        Type of file format (e.g., 'sbe-cnv', 'sbe-asc', 'rbr-rsk')
+        Type of file format. Seasenselib-routed keys: 'sbe-cnv', 'sbe-ascii',
+        'sbe-hex', 'rbr-rsk', 'nortek-csv'. Caldip legacy keys
+        (workarounds for formats not yet fully supported by seasenselib):
+        'sbe-hex-cd' (SBE37 hex TxRealTime=no), 'sbe-ascii-cd' (SBE37 ASCII).
     **kwargs
         Additional arguments passed to the specific loader
 
@@ -206,24 +261,19 @@ def load_instrument_data(
         raise FileNotFoundError(f"Data file not found: {file_path}")
 
     # Route to appropriate loader based on file_type
-    if file_type in ["sbe-cnv", "sbe-asc", "sbe-hex"]:
-        return load_microcat_data(file_path, **kwargs)
-
-    elif file_type == "rbr-rsk":
-        if not SEASENSELIB_AVAILABLE:
-            raise ImportError("seasenselib is required for RBR data loading")
-        return sl.read(file_path, **kwargs)
-
-    elif file_type == "ctd-cnv":
+    if file_type == "ctd-cnv":
         return load_ctd_data(file_path, **kwargs)
 
-    elif file_type == "nortek-csv":
-        return load_nortek_csv_data(file_path, **kwargs)
+    elif file_type in _CALDIP_LEGACY_TYPES:
+        # Caldip-internal workaround readers — see _CALDIP_LEGACY_TYPES for rationale.
+        return load_microcat_data(file_path, **kwargs)
 
     else:
-        # For all other file types, pass to seasenselib with any additional kwargs
-        return sl.read(file_path, file_format=file_type, **kwargs)
-    #    raise ValueError(f"Unsupported file_type: {file_type}")
+        if not SEASENSELIB_AVAILABLE:
+            raise ImportError(f"seasenselib is required for '{file_type}' data loading")
+        sl_format = _SL_FORMAT_MAP.get(file_type, file_type)
+        ds = sl.read(str(file_path), file_format=sl_format)
+        return _normalize_conductivity(ds)
 
 
 def load_instruments_from_config(
@@ -679,8 +729,10 @@ def load_ctd_data(file_path: Union[str, Path]) -> xr.Dataset:
 
 
 def load_microcat_data(file_path: Union[str, Path]) -> xr.Dataset:
-    """
-    Load microCAT (SBE37) data from SeaBird hex/asc/cnv file.
+    """Load microCAT (SBE37) data from SeaBird hex/asc/cnv file.
+
+    Deprecated: load_instrument_data() now routes sbe-cnv/sbe-hex/sbe-asc through
+    seasenselib directly. This function is retained for direct use and testing only.
 
     Parameters
     ----------
@@ -1064,8 +1116,10 @@ def _add_nortek_variable_attributes(ds: xr.Dataset) -> xr.Dataset:
 def load_nortek_csv_data(
     file_path: Union[str, Path], header_file: Optional[str] = None
 ) -> xr.Dataset:
-    """
-    Load Nortek CSV data exported from AquaPro software.
+    """Load Nortek CSV data exported from AquaPro software.
+
+    Deprecated: load_instrument_data() now routes nortek-csv through seasenselib
+    directly. This function is retained for direct use and testing only.
 
     Parameters
     ----------

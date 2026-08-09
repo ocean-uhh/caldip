@@ -15,25 +15,47 @@ import datetime
 import numpy as np
 import pandas as pd
 import xarray as xr
-from typing import Dict
+from pathlib import Path
+from typing import Dict, Union
 
 
-def save_instrument_nc(ds: xr.Dataset, path, label: str) -> bool:
+def _clean_attrs(attrs: dict) -> dict:
+    """Drop None and convert datetime.datetime values for NetCDF serialization."""
+    cleaned = {}
+    for k, v in attrs.items():
+        if v is None:
+            continue
+        if isinstance(v, datetime.datetime):
+            cleaned[k] = v.isoformat()
+        else:
+            cleaned[k] = v
+    return cleaned
+
+
+def save_instrument_nc(ds: xr.Dataset, path: Union[str, Path], label: str) -> bool:
     """Save instrument Dataset to NetCDF, converting un-serializable attrs to strings.
 
     Returns True on success, False on failure.
     """
+    # -----------------------------------------------------------------------
+    # DROP RAW SBE TIME AUXILIARIES
+    # These variables are raw columns from SeaBird CNV files, passed through
+    # unchanged by seasenselib.  The proper datetime coordinate is 'time'.
+    # - timeS: elapsed seconds since recording start; its units='seconds' attr
+    #   triggers an xarray FutureWarning (will break in a future xarray release)
+    # - timeJ: instrument julian-day clock (alternative SBE time axis)
+    # - scan:  sequential scan counter
+    # To restore them, remove this block and regenerate any cached NC files.
+    # -----------------------------------------------------------------------
+    _SBE_AUX_VARS = {"timeS", "timeJ", "scan"}
     try:
         out = ds.copy()
-        cleaned = {}
-        for k, v in out.attrs.items():
-            if v is None:
-                continue
-            if isinstance(v, datetime.datetime):
-                cleaned[k] = v.isoformat()
-            else:
-                cleaned[k] = v
-        out.attrs = cleaned
+        vars_to_drop = [v for v in out.data_vars if v in _SBE_AUX_VARS]
+        if vars_to_drop:
+            out = out.drop_vars(vars_to_drop)
+        out.attrs = _clean_attrs(out.attrs)
+        for var in list(out.data_vars) + list(out.coords):
+            out[var].attrs = _clean_attrs(out[var].attrs)
         out.to_netcdf(path)
         print(f"  💾 Saved {label} ({len(ds.time)} samples)")
         return True

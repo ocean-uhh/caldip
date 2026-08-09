@@ -88,7 +88,7 @@ def plot(
     oxygen_values = []
 
     # Determine if we have pressure data from instruments (vs temperature-only)
-    has_instrument_pressure = False
+    _has_instrument_pressure = False
     has_conductivity = False
     has_oxygen = False
 
@@ -101,7 +101,7 @@ def plot(
             pressure_values.extend(
                 ds["pressure"].values[~np.isnan(ds["pressure"].values)]
             )
-            has_instrument_pressure = True
+            _has_instrument_pressure = True
 
         if "temperature" in ds.data_vars:
             temperature_values.extend(
@@ -212,7 +212,7 @@ def plot(
     for i, serial in enumerate(instrument_serials):
         color_map[serial] = base_colors[i % len(base_colors)]
 
-    current_row = 1
+    _current_row = 1
 
     # Plot instrument data
     for serial, info in instrument_data.items():
@@ -320,9 +320,9 @@ def plot(
         ds = info["data"]
         ref_color = ref_colors[i % len(ref_colors)]
 
-        show_ref_legend = i == 0  # Only show legend for first reference
+        _show_ref_legend = i == 0  # Only show legend for first reference
 
-        current_row = 1
+        _current_row = 1
 
         # Reference pressure (canonical name)
         if "pressure" in ds.data_vars:
@@ -361,7 +361,7 @@ def plot(
                     row=TEMPERATURE_ROW,
                     col=1,
                 )
-        show_ref_legend = False
+        _show_ref_legend = False
 
         # Reference conductivities — selected ('conductivity') + secondary ('conductivity_2')
         if has_conductivity:

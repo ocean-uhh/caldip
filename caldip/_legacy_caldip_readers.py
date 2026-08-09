@@ -515,7 +515,7 @@ def _parse_microcat_ascii(file_path: Path) -> xr.Dataset:
                 try:
                     interval_match = line.split("=")[-1].strip().split()[0]
                     metadata["interval_s"] = int(interval_match)
-                except:
+                except (ValueError, IndexError):
                     pass
             elif "System UpLoad Time" in line:
                 try:
