@@ -65,11 +65,47 @@ from .sbe_hex_reader import sbe37_hex_reader
 # Conductivity source names that are in S/m and require ×10 to reach mS/cm
 _CONDUCTIVITY_S_PER_M = frozenset({"c0S/m", "c1S/m", "cond0S/m", "cond1S/m"})
 
+# Map caldip YAML file_type keys to seasenselib format keys where they differ.
+# 'sbe-asc' is a deprecated caldip alias for the seasenselib 'sbe-ascii' key;
+# kept here so existing YAML configs don't break. Use 'sbe-ascii' in new configs.
+_SL_FORMAT_MAP: dict[str, str] = {"sbe-asc": "sbe-ascii"}
+
 # Caldip-specific source names not in seasenselib's parameters.py default_mappings.
 # These supplement (never override) the seasenselib mapping.
 _CALDIP_SUPPLEMENT = {
     "conductivity": ["cond0S/m", "cond1S/m"],  # seasenselib only has c0S/m, c1S/m
 }
+
+
+def _normalize_conductivity(ds: xr.Dataset) -> xr.Dataset:
+    """Convert conductivity to mS/cm where sl.read() returns S/m units.
+
+    sl.read() always renames conductivity columns (cond0S/m, cond0mS/cm, etc.)
+    to 'conductivity' via its mapping pipeline (parameters.py default_mappings
+    and format_mappings) before returning. The resulting variable retains the
+    original S/m unit attribute, so this function checks and converts.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset as returned by sl.read().
+
+    Returns
+    -------
+    xr.Dataset
+        Dataset with conductivity in mS/cm, or unchanged if no conductivity
+        variable is present.
+    """
+    # sl.read() renames all conductivity columns to 'conductivity' but keeps
+    # the original S/m unit attribute. Unit strings observed: 'S m-1', 'S/m',
+    # 'Siemens/m'.
+    if "conductivity" in ds.data_vars:
+        units = ds["conductivity"].attrs.get("units", "")
+        if units.lower() in ("s/m", "siemens/m", "s m-1", "s·m-1"):
+            ds["conductivity"] = ds["conductivity"] * 10.0
+            ds["conductivity"].attrs["units"] = "mS/cm"
+
+    return ds
 
 
 def _normalize_instrument_vars(ds: xr.Dataset) -> xr.Dataset:
@@ -184,7 +220,8 @@ def load_instrument_data(
     file_path : str or Path
         Path to the data file
     file_type : str
-        Type of file format (e.g., 'sbe-cnv', 'sbe-asc', 'rbr-rsk')
+        Seasenselib format key (e.g. 'sbe-cnv', 'sbe-ascii', 'sbe-hex', 'rbr-rsk',
+        'nortek-csv'). 'sbe-asc' is accepted as a deprecated alias for 'sbe-ascii'.
     **kwargs
         Additional arguments passed to the specific loader
 
@@ -206,24 +243,15 @@ def load_instrument_data(
         raise FileNotFoundError(f"Data file not found: {file_path}")
 
     # Route to appropriate loader based on file_type
-    if file_type in ["sbe-cnv", "sbe-asc", "sbe-hex"]:
-        return load_microcat_data(file_path, **kwargs)
-
-    elif file_type == "rbr-rsk":
-        if not SEASENSELIB_AVAILABLE:
-            raise ImportError("seasenselib is required for RBR data loading")
-        return sl.read(file_path, **kwargs)
-
-    elif file_type == "ctd-cnv":
+    if file_type == "ctd-cnv":
         return load_ctd_data(file_path, **kwargs)
 
-    elif file_type == "nortek-csv":
-        return load_nortek_csv_data(file_path, **kwargs)
-
     else:
-        # For all other file types, pass to seasenselib with any additional kwargs
-        return sl.read(file_path, file_format=file_type, **kwargs)
-    #    raise ValueError(f"Unsupported file_type: {file_type}")
+        if not SEASENSELIB_AVAILABLE:
+            raise ImportError(f"seasenselib is required for '{file_type}' data loading")
+        sl_format = _SL_FORMAT_MAP.get(file_type, file_type)
+        ds = sl.read(str(file_path), file_format=sl_format, **kwargs)
+        return _normalize_conductivity(ds)
 
 
 def load_instruments_from_config(
@@ -679,8 +707,10 @@ def load_ctd_data(file_path: Union[str, Path]) -> xr.Dataset:
 
 
 def load_microcat_data(file_path: Union[str, Path]) -> xr.Dataset:
-    """
-    Load microCAT (SBE37) data from SeaBird hex/asc/cnv file.
+    """Load microCAT (SBE37) data from SeaBird hex/asc/cnv file.
+
+    Deprecated: load_instrument_data() now routes sbe-cnv/sbe-hex/sbe-asc through
+    seasenselib directly. This function is retained for direct use and testing only.
 
     Parameters
     ----------
@@ -1064,8 +1094,10 @@ def _add_nortek_variable_attributes(ds: xr.Dataset) -> xr.Dataset:
 def load_nortek_csv_data(
     file_path: Union[str, Path], header_file: Optional[str] = None
 ) -> xr.Dataset:
-    """
-    Load Nortek CSV data exported from AquaPro software.
+    """Load Nortek CSV data exported from AquaPro software.
+
+    Deprecated: load_instrument_data() now routes nortek-csv through seasenselib
+    directly. This function is retained for direct use and testing only.
 
     Parameters
     ----------

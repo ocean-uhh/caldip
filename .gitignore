@@ -173,7 +173,6 @@ plots/
 output/
 outputs/
 temp/
-.claude/settings.local.json
 
 # exceptions for docs static files
 !docs/source/_static/*.html

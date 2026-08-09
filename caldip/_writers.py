@@ -15,30 +15,75 @@ import datetime
 import numpy as np
 import pandas as pd
 import xarray as xr
-from typing import Dict
+from pathlib import Path
+from typing import Any, Dict, Union
+
+# Raw SBE CNV time auxiliary variables dropped before NC write.
+# These are raw columns passed through unchanged by seasenselib; the proper
+# datetime coordinate is 'time'. timeS triggers an xarray FutureWarning
+# (units='seconds' on a non-decoded variable will change semantics in a
+# future xarray release).
+_SBE_AUX_VARS: frozenset = frozenset({"timeS", "timeJ", "scan"})
 
 
-def save_instrument_nc(ds: xr.Dataset, path, label: str) -> bool:
-    """Save instrument Dataset to NetCDF, converting un-serializable attrs to strings.
+def _clean_attrs(attrs: Dict[str, Any]) -> Dict[str, Any]:
+    """Drop None values and convert datetimes for NetCDF serialization.
 
-    Returns True on success, False on failure.
+    Parameters
+    ----------
+    attrs : dict
+        Attribute dict from an xarray Dataset or DataArray.
+
+    Returns
+    -------
+    dict
+        Copy of attrs with None values removed and datetime.datetime values
+        converted to ISO 8601 strings.
+    """
+    cleaned: Dict[str, Any] = {}
+    for k, v in attrs.items():
+        if v is None:
+            continue
+        if isinstance(v, datetime.datetime):
+            cleaned[k] = v.isoformat()
+        else:
+            cleaned[k] = v
+    return cleaned
+
+
+def save_instrument_nc(ds: xr.Dataset, path: Union[str, Path], label: str) -> bool:
+    """Save instrument Dataset to NetCDF, sanitizing un-serializable attributes.
+
+    Drops SBE raw time auxiliary variables (timeS, timeJ, scan) which are
+    superseded by the time coordinate and trigger an xarray FutureWarning.
+    Cleans None values and datetime objects from variable and dataset attrs
+    before writing.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Instrument Dataset as returned by sl.read() or loaded from NC cache.
+    path : str or Path
+        Output NetCDF file path.
+    label : str
+        Human-readable label for log messages (e.g. ``'SBE 13840 raw'``).
+
+    Returns
+    -------
+    bool
+        True on success, False if an error occurred during write.
     """
     try:
-        out = ds.copy()
-        cleaned = {}
-        for k, v in out.attrs.items():
-            if v is None:
-                continue
-            if isinstance(v, datetime.datetime):
-                cleaned[k] = v.isoformat()
-            else:
-                cleaned[k] = v
-        out.attrs = cleaned
+        vars_to_drop = [v for v in ds.data_vars if v in _SBE_AUX_VARS]
+        out = ds.drop_vars(vars_to_drop)
+        out.attrs = _clean_attrs(out.attrs)
+        for var in list(out.data_vars) + list(out.coords):
+            out[var].attrs = _clean_attrs(out[var].attrs)
         out.to_netcdf(path)
         print(f"  💾 Saved {label} ({len(ds.time)} samples)")
         return True
-    except Exception as _e:
-        print(f"  ⚠️  {label} save failed: {_e}")
+    except (OSError, ValueError) as e:
+        print(f"  ⚠️  {label} save failed: {e}")
         return False
 
 

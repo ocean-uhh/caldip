@@ -366,7 +366,7 @@ def stats(
         for serial, inst_info in instrument_data.items():
             inst_data = inst_info["data"]
             inst_config = inst_info["config"]
-            inst_type = inst_info["type"]
+            _inst_type = inst_info["type"]
 
             # Convert instrument time to numeric
             inst_time_dt = pd.to_datetime(inst_data.time.values)
