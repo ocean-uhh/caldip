@@ -24,7 +24,6 @@ For recommendations or bug reports, please visit https://github.com/ocean-uhh/ca
    :maxdepth: 3
    :caption: Users guide
 
-   demo-output.ipynb
    running
    configuration
    outputs

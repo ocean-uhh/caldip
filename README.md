@@ -34,6 +34,9 @@ caldip plot data/proc_calib/msm142_2026/cal_dip/castM4/
 
 # Generate statistics (use secondary CTD sensor as reference)
 caldip stats data/proc_calib/msm142_2026/cal_dip/castM4/ --ctd-sensor 2
+
+# Build a per-cruise HTML report from the stats output
+caldip report data/proc_calib/msm142_2026/cal_dip/
 ```
 
 ## 📁 Project Structure
@@ -50,13 +53,15 @@ caldip/
 │   ├── sbe_hex_reader.py      # SBE hex format reader
 │   ├── _plot.py               # Plotly implementation (internal)
 │   ├── _writers.py            # Output formatting and NetCDF saving (internal)
+│   ├── report/                # Per-cruise HTML report builder (caldip report)
 │   └── cli/                   # CLI entry points
 │       ├── __init__.py        # `caldip` dispatcher
 │       ├── init.py            # `caldip init` subcommand
 │       ├── ctd.py             # `caldip ctd` subcommand
 │       ├── instrument.py      # `caldip instrument` subcommand
 │       ├── plot.py            # `caldip plot` subcommand
-│       └── stats.py           # `caldip stats` subcommand
+│       ├── stats.py           # `caldip stats` subcommand
+│       └── report.py          # `caldip report` subcommand
 ├── generate_all_caldip_plots.sh  # Batch processing script
 ├── pyproject.toml             # Package configuration
 └── requirements.txt           # Package dependencies
@@ -122,6 +127,13 @@ caldip plot castM4/castM4.caldip.yaml
 
 # Per-bottle-stop statistics
 caldip stats castM4/castM4.caldip.yaml --ctd-sensor 2 -o outputs/
+```
+
+Once a cruise's casts have been processed, build a browsable report of them all:
+
+```bash
+# Per-cruise HTML report (index + per-cast pages) from the stats output
+caldip report data/proc_calib/msm142_2026/cal_dip/
 ```
 
 ### Configuration file
@@ -207,6 +219,7 @@ The bottle stop detection algorithm in `caldip/core.py:find_bottle_stops()`:
 | `caldip instrument <yaml> --serial N` | Save one instrument to `_raw.nc` / `_use.nc` and generate a time-series plot |
 | `caldip plot <yaml>` | Interactive Plotly plot of instruments vs CTD |
 | `caldip stats <yaml>` | Per-bottle-stop statistics; write CSV files |
+| `caldip report <dir>` | Per-cruise HTML report (index + per-cast pages) from stats output |
 
 Both `caldip ctd` and `caldip instrument` accept `--format` to control what outputs are
 produced. Valid values (comma-separated): `nc` and `html`.

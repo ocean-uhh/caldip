@@ -300,15 +300,9 @@ def load_instruments_from_config(
     Returns
     -------
     dict
-        Dictionary with instrument serial numbers as keys and data info as values:
-        {
-            'serial_number': {
-                'data': xr.Dataset,
-                'config': dict,  # instrument config from YAML
-                'type': str,     # file_type
-                'file': str      # full file path
-            }
-        }
+        Instrument serial numbers as keys; each value is a dict with ``data``
+        (``xr.Dataset``), ``config`` (the instrument's YAML config dict),
+        ``type`` (``str``, the file type) and ``file`` (``str``, the full path).
     """
     if data_dir is None:
         data_dir = config.get("directory", ".")
