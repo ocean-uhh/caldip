@@ -1,0 +1,264 @@
+"""Shared HTML building blocks for caldip reports.
+
+Pages use the shared report design system (:mod:`caldip.report._report_css`,
+vendored from oceanarray/ctdcast) so a caldip cast page reads as the same document
+family as a mooring or CTD report. Markup is built with escaped data
+interpolation (no template engine — see the module note in
+:mod:`caldip.report`). The Plotly bundle is written once per report as a sibling
+``plotly.min.js`` (see :func:`write_plotly_bundle`); each cast page references it
+with a relative ``<script src>`` rather than inlining ~5 MB per page.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from html import escape
+from pathlib import Path
+
+import pandas as pd
+from plotly.offline import get_plotlyjs
+
+from caldip.report._figure import FigureFragment
+from caldip.report._report_css import CALDIP_LOCAL_CSS, SHARED_CSS, _JS_TOP_LINKS
+
+#: Filename of the shared Plotly bundle written into the report root.
+PLOTLY_BUNDLE_FILENAME = "plotly.min.js"
+
+#: Container height (px) used when a saved figure carries no explicit pixel height.
+_DEFAULT_FIGURE_HEIGHT_PX = 600
+
+
+def write_plotly_bundle(out_dir: Path) -> Path:
+    """Write the installed plotly.js bundle once into the report root.
+
+    Parameters
+    ----------
+    out_dir : pathlib.Path
+        Report root directory; must already exist.
+
+    Returns
+    -------
+    pathlib.Path
+        Path to the written bundle file.
+    """
+    bundle_path = out_dir / PLOTLY_BUNDLE_FILENAME
+    bundle_path.write_text(get_plotlyjs(), encoding="utf-8")
+    return bundle_path
+
+
+def page(title: str, body: str, *, plotly_src: str | None = None) -> str:
+    """Wrap body HTML in a complete document styled with the shared design system.
+
+    Parameters
+    ----------
+    title : str
+        Document title (escaped).
+    body : str
+        Inner HTML for the ``<body>``; caller is responsible for escaping any
+        data interpolated into it.
+    plotly_src : str or None, optional
+        Relative href to the shared ``plotly.min.js``. If given, a
+        ``<script src>`` referencing it is added to the head so embedded figures
+        render. ``None`` for pages without figures.
+
+    Returns
+    -------
+    str
+        A full HTML document.
+    """
+    bundle = f"<script src='{escape(plotly_src)}'></script>\n" if plotly_src else ""
+    return (
+        "<!DOCTYPE html>\n<html lang='en'>\n<head>\n"
+        "<meta charset='utf-8'>\n"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>\n"
+        f"<title>{escape(title)}</title>\n"
+        f"<style>\n{SHARED_CSS}{CALDIP_LOCAL_CSS}</style>\n{bundle}"
+        f"</head>\n<body id='top'>\n{body}\n{_JS_TOP_LINKS}</body>\n</html>\n"
+    )
+
+
+def masthead(title: str, *, type_label: str, sub: str | None = None) -> str:
+    """Return the shared masthead block with the caldip wordmark.
+
+    Parameters
+    ----------
+    title : str
+        Main heading (escaped).
+    type_label : str
+        Short label shown at top-right of the masthead (escaped), e.g. the cruise
+        name or ``"cast"``.
+    sub : str or None, optional
+        Optional sub-line under the title (escaped).
+
+    Returns
+    -------
+    str
+        The ``<div class='masthead'>`` block.
+    """
+    sub_html = f"<p class='sub'>{escape(sub)}</p>" if sub else ""
+    return (
+        "<div class='masthead'>\n"
+        "<div class='masthead-header'>"
+        f"<h1>{escape(title)}</h1>"
+        f"<div class='masthead-type'>{escape(type_label)}</div>"
+        "</div>\n"
+        f"{sub_html}"
+        "<a class='wordmark' href='https://github.com/ocean-uhh/caldip'>caldip</a>\n"
+        "</div>"
+    )
+
+
+#: Header labels for caldip stats CSV columns: csv name -> (symbol, second line).
+#: The symbol is trusted HTML (``<sub>``, math glyphs); the second line carries the
+#: unit (or a qualifier), narrowing the table and giving the units a home. Unknown
+#: columns fall back to their raw (escaped) name. ``⟨…⟩`` denotes a mean.
+_COLUMN_LABELS: dict[str, tuple[str, str]] = {
+    "serial": ("S/N", ""),
+    "instrument_type": ("type", ""),
+    "label": ("label", ""),
+    "date": ("date", ""),
+    "time_start": ("t<sub>start</sub>", ""),
+    "time_end": ("t<sub>end</sub>", ""),
+    "N": ("N", ""),
+    "n_samples": ("N", "samples"),
+    "ctd_sensor_used": ("CTD sensor", ""),
+    "bl_press": ("P<sub>bl</sub>", "dbar"),
+    # per-stop values (detailed CSV)
+    "temp_diff": ("ΔT", "°C"),
+    "temp_std": ("σ<sub>T</sub>", "°C"),
+    "cond_diff": ("ΔC", "mS/cm"),
+    "cond_std": ("σ<sub>C</sub>", "mS/cm"),
+    "press_diff": ("ΔP", "dbar"),
+    "press_std": ("σ<sub>P</sub>", "dbar"),
+    "temp_status": ("T status", ""),
+    "cond_status": ("C status", ""),
+    "press_status": ("P status", ""),
+    "ctd_temp": ("T<sub>CTD</sub>", "°C"),
+    "ctd_cond": ("C<sub>CTD</sub>", "mS/cm"),
+    "inst_temp": ("T<sub>inst</sub>", "°C"),
+    "inst_cond": ("C<sub>inst</sub>", "mS/cm"),
+    "inst_press": ("P<sub>inst</sub>", "dbar"),
+    # cross-stop means (summary CSV)
+    "temp_diff_mean": ("⟨ΔT⟩", "°C"),
+    "temp_diff_std": ("σ<sub>T</sub>", "°C"),
+    "cond_diff_mean": ("⟨ΔC⟩", "mS/cm"),
+    "cond_diff_std": ("σ<sub>C</sub>", "mS/cm"),
+    "press_diff_mean": ("⟨ΔP⟩", "dbar"),
+    "press_diff_std": ("σ<sub>P</sub>", "dbar"),
+}
+
+#: Columns rendered right-aligned with tabular figures (``.num``).
+_NUMERIC_COLUMNS: frozenset[str] = frozenset(
+    {
+        "N",
+        "n_samples",
+        "ctd_sensor_used",
+        "bl_press",
+        "temp_diff",
+        "temp_std",
+        "cond_diff",
+        "cond_std",
+        "press_diff",
+        "press_std",
+        "ctd_temp",
+        "ctd_cond",
+        "inst_temp",
+        "inst_cond",
+        "inst_press",
+        "temp_diff_mean",
+        "temp_diff_std",
+        "cond_diff_mean",
+        "cond_diff_std",
+        "press_diff_mean",
+        "press_diff_std",
+    }
+)
+
+#: Identifier columns shown in monospace, left-aligned (numeric but not a measure).
+_IDENTIFIER_COLUMNS: frozenset[str] = frozenset({"serial"})
+
+
+def _header_cell(column: str) -> str:
+    """Return the ``<th>`` for one column, with symbol label and unit second line."""
+    symbol, second = _COLUMN_LABELS.get(column, (escape(str(column)), ""))
+    cls = " class='num'" if column in _NUMERIC_COLUMNS else ""
+    unit = f"<br><span class='unit'>{second}</span>" if second else ""
+    return f"<th{cls}>{symbol}{unit}</th>"
+
+
+def _data_cell(column: str, value: object) -> str:
+    """Return the ``<td>`` for one value, escaped, with alignment classes."""
+    classes = []
+    if column in _NUMERIC_COLUMNS:
+        classes.append("num")
+    if column in _IDENTIFIER_COLUMNS:
+        classes.append("mono")
+    cls = f" class='{' '.join(classes)}'" if classes else ""
+    text = "" if value is None else escape(str(value))
+    return f"<td{cls}>{text}</td>"
+
+
+def dataframe_to_table(
+    df: pd.DataFrame,
+    *,
+    row_class: Callable[[pd.Series], str | None] | None = None,
+) -> str:
+    """Render a stats DataFrame as an HTML table with normalised symbol headers.
+
+    Columns are relabelled to compact symbols (``ΔT``, ``σ``\\ :sub:`C`,
+    ``⟨ΔP⟩`` …) with the unit on a second header line, numeric columns are
+    right-aligned, and data cells are escaped. Pass the frame read as strings
+    (``dtype=str``) so values render exactly as caldip wrote them.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The table to render (ideally read with ``dtype=str``).
+    row_class : callable, optional
+        Called with each row (a ``pandas.Series``); the returned class string is
+        put on that row's ``<tr>`` (used to shade over-threshold rows amber).
+
+    Returns
+    -------
+    str
+        An HTML ``<table>`` styled by the shared stylesheet.
+    """
+    columns = list(df.columns)
+    header = "".join(_header_cell(c) for c in columns)
+    rows = []
+    for _, row in df.iterrows():
+        cls = row_class(row) if row_class is not None else None
+        tr = f"<tr class='{cls}'>" if cls else "<tr>"
+        rows.append(tr + "".join(_data_cell(c, row[c]) for c in columns) + "</tr>")
+    return (
+        "<table>\n<thead><tr>"
+        f"{header}</tr></thead>\n<tbody>\n"
+        f"{chr(10).join(rows)}\n</tbody>\n</table>"
+    )
+
+
+def figure_block(fragment: FigureFragment | None, *, fallback_href: str | None) -> str:
+    """Return the HTML block for a cast's figure, or a graceful fallback.
+
+    Parameters
+    ----------
+    fragment : FigureFragment or None
+        The extracted figure fragment, or ``None`` if it could not be lifted.
+    fallback_href : str or None
+        Relative href to the saved plot file, shown as a link when the fragment
+        is unavailable. ``None`` if no saved plot exists at all.
+
+    Returns
+    -------
+    str
+        A figure ``<div>`` wrapped to a fixed height, or a warning note.
+    """
+    if fragment is not None:
+        height = fragment.height_px or _DEFAULT_FIGURE_HEIGHT_PX
+        return (
+            f"<div class='figure-wrap' style='height:{height}px'>{fragment.html}</div>"
+        )
+    if fallback_href is not None:
+        link = f"<a href='{escape(fallback_href)}'>open the saved plot</a>"
+        return f"<p class='warn'>Figure could not be embedded; {link}.</p>"
+    return "<p class='warn'>No saved plot found for this cast.</p>"

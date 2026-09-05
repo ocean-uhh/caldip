@@ -179,6 +179,10 @@ temp/
 !docs/source/_static/*_statistics.csv
 !docs/source/_static/*_detailed_statistics.csv
 
+# exceptions for committed test fixtures (real caldip output used by the suite)
+!tests/test_fixtures/report/*_statistics.csv
+!tests/test_fixtures/report/*_detailed_statistics.csv
+
 # one-off cruise diagnostic scripts
 check_serial_mapping.py
 check_tr1050_timestamps.py

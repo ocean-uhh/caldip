@@ -1,0 +1,2 @@
+serial,instrument_type,bl_press,temp_diff,temp_std,cond_diff,cond_std,press_diff,press_std,temp_status,cond_status,press_status,date,time_start,time_end,ctd_temp,ctd_cond,inst_temp,inst_cond,inst_press,N,label
+101657,rbr,1010,0.0119,0.00067,,,,,T reads high by 0.012,C NO DATA,P NO DATA,2026-04-02,15:42:00,15:44:00,3.76312,32.67732,3.77498,,,121,RBRsolo T
