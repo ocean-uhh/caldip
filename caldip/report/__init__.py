@@ -32,6 +32,28 @@ __all__ = ["build_report"]
 _CAST_SUBDIR = "casts"
 
 
+def _rel_href(target: Path, start: Path) -> str:
+    """Return a relative href from ``start`` to ``target`` with forward slashes.
+
+    ``os.path.relpath`` uses the OS separator (backslash on Windows), which is
+    wrong for an HTML ``href``; this normalises to POSIX separators so the report
+    links work on every platform.
+
+    Parameters
+    ----------
+    target : pathlib.Path
+        The file being linked to.
+    start : pathlib.Path
+        The directory the link is written from.
+
+    Returns
+    -------
+    str
+        The relative path using ``/`` separators.
+    """
+    return Path(os.path.relpath(target, start)).as_posix()
+
+
 def _infer_cruise_name(results_dir: Path) -> str | None:
     """Return a cruise label only for the case the path justifies, else None.
 
@@ -139,12 +161,12 @@ def build_report(
         cruise_name = _resolve_cruise_name(results_dir, summaries)
 
     write_plotly_bundle(out_dir)
-    plotly_src = os.path.relpath(out_dir / PLOTLY_BUNDLE_FILENAME, cast_dir)
+    plotly_src = _rel_href(out_dir / PLOTLY_BUNDLE_FILENAME, cast_dir)
 
     for summary in summaries:
         fallback_href = None
         if summary.plot_path is not None:
-            fallback_href = os.path.relpath(summary.plot_path, cast_dir)
+            fallback_href = _rel_href(summary.plot_path, cast_dir)
         html = build_cast_page_html(
             summary, fallback_href=fallback_href, plotly_src=plotly_src
         )
