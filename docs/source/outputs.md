@@ -1,6 +1,6 @@
 # Outputs
 
-Running caldip on a cast produces two types of output: an **interactive plot** and **statistics CSV files**.
+Running caldip on a cast produces two types of output: an **interactive plot** and **statistics CSV files**. A third command, `caldip report`, gathers those per-cast outputs for a whole cruise into a browsable HTML report (see below and [Running caldip](running.md)).
 
 ---
 
@@ -134,3 +134,13 @@ bash generate_all_caldip_plots.sh
 ```
 
 The script uses `caldip plot` and `caldip stats`. Edit the `CTD_SENSOR` variable at the top to switch between primary (1) and secondary (2) sensors for the whole cruise in one step.
+
+---
+
+## Per-cruise report
+
+Once a cruise's casts have their CSVs and plots, `caldip report <dir>` builds a self-contained HTML report from them — an index of casts and one page per cast with the interactive figure, a bottle-stops table, the deepest-stop summary and the per-stop detail. It reads only the files already on disk; see [Running caldip](running.md) for details and options.
+
+```bash
+caldip report data/proc_calib/msm142_2026/cal_dip/
+```

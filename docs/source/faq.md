@@ -2,7 +2,7 @@ FAQ / Troubleshooting
 ======================
 
 
-#### I get an error when doing `from caldip import readers`
+## I get an error when doing `from caldip import readers`
 
 This is because your code can't find the project `caldip`.
 
@@ -29,7 +29,7 @@ sys.path.append('/Users/eddifying/github/caldip')
 ```
 before the line where you try `from caldip import readers`.
 
-#### Failing to install the package in a Github Action
+## Failing to install the package in a Github Action
 
 ```
 × Getting requirements to build editable did not run successfully.
@@ -49,7 +49,7 @@ pip install -e .
 
 Then check and troubleshoot any errors.  When this runs, you are probably ready to try it with the GitHub Actions (where the workflows are in your repository in `.github/workflows/*.yml`)
 
-#### What's the difference between the repository name and the python package name??
+## What's the difference between the repository name and the python package name??
 
 Here, they are both called caldip, but the outer folder caldip/ is the repository, while the inner folder `caldip/caldip/` contains the package modules (e.g. readers.py).
 

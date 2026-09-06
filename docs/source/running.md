@@ -1,15 +1,16 @@
 # Running caldip
 
-## The two main commands
+## The main commands
 
-caldip has two subcommands that operate on the same YAML configuration file but produce different outputs.
+`caldip plot` and `caldip stats` operate on the same YAML configuration file but produce different outputs. `caldip report` gathers their outputs for a whole cruise into a browsable HTML report.
 
 | Command | Output | Use for |
 |---------|--------|---------|
 | `caldip plot` | Interactive HTML plot | Visual inspection, QC at sea |
 | `caldip stats` | Summary + detailed statistics CSVs | Quantitative calibration offsets |
+| `caldip report` | Per-cruise HTML report (index + per-cast pages) | Reviewing a whole cruise at once |
 
-Both accept either a path to the YAML file or the cast directory (caldip will find the YAML automatically).
+`plot` and `stats` accept either a path to the YAML file or the cast directory (caldip will find the YAML automatically). `report` takes the directory the CSVs and plots were written to.
 
 ---
 
@@ -99,6 +100,36 @@ CTD rosettes typically carry two independent sensor packages. Use `--ctd-sensor 
 > **Gotcha — threshold/duration consistency:** If you change `--threshold` or `--min-duration` from the defaults, apply the same values to both `caldip plot` and `caldip stats`. Otherwise the bottle stops shown in the plot will not match those used to compute the statistics.
 
 > **Gotcha — rerunning after CTD reprocessing:** If the CTD `.cnv` file is updated (spike removal, pressure drift correction, conductivity slope corrections, sensor swap), regenerate all `caldip stats` outputs for that cast. 
+
+---
+
+## caldip report
+
+```
+caldip report <results_dir> [options]
+```
+
+`caldip report` reads the CSVs and saved plots that `caldip stats` and `caldip plot` already wrote for a cruise, and builds a browsable HTML report: a per-cruise index listing every cast, and one page per cast with its summary table, per-stop detail, and the interactive figure. It reads only files already on disk — no reprocessing, no access to the raw instrument data needed.
+
+`results_dir` is the directory those outputs were written to (the cruise `cal_dip/` folder by default, or wherever `-o` sent them).
+
+| Option | Meaning |
+|--------|---------|
+| `--output-dir DIR`, `-o DIR` | Where to write the report (default: `<results_dir>/report`) |
+| `--cruise NAME` | Cruise label for the index heading (default: inferred from the path) |
+
+```
+caldip report data/proc_calib/odb_2026/cal_dip/
+caldip report outputs/ --cruise msm142_2026 -o reports/msm142_2026
+```
+
+The report is a self-contained folder: `index.html`, a `casts/` subfolder of per-cast pages, and one shared `plotly.min.js`. Open `index.html` in a browser; it works offline. It is a folder rather than single files because the figures are interactive Plotly sharing one bundle — which also means there is no print/PDF version: a headless renderer will not run the figure script, so a printed cast page has no figure. If PDF is ever needed, the figures would have to be saved as static images alongside the interactive ones.
+
+**Index findings.** The index's "Flagged by caldip" column counts *instruments* (not stops) that caldip marked as reading high or low, using its configured thresholds — it is not an absolute pass/fail. Variables an instrument does not measure (for example conductivity on a temperature-only RBRsolo) are not counted as flags. If a directory mixes casts from more than one cruise, a Cruise column appears (the cruise is read from the CSVs when present, otherwise the report is labelled `UNK`).
+
+**Cast pages.** Each cast page shows the interactive figure, a bottle-stops table (pressure and the comparison-period times, deepest first), the deepest-stop summary, and the full per-stop detail. Table headers use compact symbols with units on a second line (`ΔT` °C, `σ`​`C` mS/cm, `⟨ΔP⟩` dbar, …); `Δ` is instrument − CTD. Per-stop rows caldip flagged as out of tolerance are shaded amber.
+
+> **Gotcha — regenerate plots after upgrading plotly:** the report reuses the figure saved in each `{cast}_plot.html`, but loads the Plotly library once at report level from the installed version. If a saved plot was made with a different Plotly version, `caldip report` warns and that figure may render blank; re-run `caldip plot` for the affected cast.
 
 ---
 

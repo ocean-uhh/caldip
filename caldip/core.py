@@ -1,16 +1,10 @@
-"""
-Functional CalDip Processing Module
+"""Functional calibration-dip processing using xarray and numpy.
 
-This module provides simple functions for calibration dip processing using
-xarray and numpy.
+Primary functions:
 
-Currently Used Functions:
-- find_bottle_stops() -> List[Dict]
-  Detect bottle stops from CTD pressure data (primary algorithm)
-- stats_for_time_period() -> Dict
-  Calculate statistics for any dataset within a specified time period
-- stats() -> pd.DataFrame
-  Calculate statistics for each bottle stop and each instrument (any type)
+- ``find_bottle_stops()`` -> list of dict: detect bottle stops from CTD pressure data.
+- ``stats_for_time_period()`` -> dict: statistics for a dataset within a time period.
+- ``stats()`` -> pandas.DataFrame: statistics for each bottle stop and instrument.
 """
 
 import numpy as np

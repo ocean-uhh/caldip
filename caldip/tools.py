@@ -1,18 +1,12 @@
-"""
-Shared utility functions for caldip processing.
+"""Shared, general-purpose utilities used across the caldip package.
 
-This module contains general-purpose utilities used across multiple
-modules in the caldip package.
+Primary functions:
 
-Currently Used Functions:
-- to_xarray() -> xr.Dataset
-  Convert seabirdscientific objects to xarray Datasets
-- trim_to_deployment() -> tuple
-  Trim instrument and reference data to deployment/recovery times
-- summary_stats() -> pd.DataFrame
-  Extract summary statistics from detailed bottle stop statistics
+- ``to_xarray()`` -> xarray.Dataset: convert seabirdscientific objects to xarray Datasets.
+- ``trim_to_deployment()`` -> tuple: trim instrument and reference data to deployment/recovery times.
+- ``summary_stats()`` -> pandas.DataFrame: extract summary statistics from detailed bottle-stop statistics.
 
-These functions are used by caldip.readers, caldip.core, and the CLI entry points in caldip.cli.
+Used by ``caldip.readers``, ``caldip.core``, and the CLI entry points in ``caldip.cli``.
 """
 
 import numpy as np
