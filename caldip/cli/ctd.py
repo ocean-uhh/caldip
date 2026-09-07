@@ -351,7 +351,7 @@ def run(args):
             save_ds = ds_processed.copy()
             save_ds.attrs = {k: v for k, v in save_ds.attrs.items() if v is not None}
             save_ds.attrs["ctd_sensor"] = ctd_sensor
-            save_ds.to_netcdf(nc_path)
+            save_ds.to_netcdf(nc_path, engine="netcdf4")
             print(f"  Saved: {nc_path}")
         except Exception as e:
             print(f"  Failed to save NetCDF: {e}")

@@ -273,3 +273,69 @@ def test_prose_rendered_from_authoritative_diff(tmp_path):
     assert exported["temp_status"].iloc[0] == core._format_status(full, 0.005, "T")
     assert exported["date"].iloc[0] == "2024-01-01"
     assert exported["time_start"].iloc[0] == "12:00:00"
+
+
+def test_export_applies_per_variable_precision(tmp_path):
+    """The CSV export rounds each variable to its per-variable precision.
+
+    Temperature and conductivity (diffs and values) to 4 dp; pressure to
+    0.1 dbar; each standard deviation one place finer than its value (T/C -> 5,
+    P -> 2). The netCDF itself keeps full precision; only the CSV is rounded.
+    """
+    from caldip import core
+
+    start = pd.Timestamp("2024-01-01 12:00:00")
+    df = pd.DataFrame(
+        {
+            "serial": ["S1"],
+            "instrument_type": ["microcat"],
+            "bl_press": [1000],
+            "stop": [1],
+            "time": [start],
+            "t_start": [start],
+            "t_end": [start + pd.Timedelta(minutes=2)],
+            "temp_diff": [0.0123456],
+            "temp_std": [0.0011111],
+            "cond_diff": [0.0234567],
+            "cond_std": [0.0022222],
+            "press_diff": [1.23456],
+            "press_std": [0.98765],
+            "ctd_temp": [5.1234567],
+            "ctd_cond": [32.7654321],
+            "ctd_press": [1000.0],
+            "inst_temp": [5.1357913],
+            "inst_cond": [32.7890123],
+            "inst_press": [1001.98765],
+            "N": [100],
+            "label": ["x"],
+            "temp_flag": [1],
+            "cond_flag": [1],
+            "press_flag": [1],
+            "date": ["2024-01-01"],
+            "time_start": ["12:00:00"],
+            "time_end": ["12:02:00"],
+        }
+    )
+    out = writers.write_stats_netcdf(
+        df, _CONFIG, tmp_path / "castX_caldip.nc", thresholds=_THRESHOLDS
+    )
+    with xr.open_dataset(out, engine="netcdf4") as ds:
+        row = writers.stats_dataset_to_frame(ds).iloc[0]
+
+    # Temperature and conductivity to 4 dp.
+    assert row["temp_diff"] == pytest.approx(0.0123)
+    assert row["ctd_temp"] == pytest.approx(5.1235)
+    assert row["inst_temp"] == pytest.approx(5.1358)
+    assert row["cond_diff"] == pytest.approx(0.0235)
+    assert row["ctd_cond"] == pytest.approx(32.7654)
+    # Pressure to 0.1 dbar.
+    assert row["press_diff"] == pytest.approx(1.2)
+    assert row["inst_press"] == pytest.approx(1002.0)
+    # Standard deviation one place finer than its value.
+    assert row["temp_std"] == pytest.approx(0.00111)
+    assert row["cond_std"] == pytest.approx(0.00222)
+    assert row["press_std"] == pytest.approx(0.99)
+
+    # The pressure status string reads to 0.1 dbar, not 3 dp.
+    assert core._format_status(1.23456, 0.5, "P") == "P reads high by 1.2"
+    assert core._format_status(0.0123456, 0.005, "T") == "T reads high by 0.012"

@@ -43,6 +43,10 @@ those changes are listed under **Breaking changes**).
 - `{cast}_summary_statistics.csv` values may differ from earlier output in the last
   decimal place for boundary cases: the summary is now rounded once from the
   full-precision differences rather than from already-rounded detailed values.
+- The detailed-CSV export now rounds per variable: temperature and conductivity
+  (differences and values) to 4 dp, pressure to 0.1 dbar, and each standard
+  deviation one place finer than its value; the `"P reads high/low by X"` status
+  reads to 0.1 dbar. The netCDF keeps full precision — only the CSV is rounded.
 
 ### Breaking changes
 

@@ -91,7 +91,7 @@ RBR thermistors (temperature-only) leave the conductivity and pressure columns e
 
 ### Detailed statistics (`{cast}_detailed_statistics.csv`)
 
-A CSV **export of the netCDF**, for reading and for the report tables — not a separate source of truth. One row per instrument per bottle stop. The `*_status` prose is rendered from the netCDF's difference and flag threshold at export time (so it never disagrees with the flag), and absent values are **empty cells** (the netCDF holds `NaN`). Columns:
+A CSV **export of the netCDF**, for reading and for the report tables — not a separate source of truth. One row per instrument per bottle stop. The `*_status` prose is rendered from the netCDF's difference and flag threshold at export time (so it never disagrees with the flag), and absent values are **empty cells** (the netCDF holds `NaN`). Values are rounded per variable for reading — temperature and conductivity to 4 decimal places, pressure to 0.1 dbar, and each standard deviation one place finer than its value; the netCDF itself keeps full precision. Columns:
 
 | Column | Description |
 |--------|-------------|
