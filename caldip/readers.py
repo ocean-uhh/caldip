@@ -352,14 +352,14 @@ def load_instruments_from_config(
 
             # Priority: _use.nc → _raw.nc (if newer than source) → source
             if nc_use.exists():
-                dataset = xr.open_dataset(nc_use)
+                dataset = xr.open_dataset(nc_use, engine="netcdf4")
                 print(f"  📦 Loaded from _use.nc ({len(dataset.time)} samples)")
             elif (
                 nc_raw.exists()
                 and file_path.exists()
                 and nc_raw.stat().st_mtime > file_path.stat().st_mtime
             ):
-                dataset = xr.open_dataset(nc_raw)
+                dataset = xr.open_dataset(nc_raw, engine="netcdf4")
                 print(f"  📦 Loaded from _raw.nc ({len(dataset.time)} samples)")
                 # Create _use.nc from _raw.nc if not yet present
                 _trim_and_save_use(dataset)
@@ -472,7 +472,7 @@ def load_reference_data(
 
         try:
             if nc_path.exists():
-                dataset = xr.open_dataset(nc_path)
+                dataset = xr.open_dataset(nc_path, engine="netcdf4")
                 cached_sensor = int(dataset.attrs.get("ctd_sensor", 1))
                 if cached_sensor != requested_sensor:
                     raise ValueError(

@@ -257,6 +257,82 @@ def _format_status(diff: float, threshold: float, var_name: str) -> str:
         return f"{var_name} reads low by {abs(diff):.3f}"
 
 
+def resolve_quality_thresholds(
+    config: Dict,
+    temp_threshold: Optional[float] = None,
+    cond_threshold: Optional[float] = None,
+    press_threshold: Optional[float] = None,
+) -> Dict[str, float]:
+    """Return the per-variable quality-flag thresholds for a cast.
+
+    Precedence per variable: an explicit argument, then the cast YAML's
+    ``quality_flags`` mapping, then the built-in default in
+    :mod:`caldip.config.parameters`. Shared by :func:`stats` and the netCDF
+    writer so the flag variable's threshold attribute matches the value used to
+    set the flag.
+
+    Parameters
+    ----------
+    config : dict
+        Cast configuration; may carry a ``quality_flags`` mapping.
+    temp_threshold, cond_threshold, press_threshold : float or None
+        Explicit overrides; ``None`` falls through to YAML then default.
+
+    Returns
+    -------
+    dict
+        Mapping ``{"temp": float, "cond": float, "press": float}`` in
+        ``degree_C`` / ``mS cm-1`` / ``dbar``.
+    """
+    yaml_flags = config.get("quality_flags", {})
+    if temp_threshold is None:
+        temp_threshold = yaml_flags.get("temp_threshold", params.QUALITY_TEMP_THRESHOLD)
+    if cond_threshold is None:
+        cond_threshold = yaml_flags.get("cond_threshold", params.QUALITY_COND_THRESHOLD)
+    if press_threshold is None:
+        press_threshold = yaml_flags.get(
+            "press_threshold", params.QUALITY_PRESS_THRESHOLD
+        )
+    return {
+        "temp": temp_threshold,
+        "cond": cond_threshold,
+        "press": press_threshold,
+    }
+
+
+def _usability_flag(diff: float, threshold: float, has_sensor: bool) -> int:
+    """Return the machine-readable usability flag for one variable difference.
+
+    The numeric counterpart of :func:`_format_status`, drawn from the closed set
+    in :mod:`caldip.config.parameters` and written to the netCDF as a CF flag
+    variable. A ``NaN`` difference is ``missing`` when the instrument carries no
+    such sensor and ``no_data`` when it does but the comparison window held none.
+
+    Parameters
+    ----------
+    diff : float
+        Instrument-minus-CTD difference for the variable.
+    threshold : float
+        Absolute difference at or below which the variable is ``ok``.
+    has_sensor : bool
+        Whether the instrument measures this variable at all.
+
+    Returns
+    -------
+    int
+        One of the ``USABILITY_FLAG_*`` values (ok / no_data / flagged / missing).
+    """
+    if np.isnan(diff):
+        return (
+            params.USABILITY_FLAG_NO_DATA
+            if has_sensor
+            else params.USABILITY_FLAG_MISSING
+        )
+    if abs(diff) <= threshold:
+        return params.USABILITY_FLAG_OK
+    return params.USABILITY_FLAG_FLAGGED
+
+
 def stats(
     instrument_data: Dict,
     reference_data: Dict,
@@ -279,14 +355,15 @@ def stats(
     arguments take precedence over YAML values, which in turn override the
     built-in defaults (±0.005 °C, ±0.02 mS/cm, ±5 dbar).
     """
-    # Precedence: explicit arg > YAML quality_flags > built-in default
-    yaml_flags = config.get("quality_flags", {})
-    if temp_threshold is None:
-        temp_threshold = yaml_flags.get("temp_threshold", 0.005)
-    if cond_threshold is None:
-        cond_threshold = yaml_flags.get("cond_threshold", 0.02)
-    if press_threshold is None:
-        press_threshold = yaml_flags.get("press_threshold", 5.0)
+    thresholds = resolve_quality_thresholds(
+        config,
+        temp_threshold=temp_threshold,
+        cond_threshold=cond_threshold,
+        press_threshold=press_threshold,
+    )
+    temp_threshold = thresholds["temp"]
+    cond_threshold = thresholds["cond"]
+    press_threshold = thresholds["press"]
     # Get the first (and likely only) reference dataset
     if not reference_data:
         print("No reference data available!")
@@ -383,9 +460,11 @@ def stats(
             # Temperature
             inst_temp = np.nan
             inst_temp_std = np.nan
+            has_temp_var = False
             temp_vars = ["tv290C", "temperature", "temp", "TEMP"]
             for var in temp_vars:
                 if var in inst_data.data_vars:
+                    has_temp_var = True
                     inst_temp_values = inst_data[var].values[inst_comp_mask]
                     inst_temp = np.nanmean(inst_temp_values)
                     inst_temp_std = np.nanstd(inst_temp_values)
@@ -394,9 +473,11 @@ def stats(
             # Conductivity (only if instrument has it)
             inst_cond = np.nan
             inst_cond_std = np.nan
+            has_cond_var = False
             cond_vars = ["cond0mS/cm", "conductivity", "cond", "COND"]
             for var in cond_vars:
                 if var in inst_data.data_vars:
+                    has_cond_var = True
                     inst_cond_values = inst_data[var].values[inst_comp_mask]
                     # Only use if not all NaN
                     if not np.all(np.isnan(inst_cond_values)):
@@ -407,9 +488,11 @@ def stats(
             # Pressure (only if instrument has it)
             inst_press = np.nan
             inst_press_std = np.nan
+            has_press_var = False
             press_vars = ["prdM", "pressure", "press", "PRES"]
             for var in press_vars:
                 if var in inst_data.data_vars:
+                    has_press_var = True
                     inst_press_values = inst_data[var].values[inst_comp_mask]
                     inst_press = np.nanmean(inst_press_values)
                     inst_press_std = np.nanstd(inst_press_values)
@@ -430,36 +513,54 @@ def stats(
             cond_status = _format_status(cond_diff, cond_threshold, "C")
             press_status = _format_status(press_diff, press_threshold, "P")
 
-            # Extract date and time components
+            # Machine-readable counterpart of the status strings. has_sensor is
+            # whether the *instrument* carries the sensor: a present sensor with a
+            # NaN diff (e.g. the CTD reference lacks conductivity) is no_data, not
+            # missing, so pass has_cond_var, not "has it and the CTD had it too".
+            temp_flag = _usability_flag(temp_diff, temp_threshold, has_temp_var)
+            cond_flag = _usability_flag(cond_diff, cond_threshold, has_cond_var)
+            press_flag = _usability_flag(press_diff, press_threshold, has_press_var)
+
+            # Date/time strings for the CSV export; the netCDF carries real
+            # timestamps (mid-window ``time`` plus the window bounds).
             date_part = comp_start.strftime("%Y-%m-%d")
             time_start = comp_start.strftime("%H:%M:%S")
             time_end = comp_end.strftime("%H:%M:%S")
+            time_mid = comp_start + (comp_end - comp_start) / 2
 
             results.append(
                 {
                     "serial": serial,
                     "instrument_type": inst_config.get("instrument", "unknown"),
                     "bl_press": round(stop["pressure"]),
-                    "temp_diff": (
-                        round(temp_diff, 4) if not np.isnan(temp_diff) else np.nan
-                    ),
+                    # 1-based bottle-stop index; the writer pivots on it to build
+                    # the (instrument, stop) grid. Order is not load-bearing.
+                    "stop": stop_num,
+                    # Full-precision authoritative differences; the CSV export
+                    # rounds them for display, and the prose status is rendered
+                    # from these same values, so the two never drift.
+                    "temp_diff": temp_diff,
                     "temp_std": inst_temp_std,
-                    "cond_diff": (
-                        round(cond_diff, 4) if not np.isnan(cond_diff) else np.nan
-                    ),
+                    "cond_diff": cond_diff,
                     "cond_std": inst_cond_std,
-                    "press_diff": (
-                        round(press_diff, 1) if not np.isnan(press_diff) else np.nan
-                    ),
+                    "press_diff": press_diff,
                     "press_std": inst_press_std,
                     "temp_status": temp_status,
                     "cond_status": cond_status,
                     "press_status": press_status,
+                    "temp_flag": temp_flag,
+                    "cond_flag": cond_flag,
+                    "press_flag": press_flag,
                     "date": date_part,
                     "time_start": time_start,
                     "time_end": time_end,
+                    # Real timestamps for the netCDF time coordinate and bounds.
+                    "time": time_mid,
+                    "t_start": comp_start,
+                    "t_end": comp_end,
                     "ctd_temp": ctd_temp_comp,
                     "ctd_cond": ctd_cond_comp,
+                    "ctd_press": ctd_press_comp,
                     "inst_temp": inst_temp,
                     "inst_cond": inst_cond,
                     "inst_press": inst_press,

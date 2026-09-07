@@ -288,6 +288,78 @@ def test_format_status_reads_high():
     assert df.iloc[0]["temp_status"].startswith("T reads high")
 
 
+def test_stats_emits_ctd_press_and_usability_flags():
+    """stats() emits ctd_press and numeric flags: flagged temperature, missing conductivity."""
+    times = pd.date_range("2024-01-01 12:00:00", periods=1000, freq="1s")
+    pressure = np.concatenate(
+        [np.linspace(0, 90, 400), np.full(200, 100), np.linspace(100, 0, 400)]
+    )
+    # Temperature-only logger reading well above CTD: temp flagged, no conductivity sensor.
+    instruments = {
+        "S001": {
+            "data": xr.Dataset(
+                {"temperature": ("time", np.full(1000, 15.10))},
+                coords={"time": times},
+            ),
+            "config": {"instrument": "rbr", "label": "Test"},
+            "type": "rbr",
+        }
+    }
+    reference_data = {
+        "ctd": {
+            "data": xr.Dataset(
+                {
+                    "pressure": ("time", pressure),
+                    "temperature": ("time", np.full(1000, 15.00)),
+                    "conductivity": ("time", np.full(1000, 34.5)),
+                },
+                coords={"time": times},
+            ),
+            "config": {},
+        }
+    }
+    row = cf.stats(instruments, reference_data, {"name": "test"}).iloc[0]
+    assert row["ctd_press"] == pytest.approx(100, abs=2)
+    assert row["temp_flag"] == 3  # flagged: reads high beyond threshold
+    assert row["cond_flag"] == 4  # missing: RBR has no conductivity sensor
+    assert row["press_flag"] == 4  # missing: RBR has no pressure sensor
+
+
+def test_cond_flag_is_no_data_when_ctd_lacks_conductivity():
+    """An instrument with a conductivity sensor but no CTD reference is no_data, not missing."""
+    times = pd.date_range("2024-01-01 12:00:00", periods=1000, freq="1s")
+    pressure = np.concatenate(
+        [np.linspace(0, 90, 400), np.full(200, 100), np.linspace(100, 0, 400)]
+    )
+    instruments = {
+        "S001": {
+            "data": xr.Dataset(
+                {
+                    "temperature": ("time", np.full(1000, 15.0)),
+                    "conductivity": ("time", np.full(1000, 35.0)),
+                },
+                coords={"time": times},
+            ),
+            "config": {"instrument": "sbe37", "label": "Test"},
+            "type": "sbe37",
+        }
+    }
+    reference_data = {
+        "ctd": {
+            "data": xr.Dataset(
+                {
+                    "pressure": ("time", pressure),
+                    "temperature": ("time", np.full(1000, 15.0)),
+                },  # CTD reference has no conductivity
+                coords={"time": times},
+            ),
+            "config": {},
+        }
+    }
+    row = cf.stats(instruments, reference_data, {"name": "test"}).iloc[0]
+    assert row["cond_flag"] == 2  # no_data: sensor present, CTD reference absent
+
+
 def test_stats_with_canonical_variable_names():
     """stats() works when reference data uses canonical variable names."""
     times = pd.date_range("2024-01-01 12:00:00", periods=1000, freq="1s")

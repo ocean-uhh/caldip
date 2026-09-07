@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
+import warnings
 from html import escape
 from pathlib import Path
 
 import pandas as pd
 
-from caldip.report._data import CastSummary
+from caldip.report._data import CastSummary, FlagData
 from caldip.report._figure import check_version_skew, extract_figure
 from caldip.report._html import dataframe_to_table, figure_block, masthead, page
-from caldip.report.status import FLAGGED_KIND, classify_status
 
 _INDEX_HREF = "../index.html"
 #: Stop-level columns repeated per instrument in the detailed CSV; lifted into a
 #: separate bottle-stops table and dropped from the per-stop detail.
 _STOP_COLUMNS = ("date", "time_start", "time_end")
-_STATUS_COLUMNS = ("temp_status", "cond_status", "press_status")
 
 #: Sign convention and notation, stated in every table caption that shows a diff.
 _DIFF_NOTE = (
@@ -55,16 +54,77 @@ def _bottle_stops(detail: pd.DataFrame) -> pd.DataFrame:
     return stops
 
 
-def _over_threshold(row: pd.Series) -> str | None:
-    """Return ``"over-threshold"`` if any status in the row is a caldip flag."""
-    for col in _STATUS_COLUMNS:
-        if col in row and classify_status(row[col]).kind == FLAGGED_KIND:
-            return "over-threshold"
-    return None
+def _bl_int(value: object) -> int | None:
+    """Return an integer-dbar bottle-stop pressure, or ``None`` if unparseable."""
+    try:
+        return round(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _rows_aligned(detail: pd.DataFrame, flag_data: FlagData) -> bool:
+    """Return whether the detail frame and the netCDF flags are row-for-row aligned.
+
+    The CSV is a derived export of the netCDF, so row *i* of one is row *i* of the
+    other; this verifies that invariant on ``(serial, bl_press)`` before the flags
+    are used to shade rows positionally. A silent mis-join would shade the wrong
+    rows with no error, so a mismatch disables shading with a warning rather than
+    guessing.
+
+    Parameters
+    ----------
+    detail : pandas.DataFrame
+        The per-stop detail frame, read as strings, indexed ``0..n-1``.
+    flag_data : FlagData
+        Per-row flags read from the cast netCDF.
+
+    Returns
+    -------
+    bool
+        ``True`` if every row's serial and integer pressure match positionally.
+    """
+    if len(detail) != len(flag_data.flagged):
+        return False
+    serials = detail["serial"].astype(str) if "serial" in detail.columns else None
+    pressures = detail["bl_press"] if "bl_press" in detail.columns else None
+    if serials is None or pressures is None:
+        return False
+    for i in range(len(detail)):
+        if str(flag_data.serial[i]) != serials.iloc[i].strip():
+            return False
+        if int(flag_data.bl_press[i]) != _bl_int(pressures.iloc[i]):
+            return False
+    return True
+
+
+def _make_over_threshold(row_flagged: object):
+    """Return a ``row_class`` callback shading rows flagged in the netCDF.
+
+    Parameters
+    ----------
+    row_flagged : numpy.ndarray or None
+        Per-row boolean flag aligned to the frame, or ``None`` to disable shading.
+
+    Returns
+    -------
+    callable
+        A function returning ``"over-threshold"`` for a flagged row, else ``None``.
+    """
+
+    def _over_threshold(row: pd.Series) -> str | None:
+        if row_flagged is None:
+            return None
+        return "over-threshold" if bool(row_flagged[row.name]) else None
+
+    return _over_threshold
 
 
 def build_cast_page_html(
-    summary: CastSummary, *, fallback_href: str | None, plotly_src: str
+    summary: CastSummary,
+    *,
+    fallback_href: str | None,
+    plotly_src: str,
+    inventory_href: str | None = None,
 ) -> str:
     """Build the HTML page for a single cast.
 
@@ -77,6 +137,9 @@ def build_cast_page_html(
         figure cannot be embedded. ``None`` if no saved plot exists.
     plotly_src : str
         Relative href from this page to the shared ``plotly.min.js``.
+    inventory_href : str or None, optional
+        Relative href to this cast's netCDF inventory page, linked in the nav.
+        ``None`` when the cast has no netCDF.
 
     Returns
     -------
@@ -98,9 +161,12 @@ def build_cast_page_html(
             f"{summary.n_flagged} flagged by caldip"
         ),
     )
+    nav_links = [f"<a href='{_INDEX_HREF}'>all casts</a>"]
+    if inventory_href is not None:
+        nav_links.append(f"<a href='{escape(inventory_href)}'>netCDF inventory</a>")
     parts = [
         head,
-        f"<div class='jump-nav'><a href='{_INDEX_HREF}'>all casts</a></div>",
+        f"<div class='jump-nav'>{' '.join(nav_links)}</div>",
         "<h2>Instruments vs CTD</h2>",
     ]
     if skew_note is not None:
@@ -139,8 +205,21 @@ def build_cast_page_html(
     )
     detail_display = detail.drop(
         columns=[c for c in _STOP_COLUMNS if c in detail.columns]
+    ).reset_index(drop=True)
+    flag_data = summary.flag_data
+    row_flagged = None
+    if flag_data is not None:
+        if _rows_aligned(detail_display, flag_data):
+            row_flagged = flag_data.flagged
+        else:
+            warnings.warn(
+                f"{summary.name}: netCDF flag rows do not align with the detailed "
+                "CSV; amber shading disabled to avoid shading the wrong rows.",
+                stacklevel=2,
+            )
+    parts.append(
+        dataframe_to_table(detail_display, row_class=_make_over_threshold(row_flagged))
     )
-    parts.append(dataframe_to_table(detail_display, row_class=_over_threshold))
 
     body = "\n".join(parts)
     return page(

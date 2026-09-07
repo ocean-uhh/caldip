@@ -43,13 +43,6 @@ report
    :members:
    :undoc-members:
 
-report.status
-=============
-
-.. automodule:: caldip.report.status
-   :members:
-   :undoc-members:
-
 report.index
 ============
 
@@ -61,5 +54,12 @@ report.cast
 ===========
 
 .. automodule:: caldip.report.cast
+   :members:
+   :undoc-members:
+
+report.inventory
+================
+
+.. automodule:: caldip.report.inventory
    :members:
    :undoc-members:
