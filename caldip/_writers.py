@@ -246,8 +246,7 @@ def _global_attrs(
         "schema_version": STATS_SCHEMA_VERSION,
         "caldip_version": _caldip_version(),
         "cast_id": str(config.get("name", UNK)),
-        "cruise_id": str(config.get("cruise") or UNK),
-        "cruise_cast": UNK,
+        "cruise": str(config.get("cruise") or UNK),
         "input_mode": input_mode,
         # No QARTOD flags travel on the .cnv path, so none were excluded; the
         # ctdcast-input branch honours real stage-2/3 flags and sets this true.

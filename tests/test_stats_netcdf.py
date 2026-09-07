@@ -140,7 +140,7 @@ def test_global_attributes_complete_with_unk_where_unsourced():
     assert ds.attrs["data_mode_meaning"] == "provisional"
     assert ds.attrs["schema_version"] == 1
     assert ds.attrs["caldip_version"] != "UNK"
-    assert ds.attrs["cruise_id"] == "msm142"
+    assert ds.attrs["cruise"] == "msm142"
     assert ds.attrs["cast_id"] == "castM6"
     assert ds.attrs["ctd_sensor_used"] == "2"
     assert ds.attrs["ctd_temp_processing_level"] == (

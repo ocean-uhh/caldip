@@ -65,7 +65,7 @@ def test_read_nc_meta(tmp_path):
     names = {v["name"] for v in meta["data_vars"]}
     assert {"temp_diff", "temp_flag", "ctd_press"} <= names
     assert meta["global_attrs"]["data_mode"] == "P"
-    assert meta["global_attrs"]["cruise_id"] == "msm142"
+    assert meta["global_attrs"]["cruise"] == "msm142"
 
 
 def test_inventory_html_sections_and_types(tmp_path):

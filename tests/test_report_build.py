@@ -145,7 +145,7 @@ def test_uninferable_cruise_warns_and_labels_unk(tmp_path):
     src.mkdir()
     for csv in _FIXTURE.glob("*.csv"):
         shutil.copy(csv, src / csv.name)
-    _write_cast_nc(src, {})  # no cruise in the netCDFs -> cruise_id UNK
+    _write_cast_nc(src, {})  # no cruise in the netCDFs -> cruise UNK
     out = tmp_path / "report"
     with pytest.warns(UserWarning, match="UNK"):
         build_report(src, out)  # no cruise_name, not a cal_dip dir
@@ -229,7 +229,7 @@ def test_cruise_recovered_from_netcdf(tmp_path):
     _copy_csvs(src)
     _write_cast_nc(src, {"castM7": "msm142_2026", "castM5": "msm142_2026"})
     out = tmp_path / "report"
-    build_report(src, out)  # no --cruise; recovered from the netCDF cruise_id
+    build_report(src, out)  # no --cruise; recovered from the netCDF cruise
     index = (out / "index.html").read_text(encoding="utf-8")
     assert "msm142_2026" in index
     # single cruise -> no redundant Cruise column
