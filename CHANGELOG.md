@@ -26,6 +26,13 @@ those changes are listed under **Breaking changes**).
   (dimensions, variables with shapes and units, and global attributes).
 - `caldip report` now generates a per-cast netCDF inventory page and links it from
   each cast page, and reads the cruise name and usability counts from the netCDF.
+- A controlled vocabulary for the instrument class, in
+  `caldip.config.parameters.INSTRUMENT_CLASSES` (the nine oceanarray classes:
+  `microcat`, `sbe56`, `sbe16`, `aquadopp`, `tr1050`, `rbrsolo`, `rbrduet`,
+  `seapoint`, `adcp`). `load_config` validates the cruise-YAML `instrument:` field
+  against it and normalises legacy values (`sbe37`/`sbe`/`MicroCAT` → `microcat`,
+  `nortek` → `aquadopp`, `rbr` → `tr1050` or `rbrsolo` by `file_type`) with a
+  deprecation warning; `caldip init` now scaffolds class names directly.
 
 ### Changed
 
@@ -46,6 +53,17 @@ those changes are listed under **Breaking changes**).
 - `caldip report` now requires each cast's `{cast}_caldip.nc` to count flags and
   read the cruise; a directory of CSVs alone reports zero flags and an `UNK` cruise
   with a warning. Re-run `caldip stats` to produce the netCDF.
+- `instrument_type` in the netCDF and CSV is now an oceanarray class name, not the
+  raw YAML string; a cruise YAML naming an old value (`rbr`, `sbe`, `sbe37`, …) still
+  loads but warns, and the aliases are removed at v1.0.0. A YAML naming `instrument:`
+  outside the vocabulary is now refused on load.
+- The `dip_role` global attribute is removed from the netCDF. Pre- versus
+  post-deployment is a property of the (instrument, deployment) pair, which
+  oceanarray assigns from the cast time against each instrument's deployment window;
+  caldip guarantees only that the cast is datable.
+- Instrument serials are normalised on load (leading zeros and a trailing marker
+  asterisk stripped, so `013874` and `9920*` become `13874` and `9920`), matching
+  the join key oceanarray uses.
 
 ## [0.1.0] - 2026-07-05
 

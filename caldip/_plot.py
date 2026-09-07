@@ -224,14 +224,16 @@ def plot(
 
         # Create smart legend labels and line styles
         instrument_type = info["config"].get("instrument", "").lower()
-        if instrument_type == "sbe" or "sbe" in instrument_label.lower():
+        if instrument_type in ("microcat", "sbe16", "sbe56") or (
+            "sbe" in instrument_label.lower()
+        ):
             legend_name = f"MC {serial}"
             line_dash = "solid"  # MicroCATs get solid lines
-        elif instrument_type == "rbr":
-            if "solo" in instrument_label.lower():
+        elif instrument_type in ("tr1050", "rbrsolo", "rbrduet"):
+            if instrument_type == "rbrsolo" or "solo" in instrument_label.lower():
                 legend_name = f"solo {serial}"
                 line_dash = "dash"  # RBR thermistors get dashed lines
-            elif "tr" in instrument_label.lower():
+            elif instrument_type == "tr1050" or "tr" in instrument_label.lower():
                 legend_name = f"TR {serial}"
                 line_dash = "dash"  # RBR thermistors get dashed lines
             else:

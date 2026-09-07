@@ -74,7 +74,7 @@ One row per instrument, taken from the **deepest bottle stop** of the cast.
 | Column | Description |
 |--------|-------------|
 | `serial` | Instrument serial number |
-| `instrument_type` | Instrument family (`rbr`, `sbe37`, etc.) |
+| `instrument_type` | Instrument class from the controlled vocabulary (`microcat`, `tr1050`, `rbrsolo`, etc.) |
 | `label` | Human-readable model label |
 | `n_samples` | Number of instrument data points in the 2-minute comparison window |
 | `bl_press` | Pressure of the deepest bottle stop (dbar) |

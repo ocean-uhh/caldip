@@ -152,7 +152,7 @@ instruments:
 - position: '1'
   serial: 013874
   label: 'TR1050'
-  instrument: rbr
+  instrument: tr1050
   file_type: 'rbr-matlab-legacy'
   filename: '013874_20260403_1302.mat'
   clock_offset: 7175   # seconds; positive = add to instrument time

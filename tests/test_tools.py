@@ -81,7 +81,7 @@ def _make_detailed_df():
         [
             {
                 "serial": "S001",
-                "instrument_type": "sbe37",
+                "instrument_type": "microcat",
                 "label": "SBE37",
                 "N": 120,
                 "bl_press": 1500,
@@ -98,7 +98,7 @@ def _make_detailed_df():
             },
             {
                 "serial": "S001",
-                "instrument_type": "sbe37",
+                "instrument_type": "microcat",
                 "label": "SBE37",
                 "N": 120,
                 "bl_press": 800,
@@ -115,7 +115,7 @@ def _make_detailed_df():
             },
             {
                 "serial": "T002",
-                "instrument_type": "rbr",
+                "instrument_type": "rbrsolo",
                 "label": "TR1050",
                 "N": 120,
                 "bl_press": 1500,

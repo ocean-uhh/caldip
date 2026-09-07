@@ -198,8 +198,8 @@ def _global_attrs(
         Per-stop statistics frame, used to recover ``ctd_sensor_used`` when the
         column is present.
     config : dict
-        Cast configuration; supplies ``name``, ``cruise``, ``dip_role``,
-        ``ctd_file`` and the instrument list.
+        Cast configuration; supplies ``name``, ``cruise``, ``ctd_file`` and the
+        instrument list.
     ctd_sensor_used : int or str or None
         Reference CTD sensor (1 or 2) caldip used; ``UNK`` if it cannot be
         resolved (never defaulted).
@@ -248,7 +248,6 @@ def _global_attrs(
         "cast_id": str(config.get("name", UNK)),
         "cruise_id": str(config.get("cruise") or UNK),
         "cruise_cast": UNK,
-        "dip_role": str(config.get("dip_role") or UNK),
         "input_mode": input_mode,
         # No QARTOD flags travel on the .cnv path, so none were excluded; the
         # ctdcast-input branch honours real stage-2/3 flags and sets this true.

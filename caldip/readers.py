@@ -36,6 +36,8 @@ import warnings
 import json
 import tempfile
 
+from caldip.config import parameters as params
+
 try:
     import seasenselib as sl
 
@@ -214,10 +216,108 @@ def find_config_file(path):
     return None
 
 
+def normalize_serial(value: object) -> str:
+    """Normalise an instrument serial to its join-key form.
+
+    Leading zeros and a trailing marker asterisk are stripped, so ``013874``
+    and ``9920*`` become ``"13874"`` and ``"9920"``. The serial is the join key
+    shared with oceanarray, which normalises the same way; an all-zero serial
+    collapses to ``"0"`` rather than the empty string.
+
+    Parameters
+    ----------
+    value : object
+        The raw ``serial`` field (str or int) from a cruise YAML or a filename.
+
+    Returns
+    -------
+    str
+        The normalised serial.
+    """
+    text = str(value).strip().rstrip("*").lstrip("0")
+    return text or "0"
+
+
+def resolve_instrument_class(
+    instrument: Optional[str], file_type: Optional[str] = None
+) -> str:
+    """Resolve a cruise-YAML ``instrument`` value to an oceanarray class name.
+
+    A value already in :data:`caldip.config.parameters.INSTRUMENT_CLASSES` is
+    returned unchanged; a documented legacy alias is mapped to its class with a
+    deprecation warning (aliases are removed at v1.0.0); a real class caldip
+    compares nothing for (empty ``INSTRUMENT_CLASS_VARIABLES``, e.g.
+    ``seapoint``) is refused with a distinct message; anything else raises.
+
+    Parameters
+    ----------
+    instrument : str or None
+        The ``instrument:`` field from the cruise YAML.
+    file_type : str or None, optional
+        The instrument's ``file_type``; disambiguates ``rbr``
+        (``rbr-matlab-legacy`` -> ``tr1050``, ``rbr-rsk`` -> ``rbrsolo``).
+
+    Returns
+    -------
+    str
+        A class name from :data:`caldip.config.parameters.INSTRUMENT_CLASSES`.
+
+    Raises
+    ------
+    ValueError
+        If the value is a real class caldip does not compare, or is neither a
+        known class nor a documented alias.
+    """
+    value = str(instrument or "").strip()
+    if value in params.INSTRUMENT_CLASSES:
+        if not params.INSTRUMENT_CLASS_VARIABLES.get(value, ()):
+            raise ValueError(
+                f"instrument: {value!r} is a real instrument class caldip does "
+                f"not compare against the CTD; it cannot appear on a calibration "
+                f"cast."
+            )
+        return value
+
+    lower = value.lower()
+    ft = (str(file_type).lower() or None) if file_type else None
+    alias = params.LEGACY_INSTRUMENT_ALIASES.get(
+        (lower, ft)
+    ) or params.LEGACY_INSTRUMENT_ALIASES.get((lower, None))
+    if alias is not None:
+        warnings.warn(
+            f"instrument: {value!r} is a legacy alias for the oceanarray class "
+            f"{alias!r}; update the cruise YAML. Aliases are removed at v1.0.0.",
+            UserWarning,
+            stacklevel=3,
+        )
+        return alias
+
+    raise ValueError(
+        f"instrument: {value!r} is not a known instrument class. Valid classes: "
+        f"{', '.join(params.INSTRUMENT_CLASSES)}."
+    )
+
+
 def load_config(yaml_file: Union[str, Path]) -> Dict:
-    """Load caldip configuration from YAML file."""
+    """Load caldip configuration from YAML file.
+
+    Each instrument's ``instrument:`` field is normalised in place to an
+    oceanarray class name (see :func:`resolve_instrument_class`), so every
+    downstream consumer and the ``instrument_type`` written to the netCDF use
+    the single controlled vocabulary.
+    """
     with open(yaml_file, "r") as f:
         config = yaml.safe_load(f)
+    for instrument in config.get("instruments", []) or []:
+        instrument["instrument"] = resolve_instrument_class(
+            instrument.get("instrument"), instrument.get("file_type")
+        )
+        if "serial" in instrument:
+            instrument["serial"] = normalize_serial(instrument["serial"])
+    if config.get("process_serials") is not None:
+        config["process_serials"] = [
+            normalize_serial(s) for s in config["process_serials"]
+        ]
     return config
 
 
@@ -408,7 +508,7 @@ def load_instruments_from_config(
                 print(f"     📅 Start: {start_time}")
                 print(f"     📅 End:   {end_time}")
                 print(f"     ⏱️  Duration: {duration_hours:.1f} hours")
-                if dataset_serial and dataset_serial != serial:
+                if dataset_serial and normalize_serial(dataset_serial) != serial:
                     print(
                         f"     ⚠️  YAML serial {serial} != Dataset serial {dataset_serial}"
                     )

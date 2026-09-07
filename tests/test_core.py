@@ -266,7 +266,7 @@ def test_format_status_reads_high():
                 },
                 coords={"time": times},
             ),
-            "config": {"instrument": "sbe37", "label": "Test"},
+            "config": {"instrument": "microcat", "label": "Test"},
             "type": "sbe37",
         }
     }
@@ -301,7 +301,7 @@ def test_stats_emits_ctd_press_and_usability_flags():
                 {"temperature": ("time", np.full(1000, 15.10))},
                 coords={"time": times},
             ),
-            "config": {"instrument": "rbr", "label": "Test"},
+            "config": {"instrument": "rbrsolo", "label": "Test"},
             "type": "rbr",
         }
     }
@@ -340,7 +340,7 @@ def test_cond_flag_is_no_data_when_ctd_lacks_conductivity():
                 },
                 coords={"time": times},
             ),
-            "config": {"instrument": "sbe37", "label": "Test"},
+            "config": {"instrument": "microcat", "label": "Test"},
             "type": "sbe37",
         }
     }
@@ -376,7 +376,7 @@ def test_stats_with_canonical_variable_names():
                 {"temperature": ("time", np.full(1000, 4.0))},
                 coords={"time": times},
             ),
-            "config": {"instrument": "sbe37", "label": "Test"},
+            "config": {"instrument": "microcat", "label": "Test"},
             "type": "sbe37",
         }
     }
