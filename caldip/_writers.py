@@ -149,7 +149,7 @@ def save_instrument_nc(ds: xr.Dataset, path: Union[str, Path], label: str) -> bo
         out.attrs = _clean_attrs(out.attrs)
         for var in list(out.data_vars) + list(out.coords):
             out[var].attrs = _clean_attrs(out[var].attrs)
-        out.to_netcdf(path)
+        out.to_netcdf(path, engine="netcdf4")
         print(f"  💾 Saved {label} ({len(ds.time)} samples)")
         return True
     except (OSError, ValueError) as e:
@@ -246,8 +246,7 @@ def _global_attrs(
         "schema_version": STATS_SCHEMA_VERSION,
         "caldip_version": _caldip_version(),
         "cast_id": str(config.get("name", UNK)),
-        "cruise_id": str(config.get("cruise") or UNK),
-        "cruise_cast": UNK,
+        "cruise": str(config.get("cruise") or UNK),
         "input_mode": input_mode,
         # No QARTOD flags travel on the .cnv path, so none were excluded; the
         # ctdcast-input branch honours real stage-2/3 flags and sets this true.
@@ -743,23 +742,26 @@ def stats_dataset_to_frame(ds: xr.Dataset) -> pd.DataFrame:
             "serial": string_column("serial"),
             "instrument_type": string_column("instrument_type"),
             "bl_press": np.rint(column("bl_press")).astype(int),
+            # Per-variable export precision (CSV only; the netCDF keeps full
+            # precision): temperature and conductivity to 4 dp, pressure to
+            # 0.1 dbar, and each standard deviation one place finer than its value.
             "temp_diff": _round_keep_nan(diffs["T"], 4),
             "temp_std": _round_keep_nan(column("temp_std"), 5),
             "cond_diff": _round_keep_nan(diffs["C"], 4),
             "cond_std": _round_keep_nan(column("cond_std"), 5),
             "press_diff": _round_keep_nan(diffs["P"], 1),
-            "press_std": _round_keep_nan(column("press_std"), 5),
+            "press_std": _round_keep_nan(column("press_std"), 2),
             "temp_status": status["T"],
             "cond_status": status["C"],
             "press_status": status["P"],
             "date": times("time_start", "%Y-%m-%d"),
             "time_start": times("time_start", "%H:%M:%S"),
             "time_end": times("time_end", "%H:%M:%S"),
-            "ctd_temp": _round_keep_nan(column("ctd_temp"), 5),
-            "ctd_cond": _round_keep_nan(column("ctd_cond"), 5),
-            "inst_temp": _round_keep_nan(column("inst_temp"), 5),
-            "inst_cond": _round_keep_nan(column("inst_cond"), 5),
-            "inst_press": _round_keep_nan(column("inst_press"), 5),
+            "ctd_temp": _round_keep_nan(column("ctd_temp"), 4),
+            "ctd_cond": _round_keep_nan(column("ctd_cond"), 4),
+            "inst_temp": _round_keep_nan(column("inst_temp"), 4),
+            "inst_cond": _round_keep_nan(column("inst_cond"), 4),
+            "inst_press": _round_keep_nan(column("inst_press"), 1),
             "N": column("N").astype(int),
             "label": string_column("label"),
             "ctd_sensor_used": ds.attrs.get("ctd_sensor_used", UNK),

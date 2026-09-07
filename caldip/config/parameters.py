@@ -32,6 +32,24 @@ BOTTLE_STOP_THRESHOLD_DBAR_PER_MIN: float = 15.0
 # natural place to grow per-variable keys once the science values are fixed.
 BOTTLE_STOP_MIN_DURATION_SECONDS: float = 180.0
 
+# Sliding-window length (seconds) over which the pressure change rate is measured.
+BOTTLE_STOP_WINDOW_SECONDS: float = 60.0
+
+# Detection only starts once the cast is within this many dbar of its maximum
+# pressure, so stops near the bottom are found without scanning the whole downcast.
+BOTTLE_STOP_SEARCH_MARGIN_DBAR: float = 10.0
+
+# Initial pre-gate: a stable period shorter than this (seconds) is dropped before
+# boundary refinement. Looser than ``MIN_DURATION_SECONDS``, which is applied last.
+BOTTLE_STOP_INITIAL_MIN_SECONDS: float = 30.0
+
+# Boundary refinement: the start/end are moved to the first/last sample within
+# this many dbar of the stop's median pressure.
+BOTTLE_STOP_BOUNDARY_TOL_DBAR: float = 2.0
+
+# Two detected stops separated by fewer than this many samples are merged into one.
+BOTTLE_STOP_MERGE_GAP_SAMPLES: int = 10
+
 
 # ---------------------------------------------------------------------------
 # Per-variable usability flags  [Output schema — CF flag variable in the netCDF]

@@ -224,9 +224,13 @@ def test_netcdf_omits_dip_role_and_keeps_class_vocabulary(tmp_path):
     config = {"name": "castX", "cruise": "m", "ctd_sensor": 2, "instruments": [{}]}
     thresholds = {"temp": 0.005, "cond": 0.02, "press": 5.0}
     out = writers.write_stats_netcdf(
-        _minimal_stats_frame(), config, tmp_path / "castX_caldip.nc", thresholds=thresholds
+        _minimal_stats_frame(),
+        config,
+        tmp_path / "castX_caldip.nc",
+        thresholds=thresholds,
     )
     ds = xr.open_dataset(out, engine="netcdf4")
     assert "dip_role" not in ds.attrs
+    assert "cruise_cast" not in ds.attrs  # defunct placeholder, removed
     value = str(ds["instrument_type"].values.ravel()[0])
     assert value == "tr1050"  # full class name, not truncated

@@ -17,8 +17,8 @@ from caldip.config import parameters as params
 
 def find_bottle_stops(
     ctd_data: xr.Dataset,
-    threshold_dbar_per_min: float = params.BOTTLE_STOP_THRESHOLD_DBAR_PER_MIN,
-    min_duration_seconds: float = params.BOTTLE_STOP_MIN_DURATION_SECONDS,
+    threshold_dbar_per_min: Optional[float] = None,
+    min_duration_seconds: Optional[float] = None,
 ) -> List[Dict]:
     """
     Find bottle stops in CTD data based on pressure rate of change.
@@ -46,6 +46,13 @@ def find_bottle_stops(
         - pressure: mean pressure during stop
         - duration_seconds: duration in seconds
     """
+    # Resolved at call time (not import) so a runtime reassignment of the
+    # ``params`` constant takes effect, matching the sibling override convention.
+    if threshold_dbar_per_min is None:
+        threshold_dbar_per_min = params.BOTTLE_STOP_THRESHOLD_DBAR_PER_MIN
+    if min_duration_seconds is None:
+        min_duration_seconds = params.BOTTLE_STOP_MIN_DURATION_SECONDS
+
     bottle_stops = []
 
     # Get pressure variable
@@ -66,15 +73,15 @@ def find_bottle_stops(
     time_seconds = np.array([t.timestamp() for t in time_dt])
 
     # Calculate pressure rate of change (dbar/min)
-    window_seconds = 60  # 1 minute window
+    window_seconds = params.BOTTLE_STOP_WINDOW_SECONDS
 
     # Find max pressure point
     max_pressure_idx = np.argmax(pressure)
     max_pressure = pressure[max_pressure_idx]
 
-    # Find first time we reach max_pressure - 10 dbar to start looking for bottle stops
-    # This accounts for bottle stops that occur at or near maximum depth
-    search_threshold = max_pressure - 10.0
+    # Start looking once within the search margin of max pressure, so stops at or
+    # near maximum depth are found without scanning the whole downcast.
+    search_threshold = max_pressure - params.BOTTLE_STOP_SEARCH_MARGIN_DBAR
     deep_enough_mask = pressure >= search_threshold
 
     if np.any(deep_enough_mask):
@@ -117,24 +124,26 @@ def find_bottle_stops(
                                 break
                         end_idx += 1
 
-                    # Check minimum duration (at least 30 seconds initially, we'll subselect for minimum 3 minutes later)
+                    # Initial pre-gate; the final MIN_DURATION_SECONDS filter is
+                    # applied after merging, below.
                     duration = time_seconds[end_idx] - time_seconds[i]
-                    if duration >= 30:
+                    if duration >= params.BOTTLE_STOP_INITIAL_MIN_SECONDS:
                         # Calculate median pressure during the original stop boundaries
                         median_pressure = float(np.median(pressure[i : end_idx + 1]))
 
-                        # Refine boundaries to within 2 dbar of median
-                        # Find first point within 2 dbar of median (searching from original start)
+                        # Refine boundaries to within the tolerance of the median.
+                        tol = params.BOTTLE_STOP_BOUNDARY_TOL_DBAR
+                        # First point within tolerance (searching from original start).
                         refined_start = i
                         for j in range(i, end_idx + 1):
-                            if abs(pressure[j] - median_pressure) <= 2.0:
+                            if abs(pressure[j] - median_pressure) <= tol:
                                 refined_start = j
                                 break
 
-                        # Find last point within 2 dbar of median (searching backward from original end)
+                        # Last point within tolerance (searching from the end back).
                         refined_end = end_idx
                         for j in range(end_idx, i - 1, -1):
-                            if abs(pressure[j] - median_pressure) <= 2.0:
+                            if abs(pressure[j] - median_pressure) <= tol:
                                 refined_end = j
                                 break
 
@@ -167,8 +176,11 @@ def find_bottle_stops(
             merged_stops.append(stop)
         else:
             last_stop = merged_stops[-1]
-            # If this stop starts very close to the last one ending, merge them
-            if stop["start_idx"] - last_stop["end_idx"] < 10:  # Within 10 samples
+            # If this stop starts very close to the last one ending, merge them.
+            if (
+                stop["start_idx"] - last_stop["end_idx"]
+                < params.BOTTLE_STOP_MERGE_GAP_SAMPLES
+            ):
                 last_stop["end_idx"] = stop["end_idx"]
                 last_stop["end_time"] = stop["end_time"]
                 last_stop["duration_seconds"] = (
@@ -251,10 +263,10 @@ def _format_status(diff: float, threshold: float, var_name: str) -> str:
         return f"{var_name} NO DATA"
     elif abs(diff) <= threshold:
         return f"{var_name} OK"
-    elif diff > 0:
-        return f"{var_name} reads high by {abs(diff):.3f}"
-    else:
-        return f"{var_name} reads low by {abs(diff):.3f}"
+    # Pressure reads to 0.1 dbar; temperature and conductivity to 3 dp.
+    decimals = 1 if var_name == "P" else 3
+    direction = "high" if diff > 0 else "low"
+    return f"{var_name} reads {direction} by {abs(diff):.{decimals}f}"
 
 
 def resolve_quality_thresholds(
@@ -337,8 +349,8 @@ def stats(
     instrument_data: Dict,
     reference_data: Dict,
     config: Dict,
-    threshold_dbar_per_min: float = params.BOTTLE_STOP_THRESHOLD_DBAR_PER_MIN,
-    min_duration_seconds: float = params.BOTTLE_STOP_MIN_DURATION_SECONDS,
+    threshold_dbar_per_min: Optional[float] = None,
+    min_duration_seconds: Optional[float] = None,
     temp_threshold: Optional[float] = None,
     cond_threshold: Optional[float] = None,
     press_threshold: Optional[float] = None,

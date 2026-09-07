@@ -7,7 +7,7 @@ the strict ``_detailed_statistics.csv`` suffix, so ``-old`` / ``_all`` variants 
 ignored.
 
 Usability and the cruise come from the netCDF, not the CSV prose: the report reads
-``temp_flag`` / ``cond_flag`` / ``press_flag`` and the ``cruise_id`` attribute
+``temp_flag`` / ``cond_flag`` / ``press_flag`` and the ``cruise`` attribute
 directly. Flag counts are reduced to the *instrument* level: an instrument that
 stops at several depths appears in several rows, so it counts once if any of its
 rows flags any variable. A cast without its netCDF cannot be counted (the prose
@@ -48,7 +48,7 @@ class FlagData:
     n_unknown : int
         Count of flag cells that are ``unknown`` (drives a warning).
     cruise : str
-        Cruise recovered from the netCDF ``cruise_id`` attribute, or ``"UNK"``.
+        Cruise recovered from the netCDF ``cruise`` attribute, or ``"UNK"``.
     """
 
     serial: np.ndarray
@@ -79,7 +79,7 @@ def load_flags(nc_path: Path) -> FlagData | None:
     if not nc_path.exists():
         return None
     with xr.open_dataset(nc_path, engine="netcdf4") as ds:
-        cruise = str(ds.attrs.get("cruise_id", "UNK"))
+        cruise = str(ds.attrs.get("cruise", "UNK"))
         # Same canonical melt the CSV export uses, so the flag rows align with the
         # detailed CSV rows the report displays.
         flat = flatten_stats_grid(ds)
@@ -108,7 +108,7 @@ class CastSummary:
     name : str
         Cast name (the detailed-CSV filename with its suffix removed).
     cruise : str
-        Cruise the cast belongs to, from the netCDF ``cruise_id`` attribute, or
+        Cruise the cast belongs to, from the netCDF ``cruise`` attribute, or
         ``"UNK"`` if the netCDF is absent.
     date : str
         Cast date from the CSV, or ``"UNK"`` if absent.
