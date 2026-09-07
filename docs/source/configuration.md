@@ -141,14 +141,14 @@ instruments:
   - position: '1'
     serial: '26271'
     label: 'SBE37'
-    instrument: sbe37
+    instrument: microcat
     file_type: sbe-hex
     filename: SBE37SMP-RS232_03726271_2026_04_04.hex
     depth: 0
   - position: '2'
     serial: '26270'
     label: 'SBE37'
-    instrument: sbe37
+    instrument: microcat
     file_type: sbe-hex
     filename: SBE37SMP-RS232_03726270_2026_04_04.hex
     depth: 0
@@ -175,7 +175,7 @@ instruments:
   - position: '1'
     serial: 013874
     label: 'TR1050'
-    instrument: rbr
+    instrument: tr1050
     file_type: rbr-matlab-legacy
     filename: '013874_20260403_1302.mat'
     depth: 0
@@ -183,7 +183,7 @@ instruments:
   - position: '17'
     serial: 13840
     label: 'SBE37'
-    instrument: sbe
+    instrument: microcat
     file_type: sbe-cnv
     filename: '13840_cal_dip_data_time.cnv'
     depth: 0

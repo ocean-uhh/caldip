@@ -431,19 +431,22 @@ def _detect_instruments(directory: Path) -> List[Dict]:
             "depth": 0,
         }
 
-        # Determine instrument type and file_type based on extension
+        # Determine the instrument class and file_type from the extension. The
+        # class is oceanarray's controlled vocabulary (config.parameters
+        # .INSTRUMENT_CLASSES); a .rsk is assumed to be an rbrsolo, the only
+        # rbr-rsk class caldip has dipped (duet/seapoint are edited in by hand).
         ext = file.suffix.lower()
         if ext == ".cnv":
-            instrument["instrument"] = "sbe"
+            instrument["instrument"] = "microcat"
             instrument["file_type"] = "sbe-cnv"
         elif ext == ".mat":
-            instrument["instrument"] = "rbr"  # Common for RBR files
+            instrument["instrument"] = "tr1050"
             instrument["file_type"] = "rbr-matlab-legacy"
         elif ext == ".rsk":
-            instrument["instrument"] = "rbr"
+            instrument["instrument"] = "rbrsolo"
             instrument["file_type"] = "rbr-rsk"
         elif ext == ".hex":
-            instrument["instrument"] = "sbe"  # SBE hex files
+            instrument["instrument"] = "microcat"  # SBE hex files
             instrument["file_type"] = "sbe-hex"
         else:
             # Unknown file type - leave instrument and file_type blank

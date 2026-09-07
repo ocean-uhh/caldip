@@ -34,7 +34,7 @@ def _make_instrument_data(with_cond=False):
     return {
         "S001": {
             "data": ds,
-            "config": {"label": "SBE37", "instrument": "sbe37"},
+            "config": {"label": "SBE37", "instrument": "microcat"},
             "type": "sbe37",
         }
     }
@@ -116,12 +116,12 @@ def test_create_plot_multiple_instruments():
     instrument_data = {
         "S001": {
             "data": ds,
-            "config": {"label": "SBE37", "instrument": "sbe37"},
+            "config": {"label": "SBE37", "instrument": "microcat"},
             "type": "sbe37",
         },
         "S002": {
             "data": ds,
-            "config": {"label": "SBE37", "instrument": "sbe37"},
+            "config": {"label": "SBE37", "instrument": "microcat"},
             "type": "sbe37",
         },
     }

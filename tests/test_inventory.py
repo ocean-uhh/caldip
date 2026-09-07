@@ -25,7 +25,7 @@ def _make_nc(tmp_path: Path) -> Path:
     df = pd.DataFrame(
         {
             "serial": ["S1", "S1"],
-            "instrument_type": ["sbe37", "sbe37"],
+            "instrument_type": ["microcat", "microcat"],
             "bl_press": [1000, 500],
             "stop": [1, 2],
             "time": [t0, t1],

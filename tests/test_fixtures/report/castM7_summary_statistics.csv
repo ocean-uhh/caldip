@@ -1,2 +1,2 @@
 serial,instrument_type,label,n_samples,bl_press,temp_diff_mean,temp_diff_std,cond_diff_mean,cond_diff_std,press_diff_mean,press_diff_std
-101657,rbr,RBRsolo T,121,1010,0.012,0.0007,,,,
+101657,rbrsolo,RBRsolo T,121,1010,0.012,0.0007,,,,

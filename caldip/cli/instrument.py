@@ -9,6 +9,7 @@ from caldip.readers import (
     find_config_file,
     load_config,
     load_instrument_data,
+    normalize_serial,
     resolve_data_dir,
     _normalize_instrument_vars,
 )
@@ -171,8 +172,10 @@ def run(args):
         print(f"Error loading config file: {e}")
         return 1
 
-    # Find the requested instrument entry by serial
-    target_serial = str(args.serial)
+    # Find the requested instrument entry by serial. load_config has normalised
+    # the config serials to the join key, so normalise the CLI argument the same
+    # way; a user typing the padded form (013874) still matches 13874.
+    target_serial = normalize_serial(args.serial)
     instrument_cfg = None
     for inst in config.get("instruments", []):
         if str(inst.get("serial", "")) == target_serial:
@@ -197,7 +200,9 @@ def run(args):
         return 1
 
     file_type = instrument_cfg["file_type"]
-    instr_type = instrument_cfg.get("instrument", file_type).lower()
+    # load_config already resolved instrument: to a lowercase class; fall back to
+    # file_type only for a config built without it.
+    instr_type = instrument_cfg.get("instrument") or file_type
     label = instrument_cfg.get("label", instr_type)
     clock_offset = instrument_cfg.get("clock_offset", 0)
 

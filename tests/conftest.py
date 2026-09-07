@@ -50,7 +50,7 @@ def instrument_data_one_stop(ctd_one_stop):
                 },
                 coords={"time": times},
             ),
-            "config": {"instrument": "sbe37", "label": "SBE37"},
+            "config": {"instrument": "microcat", "label": "SBE37"},
             "type": "sbe37",
         }
     }

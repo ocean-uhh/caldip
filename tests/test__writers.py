@@ -38,7 +38,7 @@ def _make_summary_df(with_cond=True, with_press=True, with_bottle_stops=False):
     rows = [
         {
             "serial": "S001",
-            "instrument_type": "sbe37",
+            "instrument_type": "microcat",
             "label": "SBE37",
             "N": 120,
             "temp_diff": 0.003,

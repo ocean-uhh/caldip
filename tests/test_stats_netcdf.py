@@ -114,7 +114,7 @@ def test_variable_dtypes():
 def test_temperature_only_logger_conductivity_is_nan_not_zero(tmp_path):
     """An RBR temperature logger has NaN conductivity across all its stops."""
     df = _fixture_frame()
-    rbr_serial = str(df[df["instrument_type"] == "rbr"]["serial"].iloc[0])
+    rbr_serial = str(df[df["instrument_type"] == "rbrsolo"]["serial"].iloc[0])
     out = writers.write_stats_netcdf(
         df, _CONFIG, tmp_path / "castM6_caldip.nc", thresholds=_THRESHOLDS
     )
@@ -236,7 +236,7 @@ def test_prose_rendered_from_authoritative_diff(tmp_path):
     df = pd.DataFrame(
         {
             "serial": ["S1"],
-            "instrument_type": ["sbe37"],
+            "instrument_type": ["microcat"],
             "bl_press": [1000],
             "stop": [1],
             "temp_diff": [full],
