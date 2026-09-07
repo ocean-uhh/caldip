@@ -89,7 +89,8 @@ def _dims_table(dims: dict[str, int]) -> str:
         f"<tr><td class='mono'>{escape(k)}</td><td class='num'>{v}</td></tr>"
         for k, v in dims.items()
     )
-    return f"<table>\n<tr><th>Dimension</th><th class='num'>Size</th></tr>\n{body}\n</table>"
+    head = "<tr><th>Dimension</th><th class='num'>Size</th></tr>"
+    return f"<table>\n{head}\n{body}\n</table>"
 
 
 def _var_table(rows: list[dict[str, str]]) -> str:

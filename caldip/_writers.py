@@ -380,7 +380,10 @@ def stats_to_dataset(
         keys = (
             df["bl_press"] if "bl_press" in df.columns else pd.Series(0, index=df.index)
         )
-        df = df.assign(stop=pd.factorize(keys)[0])
+        # 1-based to match core.stats' stop index (the label is not emitted — the
+        # stop dimension carries bl_press/time as coordinates — but keep the two
+        # conventions the same).
+        df = df.assign(stop=pd.factorize(keys)[0] + 1)
     instruments = sorted(df["serial"].unique())
     stops = list(dict.fromkeys(df["stop"].tolist()))
     shape = (len(instruments), len(stops))

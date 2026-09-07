@@ -15,9 +15,10 @@ import xarray as xr
 
 from caldip import _writers as writers
 
-_REAL_CSV = (
-    Path(__file__).resolve().parents[1] / "outputs" / "castM6_detailed_statistics.csv"
-)
+# A real castM6 detailed CSV, committed as the writer's fixture. Named
+# ``*_stats_fixture.csv`` rather than ``*_detailed_statistics.csv`` so it is not
+# caught by the ``.gitignore`` rule that excludes generated statistics CSVs.
+_REAL_CSV = Path(__file__).parent / "test_fixtures" / "castM6_stats_fixture.csv"
 _THRESHOLDS = {"temp": 0.005, "cond": 0.02, "press": 5.0}
 
 

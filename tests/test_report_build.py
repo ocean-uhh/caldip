@@ -42,9 +42,10 @@ def _write_cast_nc(src_dir: Path, cruise_by_cast: dict[str, str]) -> None:
     """Generate ``{cast}_caldip.nc`` beside each fixture CSV, with a per-cast cruise.
 
     Flags are derived from the CSV prose so the netCDF encodes the same usability
-    the report used to read from the prose columns.
+    the report used to read from the prose columns. Reads the CSVs actually in
+    ``src_dir`` (not the global fixture) so the netCDF cannot desync from them.
     """
-    for csv in _FIXTURE.glob("*_detailed_statistics.csv"):
+    for csv in src_dir.glob("*_detailed_statistics.csv"):
         cast = csv.name.split("_")[0]
         df = pd.read_csv(csv)
         for flag, status in (
