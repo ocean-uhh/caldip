@@ -35,7 +35,9 @@ Examples:
     if subparsers is not None:
         parser = subparsers.add_parser("report", **kwargs)
     else:
-        parser = argparse.ArgumentParser(prog="caldip report", **kwargs)
+        parser = argparse.ArgumentParser(
+            prog="caldip report", **{k: v for k, v in kwargs.items() if k != "help"}
+        )
 
     parser.add_argument(
         "results_dir",

@@ -20,7 +20,9 @@ Examples:
     if subparsers is not None:
         parser = subparsers.add_parser("init", **kwargs)
     else:
-        parser = argparse.ArgumentParser(prog="caldip init", **kwargs)
+        parser = argparse.ArgumentParser(
+            prog="caldip init", **{k: v for k, v in kwargs.items() if k != "help"}
+        )
 
     parser.add_argument(
         "directory",
