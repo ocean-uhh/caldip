@@ -58,11 +58,19 @@ def test_class_variables_cover_every_class():
         (13840, "13840"),
         ("0", "0"),
         ("000", "0"),
+        ("0A123", "0A123"),  # non-numeric: leading zero is not padding, kept
     ],
 )
 def test_normalize_serial(value, expected):
     """Leading zeros and a trailing asterisk are stripped; all-zero stays '0'."""
     assert normalize_serial(value) == expected
+
+
+@pytest.mark.parametrize("value", ["", "   ", None])
+def test_normalize_serial_rejects_blank(value):
+    """A blank or missing serial raises rather than becoming a bogus join key."""
+    with pytest.raises(ValueError, match="serial is empty"):
+        normalize_serial(value)
 
 
 def test_resolve_known_class_passes_silently():
@@ -74,11 +82,21 @@ def test_resolve_known_class_passes_silently():
 
 
 @pytest.mark.parametrize(
+    ("value", "expected"),
+    [("TR1050", "tr1050"), ("RBRsolo", "rbrsolo"), ("MicroCAT", "microcat")],
+)
+def test_resolve_class_is_case_insensitive(value, expected):
+    """A class named in the label's casing resolves to its canonical form."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # a real class must not warn
+        assert resolve_instrument_class(value) == expected
+
+
+@pytest.mark.parametrize(
     ("instrument", "file_type", "expected"),
     [
         ("sbe", "sbe-cnv", "microcat"),
         ("sbe37", "sbe-cnv", "microcat"),
-        ("MicroCAT", "sbe-asc", "microcat"),
         ("nortek", "nortek-csv", "aquadopp"),
         ("rbr", "rbr-matlab-legacy", "tr1050"),
         ("rbr", "rbr-rsk", "rbrsolo"),
@@ -126,6 +144,40 @@ def test_load_config_normalizes_instrument_and_serial(tmp_path):
     inst = config["instruments"][0]
     assert inst["instrument"] == "tr1050"
     assert inst["serial"] == "13874"
+
+
+def _write_config(tmp_path, instruments):
+    """Write a minimal cruise YAML with the given instruments and return its path."""
+    cfg_path = tmp_path / "castX.caldip.yaml"
+    cfg_path.write_text(
+        yaml.safe_dump({"name": "castX", "instruments": instruments}),
+        encoding="utf-8",
+    )
+    return cfg_path
+
+
+def test_load_config_leaves_blank_scaffold_stub(tmp_path):
+    """A stub with a blank instrument/serial loads unchanged, to be filled later."""
+    cfg_path = _write_config(
+        tmp_path, [{"serial": "", "instrument": "", "file_type": "", "filename": "x"}]
+    )
+    config = load_config(cfg_path)  # must not raise
+    inst = config["instruments"][0]
+    assert inst["instrument"] == ""
+    assert inst["serial"] == ""
+
+
+def test_load_config_rejects_duplicate_serial(tmp_path):
+    """Two instruments that share a serial after normalisation are rejected."""
+    cfg_path = _write_config(
+        tmp_path,
+        [
+            {"serial": "013874", "instrument": "microcat", "filename": "a.cnv"},
+            {"serial": "13874", "instrument": "microcat", "filename": "b.cnv"},
+        ],
+    )
+    with pytest.raises(ValueError, match="share serial"):
+        load_config(cfg_path)
 
 
 def _minimal_stats_frame():

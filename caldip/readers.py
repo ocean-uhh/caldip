@@ -216,26 +216,36 @@ def find_config_file(path):
     return None
 
 
-def normalize_serial(value: object) -> str:
+def normalize_serial(value: Union[str, int]) -> str:
     """Normalise an instrument serial to its join-key form.
 
-    Leading zeros and a trailing marker asterisk are stripped, so ``013874``
-    and ``9920*`` become ``"13874"`` and ``"9920"``. The serial is the join key
-    shared with oceanarray, which normalises the same way; an all-zero serial
-    collapses to ``"0"`` rather than the empty string.
+    A trailing marker asterisk is stripped, and leading zeros are stripped from
+    an all-digit serial, so ``013874`` and ``9920*`` become ``"13874"`` and
+    ``"9920"`` while an all-zero serial collapses to ``"0"``. A non-numeric
+    serial keeps its leading zeros (they are not padding). The serial is the
+    join key shared with oceanarray, which normalises the same way.
 
     Parameters
     ----------
-    value : object
-        The raw ``serial`` field (str or int) from a cruise YAML or a filename.
+    value : str or int
+        The raw ``serial`` field from a cruise YAML or a filename.
 
     Returns
     -------
     str
         The normalised serial.
+
+    Raises
+    ------
+    ValueError
+        If the serial is ``None`` or blank; a serial cannot be defaulted.
     """
-    text = str(value).strip().rstrip("*").lstrip("0")
-    return text or "0"
+    if value is None or not str(value).strip():
+        raise ValueError("serial is empty; a serial is required as the join key.")
+    text = str(value).strip().rstrip("*")
+    if text.isdigit():
+        text = text.lstrip("0") or "0"
+    return text
 
 
 def resolve_instrument_class(
@@ -243,11 +253,12 @@ def resolve_instrument_class(
 ) -> str:
     """Resolve a cruise-YAML ``instrument`` value to an oceanarray class name.
 
-    A value already in :data:`caldip.config.parameters.INSTRUMENT_CLASSES` is
-    returned unchanged; a documented legacy alias is mapped to its class with a
-    deprecation warning (aliases are removed at v1.0.0); a real class caldip
-    compares nothing for (empty ``INSTRUMENT_CLASS_VARIABLES``, e.g.
-    ``seapoint``) is refused with a distinct message; anything else raises.
+    A value that matches :data:`caldip.config.parameters.INSTRUMENT_CLASSES`
+    case-insensitively is returned in its canonical (lowercase) form; a
+    documented legacy alias is mapped to its class with a deprecation warning
+    (aliases are removed at v1.0.0); a real class caldip compares nothing for
+    (empty ``INSTRUMENT_CLASS_VARIABLES``, e.g. ``seapoint``) is refused with a
+    distinct message; anything else raises.
 
     Parameters
     ----------
@@ -269,17 +280,17 @@ def resolve_instrument_class(
         known class nor a documented alias.
     """
     value = str(instrument or "").strip()
-    if value in params.INSTRUMENT_CLASSES:
-        if not params.INSTRUMENT_CLASS_VARIABLES.get(value, ()):
+    lower = value.lower()
+    if lower in params.INSTRUMENT_CLASSES:
+        if not params.INSTRUMENT_CLASS_VARIABLES.get(lower, ()):
             raise ValueError(
                 f"instrument: {value!r} is a real instrument class caldip does "
                 f"not compare against the CTD; it cannot appear on a calibration "
                 f"cast."
             )
-        return value
+        return lower
 
-    lower = value.lower()
-    ft = (str(file_type).lower() or None) if file_type else None
+    ft = str(file_type).lower() if file_type else None
     alias = params.LEGACY_INSTRUMENT_ALIASES.get(
         (lower, ft)
     ) or params.LEGACY_INSTRUMENT_ALIASES.get((lower, None))
@@ -302,18 +313,32 @@ def load_config(yaml_file: Union[str, Path]) -> Dict:
     """Load caldip configuration from YAML file.
 
     Each instrument's ``instrument:`` field is normalised in place to an
-    oceanarray class name (see :func:`resolve_instrument_class`), so every
-    downstream consumer and the ``instrument_type`` written to the netCDF use
-    the single controlled vocabulary.
+    oceanarray class name (see :func:`resolve_instrument_class`) and its serial
+    to the shared join key, so every downstream consumer and the
+    ``instrument_type`` written to the netCDF use the single controlled
+    vocabulary. Blank ``instrument:``/``serial:`` fields (an unfinished scaffold
+    stub) are left untouched to be filled in later; a serial that two
+    instruments share after normalisation is rejected.
     """
     with open(yaml_file, "r") as f:
         config = yaml.safe_load(f)
+    seen_serials: Dict[str, str] = {}
     for instrument in config.get("instruments", []) or []:
-        instrument["instrument"] = resolve_instrument_class(
-            instrument.get("instrument"), instrument.get("file_type")
-        )
-        if "serial" in instrument:
-            instrument["serial"] = normalize_serial(instrument["serial"])
+        if instrument.get("instrument"):
+            instrument["instrument"] = resolve_instrument_class(
+                instrument.get("instrument"), instrument.get("file_type")
+            )
+        if instrument.get("serial") not in (None, ""):
+            serial = normalize_serial(instrument["serial"])
+            if serial in seen_serials:
+                raise ValueError(
+                    f"two instruments share serial {serial!r} after normalisation "
+                    f"({seen_serials[serial]} and "
+                    f"{instrument.get('filename', '?')}); serials are the join key "
+                    f"and must be unique."
+                )
+            seen_serials[serial] = str(instrument.get("filename", "?"))
+            instrument["serial"] = serial
     if config.get("process_serials") is not None:
         config["process_serials"] = [
             normalize_serial(s) for s in config["process_serials"]

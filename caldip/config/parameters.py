@@ -111,11 +111,13 @@ INSTRUMENT_CLASS_VARIABLES: dict[str, tuple[str, ...]] = {
 # class above. Accepted on load with a deprecation warning and removed at
 # v1.0.0. ``rbr`` needs the file_type to choose (matlab-legacy -> tr1050,
 # rsk -> rbrsolo); the rest map on the lowercased value alone (file_type None).
-# Every real cruise-YAML value as of 2026-09-07 is covered here.
+# A mere case variant of a real class (``MicroCAT`` -> ``microcat``) is not a
+# legacy alias -- resolve_instrument_class matches the class tuple
+# case-insensitively, so it is accepted without a warning. Every real
+# cruise-YAML value as of 2026-09-07 is covered here.
 LEGACY_INSTRUMENT_ALIASES: dict[tuple[str, str | None], str] = {
     ("sbe", None): "microcat",
     ("sbe37", None): "microcat",
-    ("microcat", None): "microcat",
     ("nortek", None): "aquadopp",
     ("rbr", "rbr-matlab-legacy"): "tr1050",
     ("rbr", "rbr-rsk"): "rbrsolo",

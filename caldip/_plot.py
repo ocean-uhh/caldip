@@ -22,6 +22,19 @@ except ImportError:
 import caldip.core as cf
 from caldip.config import parameters as params
 
+# Legend prefix and line style per instrument class. Pumped CTDs (microcat,
+# sbe16) draw solid; temperature loggers draw dashed. instrument_type is a
+# resolved class after load_config, so the class alone drives the style; an
+# unmapped class (or a CTD) falls back to the bare serial and a solid line.
+_CLASS_STYLE: Dict[str, tuple] = {
+    "microcat": ("MC", "solid"),
+    "sbe16": ("MC", "solid"),
+    "sbe56": ("SBE56", "dash"),
+    "tr1050": ("TR", "dash"),
+    "rbrsolo": ("solo", "dash"),
+    "rbrduet": ("RBR", "dash"),
+}
+
 
 def plot(
     instrument_data: Dict[str, Dict],
@@ -220,28 +233,11 @@ def plot(
     for serial, info in instrument_data.items():
         ds = info["data"]
         color = color_map[serial]
-        instrument_label = info["config"].get("label", "Unknown")
 
-        # Create smart legend labels and line styles
+        # Legend label and line style from the resolved instrument class.
         instrument_type = info["config"].get("instrument", "").lower()
-        if instrument_type in ("microcat", "sbe16", "sbe56") or (
-            "sbe" in instrument_label.lower()
-        ):
-            legend_name = f"MC {serial}"
-            line_dash = "solid"  # MicroCATs get solid lines
-        elif instrument_type in ("tr1050", "rbrsolo", "rbrduet"):
-            if instrument_type == "rbrsolo" or "solo" in instrument_label.lower():
-                legend_name = f"solo {serial}"
-                line_dash = "dash"  # RBR thermistors get dashed lines
-            elif instrument_type == "tr1050" or "tr" in instrument_label.lower():
-                legend_name = f"TR {serial}"
-                line_dash = "dash"  # RBR thermistors get dashed lines
-            else:
-                legend_name = f"RBR {serial}"
-                line_dash = "dash"  # Default RBR get dashed lines
-        else:
-            legend_name = f"{serial}"
-            line_dash = "solid"  # Default to solid
+        prefix, line_dash = _CLASS_STYLE.get(instrument_type, (None, "solid"))
+        legend_name = f"{prefix} {serial}" if prefix else f"{serial}"
 
         show_legend_on_first_plot = True
 
