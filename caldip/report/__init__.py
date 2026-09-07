@@ -26,6 +26,7 @@ from caldip.report._data import discover_casts, summarize_cast
 from caldip.report._html import PLOTLY_BUNDLE_FILENAME, write_plotly_bundle
 from caldip.report.cast import build_cast_page_html
 from caldip.report.index import build_index_html
+from caldip.report.inventory import write_inventory
 
 __all__ = ["build_report"]
 
@@ -167,8 +168,16 @@ def build_report(
         fallback_href = None
         if summary.plot_path is not None:
             fallback_href = _rel_href(summary.plot_path, cast_dir)
+        inventory_href = None
+        if summary.nc_path is not None:
+            inventory_name = f"{summary.name}_inventory.html"
+            write_inventory(summary.nc_path, cast_dir / inventory_name)
+            inventory_href = inventory_name
         html = build_cast_page_html(
-            summary, fallback_href=fallback_href, plotly_src=plotly_src
+            summary,
+            fallback_href=fallback_href,
+            plotly_src=plotly_src,
+            inventory_href=inventory_href,
         )
         (cast_dir / f"{summary.name}.html").write_text(html, encoding="utf-8")
 

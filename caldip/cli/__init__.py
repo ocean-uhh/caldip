@@ -8,6 +8,7 @@ Entry point: the `caldip` command dispatches to subcommands.
   caldip plot       — interactive Plotly plot of instruments vs CTD
   caldip stats      — per-bottle-stop statistics vs CTD
   caldip report     — per-cruise HTML report from stats output
+  caldip inspect    — HTML inventory of a caldip netCDF file
 """
 
 import sys
@@ -21,6 +22,7 @@ from caldip.cli.instrument import (
 from caldip.cli.plot import build_parser as _build_plot, run as _run_plot
 from caldip.cli.stats import build_parser as _build_stats, run as _run_stats
 from caldip.cli.report import build_parser as _build_report, run as _run_report
+from caldip.cli.inspect import build_parser as _build_inspect, run as _run_inspect
 from caldip.cli.init import build_parser as _build_init, run as _run_init
 
 
@@ -40,6 +42,7 @@ def main(argv=None):
     _build_plot(subparsers)
     _build_stats(subparsers)
     _build_report(subparsers)
+    _build_inspect(subparsers)
 
     args = parser.parse_args(argv)
 
@@ -55,6 +58,8 @@ def main(argv=None):
         return _run_stats(args)
     if args.command == "report":
         return _run_report(args)
+    if args.command == "inspect":
+        return _run_inspect(args)
 
 
 if __name__ == "__main__":

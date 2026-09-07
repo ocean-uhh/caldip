@@ -4,8 +4,6 @@ import sys
 import argparse
 from pathlib import Path
 
-import pandas as pd
-
 from caldip.readers import (
     find_config_file,
     load_config,
@@ -13,8 +11,14 @@ from caldip.readers import (
     load_reference_data,
     resolve_data_dir,
 )
+import xarray as xr
+
 from caldip.tools import trim_to_deployment, summary_stats
-from caldip._writers import print_stats_report
+from caldip._writers import (
+    print_stats_report,
+    stats_dataset_to_frame,
+    write_stats_netcdf,
+)
 from caldip.config import parameters as params
 import caldip.core as core
 
@@ -35,7 +39,9 @@ Examples:
     if subparsers is not None:
         parser = subparsers.add_parser("stats", **kwargs)
     else:
-        parser = argparse.ArgumentParser(prog="caldip stats", **kwargs)
+        parser = argparse.ArgumentParser(
+            prog="caldip stats", **{k: v for k, v in kwargs.items() if k != "help"}
+        )
 
     parser.add_argument(
         "config_path",
@@ -154,39 +160,32 @@ def run(args):
     cast_name = config.get("name") or config_file.stem
     base_name = args.output if args.output else cast_name
 
+    detailed_nc = output_path / f"{base_name}_caldip.nc"
     detailed_csv = output_path / f"{base_name}_detailed_statistics.csv"
     summary_csv = output_path / f"{base_name}_summary_statistics.csv"
     timing_txt = output_path / f"{base_name}_timing.txt"
 
     if not detailed_df.empty:
-        float_cols = [
-            "ctd_temp",
-            "ctd_cond",
-            "inst_temp",
-            "inst_cond",
-            "inst_press",
-            "temp_std",
-            "cond_std",
-            "press_std",
-        ]
-        out_df = detailed_df.copy()
-        for col in float_cols:
-            if col in out_df.columns:
-                out_df[col] = out_df[col].apply(
-                    lambda x: (
-                        round(x, 5)
-                        if isinstance(x, (int, float)) and not pd.isna(x)
-                        else x
-                    )
-                )
-        out_df = out_df.sort_values(
+        thresholds = core.resolve_quality_thresholds(config)
+        sorted_df = detailed_df.sort_values(
             ["serial", "bl_press"], ascending=[True, False]
         ).reset_index(drop=True)
         try:
+            write_stats_netcdf(
+                sorted_df,
+                config,
+                detailed_nc,
+                thresholds=thresholds,
+                ctd_path=config.get("ctd_file"),
+            )
+            print(f"\nSaved statistics netCDF to {detailed_nc}")
+            # The CSV is a derived export of the netCDF, not a second source.
+            with xr.open_dataset(detailed_nc, engine="netcdf4") as ds:
+                out_df = stats_dataset_to_frame(ds)
             out_df.to_csv(detailed_csv, index=False)
-            print(f"\nSaved detailed statistics to {detailed_csv}")
+            print(f"Saved detailed statistics to {detailed_csv}")
         except OSError as e:
-            print(f"\n  ⚠️  Could not write {detailed_csv}: {e}")
+            print(f"\n  ⚠️  Could not write {detailed_nc} / {detailed_csv}: {e}")
             print(
                 "     Try adding -o /local/path/ to write output to a local directory."
             )

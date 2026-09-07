@@ -84,12 +84,13 @@ caldip stats moor/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml \
     --ctd-sensor 2 -o outputs/
 ```
 
-This writes three files to `outputs/`:
+This writes to `outputs/`:
+- `castM4_caldip.nc` — the machine-readable statistics (the primary output)
+- `castM4_detailed_statistics.csv` — a CSV export of the netCDF
 - `castM4_summary_statistics.csv`
-- `castM4_detailed_statistics.csv`
 - `castM4_timing.txt`
 
-See [Outputs](outputs.md) for a description of all columns.
+See [Outputs](outputs.md) for a description of the variables and columns.
 
 ### Choosing the CTD sensor
 

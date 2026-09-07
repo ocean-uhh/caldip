@@ -31,3 +31,32 @@ BOTTLE_STOP_THRESHOLD_DBAR_PER_MIN: float = 15.0
 # The plotting API already threads a ``bottle_stop_params`` dict, which is the
 # natural place to grow per-variable keys once the science values are fixed.
 BOTTLE_STOP_MIN_DURATION_SECONDS: float = 180.0
+
+
+# ---------------------------------------------------------------------------
+# Per-variable usability flags  [Output schema — CF flag variable in the netCDF]
+# ---------------------------------------------------------------------------
+# Closed usability set emitted by caldip.core.stats as the temp_flag / cond_flag /
+# press_flag columns and written to {cast}_caldip.nc as a CF flag variable, which
+# the report reads directly. Single source so the producer (core) and the writer
+# (_writers) cannot drift.
+USABILITY_FLAG_OK: int = 1
+USABILITY_FLAG_NO_DATA: int = 2
+USABILITY_FLAG_FLAGGED: int = 3
+USABILITY_FLAG_MISSING: int = 4
+USABILITY_FLAG_UNKNOWN: int = 9
+
+# CF ``flag_values`` / ``flag_meanings`` pair, in matching order.
+USABILITY_FLAG_VALUES: tuple[int, ...] = (1, 2, 3, 4, 9)
+USABILITY_FLAG_MEANINGS: str = "ok no_data flagged missing unknown"
+
+
+# ---------------------------------------------------------------------------
+# Quality-flag thresholds  [Science — |instrument - CTD| above these is flagged]
+# ---------------------------------------------------------------------------
+# A per-stop difference at or below the threshold is "OK"; above it is flagged
+# "reads high/low". Overridable per cast in the YAML under
+# ``quality_flags: {temp_threshold: ..., cond_threshold: ..., press_threshold: ...}``.
+QUALITY_TEMP_THRESHOLD: float = 0.005  # degree_C
+QUALITY_COND_THRESHOLD: float = 0.02  # mS cm-1
+QUALITY_PRESS_THRESHOLD: float = 5.0  # dbar

@@ -35,7 +35,9 @@ Examples:
     if subparsers is not None:
         parser = subparsers.add_parser("instrument", **kwargs)
     else:
-        parser = argparse.ArgumentParser(prog="caldip instrument", **kwargs)
+        parser = argparse.ArgumentParser(
+            prog="caldip instrument", **{k: v for k, v in kwargs.items() if k != "help"}
+        )
 
     parser.add_argument(
         "config_path",

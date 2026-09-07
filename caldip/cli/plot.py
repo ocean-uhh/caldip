@@ -38,7 +38,9 @@ Examples:
     if subparsers is not None:
         parser = subparsers.add_parser("plot", **kwargs)
     else:
-        parser = argparse.ArgumentParser(prog="caldip plot", **kwargs)
+        parser = argparse.ArgumentParser(
+            prog="caldip plot", **{k: v for k, v in kwargs.items() if k != "help"}
+        )
 
     parser.add_argument(
         "config_path",

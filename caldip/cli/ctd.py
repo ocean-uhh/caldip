@@ -31,7 +31,9 @@ Examples:
     if subparsers is not None:
         parser = subparsers.add_parser("ctd", **kwargs)
     else:
-        parser = argparse.ArgumentParser(prog="caldip ctd", **kwargs)
+        parser = argparse.ArgumentParser(
+            prog="caldip ctd", **{k: v for k, v in kwargs.items() if k != "help"}
+        )
 
     parser.add_argument(
         "config_path",
