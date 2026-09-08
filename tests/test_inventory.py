@@ -97,3 +97,113 @@ def test_write_inventory(tmp_path):
     out = write_inventory(_make_nc(tmp_path), tmp_path / "inv" / "castX.html")
     assert out.exists()
     assert "netCDF inventory" in out.read_text(encoding="utf-8")
+
+
+def _ctdcast_file(tmp_path, data_mode="P", stem="ref"):
+    """Write a minimal ctdcast stage-3 nc that read_ctdcast_reference can read."""
+    import xarray as xr
+
+    n = 4
+    time = pd.date_range("2026-04-03T12:00:00", periods=n, freq="1s")
+    ones = np.ones(n)
+    ds = xr.Dataset(
+        {
+            "ctd_temperature_1": ("time", 5.0 * ones),
+            "ctd_temperature_2": ("time", 6.0 * ones),
+            "conductivity_1": ("time", 30.0 * ones),
+            "conductivity_2": ("time", 31.0 * ones),
+            "pressure": ("time", 1000.0 * ones),
+        },
+        coords={"time": time},
+    )
+    _plevel = "Instrument data that has been converted to geophysical values"
+    ds["ctd_temperature_2"].attrs.update(
+        {
+            "sensor": "SENSOR_TEMPERATURE_5808",
+            "units": "degree_Celsius",
+            "processing_level": _plevel,
+        }
+    )
+    ds["conductivity_2"].attrs.update(
+        {
+            "sensor": "SENSOR_CONDUCTIVITY_2452",
+            "units": "mS cm-1",
+            "processing_level": _plevel,
+        }
+    )
+    ds["pressure"].attrs["processing_level"] = _plevel
+    for name, serial, caldate in (
+        ("SENSOR_TEMPERATURE_5808", "5808", "2019-Apr-09"),
+        ("SENSOR_CONDUCTIVITY_2452", "2452", "2017-Aug-18"),
+    ):
+        ds[name] = xr.DataArray(0)
+        ds[name].attrs["sensor_serial_number"] = serial
+        ds[name].attrs["sensor_calibration_date"] = caldate
+    ds.attrs.update(
+        {"processing_stage": 3, "data_mode": data_mode, "cruise": "MSM142",
+         "tracking_id": f"tid-{data_mode}"}
+    )
+    path = tmp_path / f"{stem}_stage3.nc"
+    ds.to_netcdf(path, engine="netcdf4")
+    return path
+
+
+def _caldip_nc_with_ref(tmp_path, ctd_path, recorded_data_mode="P"):
+    """Write a caldip nc whose recorded provenance points at ``ctd_path``."""
+    import xarray as xr
+
+    from caldip.readers import read_ctdcast_reference
+
+    with xr.open_dataset(ctd_path, engine="netcdf4") as ds:
+        _, prov = read_ctdcast_reference(ds, 2)
+    prov = dict(prov)
+    prov["data_mode"] = recorded_data_mode  # what was recorded at run time
+    t0 = pd.Timestamp("2026-04-03 12:00:00")
+    df = pd.DataFrame(
+        {
+            "serial": ["13874"], "instrument_type": ["tr1050"], "bl_press": [1000],
+            "stop": [1], "time": [t0], "t_start": [t0],
+            "t_end": [t0 + pd.Timedelta(minutes=2)], "temp_diff": [0.006],
+            "temp_std": [0.001], "cond_diff": [np.nan], "cond_std": [np.nan],
+            "press_diff": [np.nan], "press_std": [np.nan], "ctd_temp": [6.0],
+            "ctd_cond": [np.nan], "ctd_press": [1000.0], "inst_temp": [6.006],
+            "inst_cond": [np.nan], "inst_press": [np.nan], "N": [100], "label": ["x"],
+            "temp_flag": [1], "cond_flag": [2], "press_flag": [2],
+            "date": ["2026-04-03"], "time_start": ["12:00:00"],
+            "time_end": ["12:02:00"],
+        }
+    )
+    return writers.write_stats_netcdf(
+        df, _CONFIG, tmp_path / "castX_caldip.nc", thresholds=_THRESHOLDS,
+        input_mode="netcdf", ctd_provenance=prov, ctd_path=str(ctd_path),
+    )
+
+
+def test_no_reference_state_on_cnv_output(tmp_path):
+    """A .cnv-sourced output has no recorded/now comparison; the plain table shows."""
+    meta = read_nc_meta(_make_nc(tmp_path))
+    assert meta["reference_state"] is None
+    assert "as recorded / now" not in build_inventory_html(_make_nc(tmp_path))
+
+
+def test_reference_recorded_now_matches(tmp_path):
+    """When the reference is unchanged, the pair shows and no row is flagged."""
+    ctd = _ctdcast_file(tmp_path, data_mode="P")
+    meta = read_nc_meta(_caldip_nc_with_ref(tmp_path, ctd, recorded_data_mode="P"))
+    state = meta["reference_state"]
+    assert state["now_available"] is True
+    assert not [r["field"] for r in state["rows"] if r["changed"]]
+
+
+def test_reference_recorded_now_flags_a_change(tmp_path):
+    """A reference that advanced P->D marks the data_mode row and the finality gate."""
+    ctd = _ctdcast_file(tmp_path, data_mode="D")
+    html = build_inventory_html(
+        _caldip_nc_with_ref(tmp_path, ctd, recorded_data_mode="P")
+    )
+    meta = read_nc_meta(_caldip_nc_with_ref(tmp_path, ctd, recorded_data_mode="P"))
+    state = meta["reference_state"]
+    assert "data_mode" in [r["field"] for r in state["rows"] if r["changed"]]
+    assert state["data_mode_final"] is True  # the current reference is delayed-mode
+    assert "over-threshold" in html  # the changed row is highlighted
+    assert "Reference finished:" in html
