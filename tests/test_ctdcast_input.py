@@ -9,6 +9,7 @@ real-file integration test against ``msm_142_1_032_1sec_stage3.nc`` is a follow-
 """
 
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -19,6 +20,7 @@ from caldip import _writers as writers
 from caldip.readers import (
     _is_ctdcast_nc,
     _normalize_conductivity,
+    load_reference_data,
     read_ctdcast_reference,
 )
 
@@ -358,6 +360,27 @@ def test_config_digest_ignores_cosmetics_tracks_clock_offset():
     }
     assert _config_digest(base) == _config_digest(cosmetic)
     assert _config_digest(base) != _config_digest(shifted)
+
+
+def test_reference_file_records_resolved_path(tmp_path):
+    """load_reference_data exposes the reference path it resolved (data_dir +
+    ctd_file), not the bare ``ctd_file`` name.
+
+    ``caldip stats`` records this as ``ctd_path``; the inventory recorded-vs-now
+    view and ``caldip report --check`` locate the reference by it, so a bare
+    filename would only resolve when run from the cast directory.
+    """
+    cast_dir = tmp_path / "cal_dip" / "castM4"
+    cast_dir.mkdir(parents=True)
+    _ctdcast_ds().to_netcdf(cast_dir / "ref_stage3.nc", engine="netcdf4")
+    config = {"name": "castM4", "ctd_sensor": 2, "ctd_file": "ref_stage3.nc"}
+
+    reference = load_reference_data(config, data_dir=cast_dir)
+
+    entry = next(iter(reference.values()))
+    assert entry["file"] == str(cast_dir / "ref_stage3.nc")
+    assert Path(entry["file"]).exists()
+    assert entry["file"] != config["ctd_file"]  # not the bare filename
 
 
 def test_config_digest_written_to_netcdf(tmp_path):

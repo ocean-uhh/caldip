@@ -177,13 +177,21 @@ def run(args):
             (r["provenance"] for r in reference_data.values() if r.get("provenance")),
             None,
         )
+        # Record the reference path as load_reference_data resolved it (data_dir +
+        # ctd_file), not the bare ``ctd_file`` name: the inventory recorded-vs-now
+        # view and ``caldip report --check`` locate the reference by this path, so a
+        # bare filename would only resolve when run from the cast directory.
+        ctd_path = next(
+            (r["file"] for r in reference_data.values() if r.get("file")),
+            config.get("ctd_file"),
+        )
         try:
             write_stats_netcdf(
                 sorted_df,
                 config,
                 detailed_nc,
                 thresholds=thresholds,
-                ctd_path=config.get("ctd_file"),
+                ctd_path=ctd_path,
                 input_mode="netcdf" if ctd_provenance else "cnv",
                 ctd_provenance=ctd_provenance,
             )

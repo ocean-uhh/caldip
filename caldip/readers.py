@@ -438,7 +438,7 @@ def load_config(yaml_file: Union[str, Path]) -> Dict:
     are inherited from the nearest ``caldip.cruise.yaml`` when one is present.
     """
     with open(yaml_file, "r") as f:
-        config = yaml.safe_load(f)
+        config = yaml.safe_load(f) or {}
     _merge_cruise_defaults(config, Path(yaml_file))
     seen_serials: Dict[str, str] = {}
     for instrument in config.get("instruments", []) or []:
