@@ -286,8 +286,12 @@ def test_every_provenance_key_is_a_seeded_nc_attribute(tmp_path):
     """
     _, prov = read_ctdcast_reference(_ctdcast_ds(slope=1.0002), ctd_sensor=2)
     out = writers.write_stats_netcdf(
-        _stats_frame(), _CFG, tmp_path / "castM4_caldip.nc",
-        thresholds=_THRESHOLDS, input_mode="netcdf", ctd_provenance=prov,
+        _stats_frame(),
+        _CFG,
+        tmp_path / "castM4_caldip.nc",
+        thresholds=_THRESHOLDS,
+        input_mode="netcdf",
+        ctd_provenance=prov,
     )
     ds = xr.open_dataset(out, engine="netcdf4")
     missing = [k for k in prov if k not in ds.attrs]

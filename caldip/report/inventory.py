@@ -220,8 +220,7 @@ def _attr_table(attrs: dict[str, str]) -> str:
 def _reference_table(state: dict[str, Any]) -> str:
     """Render the CTD-reference *as recorded / now* comparison as HTML."""
     path_line = (
-        "<p>Reference file: "
-        f"<span class='mono'>{escape(state['ctd_path'])}</span></p>"
+        f"<p>Reference file: <span class='mono'>{escape(state['ctd_path'])}</span></p>"
     )
     if not state["now_available"]:
         note = (

@@ -140,8 +140,12 @@ def _ctdcast_file(tmp_path, data_mode="P", stem="ref"):
         ds[name].attrs["sensor_serial_number"] = serial
         ds[name].attrs["sensor_calibration_date"] = caldate
     ds.attrs.update(
-        {"processing_stage": 3, "data_mode": data_mode, "cruise": "MSM142",
-         "tracking_id": f"tid-{data_mode}"}
+        {
+            "processing_stage": 3,
+            "data_mode": data_mode,
+            "cruise": "MSM142",
+            "tracking_id": f"tid-{data_mode}",
+        }
     )
     path = tmp_path / f"{stem}_stage3.nc"
     ds.to_netcdf(path, engine="netcdf4")
@@ -161,21 +165,43 @@ def _caldip_nc_with_ref(tmp_path, ctd_path, recorded_data_mode="P"):
     t0 = pd.Timestamp("2026-04-03 12:00:00")
     df = pd.DataFrame(
         {
-            "serial": ["13874"], "instrument_type": ["tr1050"], "bl_press": [1000],
-            "stop": [1], "time": [t0], "t_start": [t0],
-            "t_end": [t0 + pd.Timedelta(minutes=2)], "temp_diff": [0.006],
-            "temp_std": [0.001], "cond_diff": [np.nan], "cond_std": [np.nan],
-            "press_diff": [np.nan], "press_std": [np.nan], "ctd_temp": [6.0],
-            "ctd_cond": [np.nan], "ctd_press": [1000.0], "inst_temp": [6.006],
-            "inst_cond": [np.nan], "inst_press": [np.nan], "N": [100], "label": ["x"],
-            "temp_flag": [1], "cond_flag": [2], "press_flag": [2],
-            "date": ["2026-04-03"], "time_start": ["12:00:00"],
+            "serial": ["13874"],
+            "instrument_type": ["tr1050"],
+            "bl_press": [1000],
+            "stop": [1],
+            "time": [t0],
+            "t_start": [t0],
+            "t_end": [t0 + pd.Timedelta(minutes=2)],
+            "temp_diff": [0.006],
+            "temp_std": [0.001],
+            "cond_diff": [np.nan],
+            "cond_std": [np.nan],
+            "press_diff": [np.nan],
+            "press_std": [np.nan],
+            "ctd_temp": [6.0],
+            "ctd_cond": [np.nan],
+            "ctd_press": [1000.0],
+            "inst_temp": [6.006],
+            "inst_cond": [np.nan],
+            "inst_press": [np.nan],
+            "N": [100],
+            "label": ["x"],
+            "temp_flag": [1],
+            "cond_flag": [2],
+            "press_flag": [2],
+            "date": ["2026-04-03"],
+            "time_start": ["12:00:00"],
             "time_end": ["12:02:00"],
         }
     )
     return writers.write_stats_netcdf(
-        df, _CONFIG, tmp_path / "castX_caldip.nc", thresholds=_THRESHOLDS,
-        input_mode="netcdf", ctd_provenance=prov, ctd_path=str(ctd_path),
+        df,
+        _CONFIG,
+        tmp_path / "castX_caldip.nc",
+        thresholds=_THRESHOLDS,
+        input_mode="netcdf",
+        ctd_provenance=prov,
+        ctd_path=str(ctd_path),
     )
 
 
