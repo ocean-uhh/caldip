@@ -52,7 +52,6 @@ jobs:
       - name: Test with pytest
         # Coverage is measured on one cell (ubuntu / 3.12) so the floor is compared
         # against one platform's number; every other cell runs --no-cov.
-        # Raise the floor as coverage grows; never lower it.
-        run: |
-          pytest -q \
-          ${{ (matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12') && '--cov=caldip --cov-report=term-missing --cov-fail-under=52' || '--no-cov' }}
+        # Raise the floor as coverage grows; never lower it. Single line (no
+        # backslash continuation) so it runs on the Windows PowerShell shell too.
+        run: pytest -q ${{ (matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12') && '--cov=caldip --cov-report=term-missing --cov-fail-under=52' || '--no-cov' }}
