@@ -14,8 +14,7 @@ To copy the repository for your own purposes (including to suggest edits):
 2. Change to the parent directory of `caldip` on your local machine
 3. Install the package locally
 ```
-pip install -r requirements-dev.txt
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 ## Option 2: Install with pip

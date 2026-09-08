@@ -6,6 +6,23 @@ All notable changes to caldip are recorded here. The format follows
 package: before 1.0, a minor bump may change output files or public calls, and
 those changes are listed under **Breaking changes**).
 
+## [Unreleased]
+
+### Changed
+
+- Dependencies are declared in `pyproject.toml` (`[project]` dependencies plus
+  `test`, `docs` and `dev` extras); `requirements.txt`, `requirements-dev.txt` and
+  `requirements-test.txt` are removed. Install for development with
+  `pip install -e ".[dev]"`.
+- CI runs on Ubuntu for Python 3.10–3.13 with a coverage floor, and on macOS and
+  Windows for 3.12; the documentation build no longer uses conda (it uses
+  `setup-python` and installs `pandoc` directly).
+
+### Breaking changes
+
+- `requires-python` is raised to `>=3.10`; Python 3.9 is no longer supported (it
+  was never tested in CI).
+
 ## [0.2.0] - 2026-09-07
 
 ### Added
@@ -73,8 +90,8 @@ those changes are listed under **Breaking changes**).
 
 ### Added
 
-- Initial release: `caldip init`, `caldip ctd`, `caldip plot`, `caldip stats` and
-  `caldip report` for calibration-dip analysis of CTD, MicroCAT and RBR data.
+- Initial release: `caldip init`, `caldip ctd`, `caldip plot` and `caldip stats`
+  for calibration-dip analysis of CTD, MicroCAT and RBR data.
 
 [0.2.0]: https://github.com/ocean-uhh/caldip/releases/tag/v0.2.0
 [0.1.0]: https://github.com/ocean-uhh/caldip/releases/tag/v0.1.0

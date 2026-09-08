@@ -2,7 +2,8 @@
 
 [![Tests](https://github.com/ocean-uhh/caldip/actions/workflows/tests.yml/badge.svg)](https://github.com/ocean-uhh/caldip/actions/workflows/tests.yml)
 [![Docs](https://github.com/ocean-uhh/caldip/actions/workflows/docs.yml/badge.svg)](https://github.com/ocean-uhh/caldip/actions/workflows/docs.yml)
-[![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org)
+[![PyPI](https://img.shields.io/pypi/v/caldip)](https://pypi.org/project/caldip/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/github/license/ocean-uhh/caldip)](https://github.com/ocean-uhh/caldip)
 
 **Calibration dip analysis for oceanographic instruments**
@@ -16,8 +17,7 @@ Caldip provides tools for processing, analyzing, and visualizing data from calib
 ```bash
 git clone https://github.com/ocean-uhh/caldip.git
 cd caldip
-pip install -r requirements.txt
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 ### Basic Usage
@@ -63,8 +63,7 @@ caldip/
 │       ├── stats.py           # `caldip stats` subcommand
 │       └── report.py          # `caldip report` subcommand
 ├── generate_all_caldip_plots.sh  # Batch processing script
-├── pyproject.toml             # Package configuration
-└── requirements.txt           # Package dependencies
+└── pyproject.toml             # Package configuration and dependencies
 ```
 
 ## 🏗️ Workflow
