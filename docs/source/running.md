@@ -124,13 +124,26 @@ caldip report data/proc_calib/odb_2026/cal_dip/
 caldip report outputs/ --cruise msm142_2026 -o reports/msm142_2026
 ```
 
-The report is a self-contained folder: `index.html`, a `casts/` subfolder of per-cast pages, and one shared `plotly.min.js`. Open `index.html` in a browser; it works offline. It is a folder rather than single files because the figures are interactive Plotly sharing one bundle — which also means there is no print/PDF version: a headless renderer will not run the figure script, so a printed cast page has no figure. If PDF is ever needed, the figures would have to be saved as static images alongside the interactive ones.
+Every page ends with a footer naming caldip, its version and the UTC time the page was generated. The report is a self-contained folder: `index.html`, a `casts/` subfolder of per-cast pages, and one shared `plotly.min.js`. Open `index.html` in a browser; it works offline. It is a folder rather than single files because the figures are interactive Plotly sharing one bundle — which also means there is no print/PDF version: a headless renderer will not run the figure script, so a printed cast page has no figure. If PDF is ever needed, the figures would have to be saved as static images alongside the interactive ones.
 
-**Index findings.** The index's "Flagged by caldip" column counts *instruments* (not stops) that caldip marked as reading high or low, using its configured thresholds — it is not an absolute pass/fail. Variables an instrument does not measure (for example conductivity on a temperature-only RBRsolo) are not counted as flags. If a directory mixes casts from more than one cruise, a Cruise column appears (the cruise is read from the CSVs when present, otherwise the report is labelled `UNK`).
+**Index findings.** The index's "Flagged by caldip" column counts *instruments* (not stops) that caldip marked as reading high or low, using its configured thresholds — it is not an absolute pass/fail. Variables an instrument does not measure (for example conductivity on a temperature-only RBRsolo) are not counted as flags. A Cruise column is always shown, read per cast from its `{cast}_caldip.nc` (`UNK` when the netCDF is absent); it is the cruise recorded with that cast, which need not match the report heading when a directory mixes casts from more than one cruise (the heading then reads `multiple cruises`).
 
-**Cast pages.** Each cast page shows the interactive figure, a bottle-stops table (pressure and the comparison-period times, deepest first), the deepest-stop summary, and the full per-stop detail. Table headers use compact symbols with units on a second line (`ΔT` °C, `σ`​`C` mS/cm, `⟨ΔP⟩` dbar, …); `Δ` is instrument − CTD. Per-stop rows caldip flagged as out of tolerance are shaded amber.
+**Cast pages.** Each cast page shows the interactive figure, a **CTD reference** block, a bottle-stops table (pressure and the comparison-period times, deepest first), the deepest-stop summary, and the full per-stop detail. The CTD reference block names the CTD sensor used for the comparison (primary or secondary) and its provenance — reference file, data mode, and, when the reference is a ctdcast netCDF, the temperature and conductivity sensor serials, calibration dates and any conductivity slope applied. These are constant for the cast, so they are stated once here rather than repeated on every detail row. Table headers use compact symbols with units on a second line (`ΔT` °C, `σ`​`C` mS/cm, `⟨ΔP⟩` dbar, …); `Δ` is instrument − CTD. Per-stop rows caldip flagged as out of tolerance are shaded amber.
 
 > **Gotcha — regenerate plots after upgrading plotly:** the report reuses the figure saved in each `{cast}_plot.html`, but loads the Plotly library once at report level from the installed version. If a saved plot was made with a different Plotly version, `caldip report` warns and that figure may render blank; re-run `caldip plot` for the affected cast.
+
+### Checking finality (`--check`)
+
+`caldip report --check <path>` answers, for a cruise, "should any casts be re-run?" — one line per cast, and a non-zero exit code if any cast is not `final`, so it fits a post-cruise checklist or CI. It reads recorded values against current ones (never file mtimes): the config against the output (`ctd_file`, `ctd_sensor`, thresholds, and a `config_digest` over the instrument list and clock offsets), the output against the CTD reference file it recorded, and the two finality gates — the reference is delayed-mode (`data_mode = D`) and its `preferred_pair` is declared.
+
+`<path>` is either a `caldip.cruise.yaml` (casts are discovered under its `cal_dip` directory) or a directory of per-cast configs; add `--nc-dir` if the `{cast}_caldip.nc` outputs are not beside the configs. States: `final` (done, never asked again), `waiting on reference` (output current, reference not yet finalised), `rerun needed` (config or reference changed since the run), `not run`, `no reference (cnv input)`, `unknown`. The same recorded-vs-now comparison is shown per attribute on each cast's `caldip inspect` inventory page.
+
+```bash
+caldip report --check data/proc_calib/msm142_2026/caldip.cruise.yaml
+caldip report --check data/proc_calib/msm142_2026/cal_dip/ --nc-dir outputs/
+```
+
+A **cruise YAML** (`caldip.cruise.yaml`, placed at the cruise directory) holds the per-cruise facts — `cruise`, `ship`, `year`, and the `cal_dip` directory — so they live in one place instead of being repeated (and drifting) across every per-cast config. A per-cast config inherits them from the nearest cruise YAML; a per-cast value that disagrees warns and the cruise value wins.
 
 ---
 

@@ -16,6 +16,8 @@ Currently Used Functions:
 """
 
 import datetime
+import hashlib
+import json
 import uuid
 import warnings
 from importlib.metadata import PackageNotFoundError, version
@@ -174,6 +176,42 @@ def _units_for(column: str) -> Optional[str]:
     return None
 
 
+def _config_digest(config: Dict) -> str:
+    """Return a short digest over the result-affecting config subset.
+
+    Covers the parts that change the numbers but carry no named attribute — the
+    instrument list (serial, class, file_type, filename) and per-instrument
+    ``clock_offset`` — canonicalised (sorted, only these keys) so that comments
+    and formatting do not trip it. It reports that the config changed, not what,
+    behind the named ``ctd_file`` / ``ctd_sensor`` / threshold comparisons.
+
+    Parameters
+    ----------
+    config : dict
+        The cast configuration.
+
+    Returns
+    -------
+    str
+        A 16-character hex digest of the canonicalised subset.
+    """
+    subset = sorted(
+        (
+            {
+                "serial": str(inst.get("serial", "")),
+                "instrument": str(inst.get("instrument", "")),
+                "file_type": str(inst.get("file_type", "")),
+                "filename": str(inst.get("filename", "")),
+                "clock_offset": inst.get("clock_offset", 0),
+            }
+            for inst in config.get("instruments", []) or []
+        ),
+        key=lambda d: (d["serial"], d["filename"]),
+    )
+    canonical = json.dumps(subset, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+
+
 def _global_attrs(
     stats_df: pd.DataFrame,
     config: Dict,
@@ -183,6 +221,7 @@ def _global_attrs(
     input_mode: str,
     date_created: str,
     date_modified: str,
+    ctd_provenance: Optional[Dict] = None,
 ) -> Dict[str, Any]:
     """Build the complete global-attribute block for ``{cast}_caldip.nc``.
 
@@ -247,12 +286,21 @@ def _global_attrs(
         "caldip_version": _caldip_version(),
         "cast_id": str(config.get("name", UNK)),
         "cruise": str(config.get("cruise") or UNK),
+        # Digest over the result-affecting config subset (instrument list +
+        # clock_offset) — the backstop for "config unchanged" behind the named
+        # ctd_file / ctd_sensor / threshold comparisons.
+        "config_digest": _config_digest(config),
         "input_mode": input_mode,
         # No QARTOD flags travel on the .cnv path, so none were excluded; the
-        # ctdcast-input branch honours real stage-2/3 flags and sets this true.
+        # ctdcast-input branch sets these from the flags it actually honoured.
         "qc_flags_honoured": "false",
+        "qc_masked_flag_values": "none",
         "data_mode": "P",
-        "data_mode_meaning": "provisional",
+        # Which CTD sensor pair the reference declares as preferred; "undeclared"
+        # until ctdcast writes it. One of the two finality gates.
+        "preferred_pair": "undeclared",
+        # data_mode_meaning is derived from data_mode after the provenance overlay
+        # (below), so the two can never disagree.
         # Lineage. source_tracking_id is the *reference* root the staleness
         # protocol tracks (the ctdcast file's tracking_id, once ctdcast-input
         # lands); source_instrument_files is the *instrument* root.
@@ -276,6 +324,27 @@ def _global_attrs(
         "ctd_press_processing_level": _CNV_PROCESSING_LEVEL,
     }
 
+    # Overlay provenance read from a ctdcast input (see readers.read_ctdcast_reference),
+    # filling the ctd_* / data_mode / cruise / source_tracking_id slots this branch
+    # otherwise leaves UNK. Only keys already in the block are applied, so a stray
+    # provenance key cannot inject an attribute; and a UNK provenance value never
+    # overwrites a known one (a ctdcast file with no cruise must not blank the
+    # config's cruise), while a known file value does win over config.
+    if ctd_provenance:
+        attrs.update(
+            {k: v for k, v in ctd_provenance.items() if k in attrs and v != UNK}
+        )
+
+    # Derived from the final data_mode, never independently set, so the pair
+    # (data_mode, data_mode_meaning) can never disagree.
+    attrs["data_mode_meaning"] = (
+        "delayed-mode" if attrs["data_mode"] == "D" else "provisional"
+    )
+    # Same coupling-safety: the masked-flag record is meaningful only when flags
+    # were honoured; otherwise it is the "none" sentinel, so the pair cannot disagree.
+    if attrs["qc_flags_honoured"] != "true":
+        attrs["qc_masked_flag_values"] = "none"
+
     unsourced = sorted(k for k, v in attrs.items() if v == UNK)
     if unsourced:
         warnings.warn(
@@ -296,6 +365,7 @@ def stats_to_dataset(
     input_mode: str = "cnv",
     date_created: Optional[str] = None,
     date_modified: Optional[str] = None,
+    ctd_provenance: Optional[Dict] = None,
 ) -> xr.Dataset:
     """Build the machine-readable per-cast statistics Dataset.
 
@@ -539,6 +609,7 @@ def stats_to_dataset(
         input_mode=input_mode,
         date_created=created,
         date_modified=modified,
+        ctd_provenance=ctd_provenance,
     )
     return ds
 
@@ -552,6 +623,7 @@ def write_stats_netcdf(
     ctd_sensor_used: Optional[Union[int, str]] = None,
     ctd_path: Optional[str] = None,
     input_mode: str = "cnv",
+    ctd_provenance: Optional[Dict] = None,
 ) -> Path:
     """Write the per-cast ``{cast}_caldip.nc`` statistics file.
 
@@ -578,6 +650,10 @@ def write_stats_netcdf(
         CTD reference file path.
     input_mode : str, default "cnv"
         How the CTD reference was read.
+    ctd_provenance : dict or None, optional
+        Provenance read from a ctdcast input (see
+        :func:`caldip.readers.read_ctdcast_reference`); fills the ``ctd_*`` /
+        ``data_mode`` / ``cruise`` / ``source_tracking_id`` global attributes.
 
     Returns
     -------
@@ -601,6 +677,7 @@ def write_stats_netcdf(
         ctd_path=ctd_path,
         input_mode=input_mode,
         date_created=date_created,
+        ctd_provenance=ctd_provenance,
     )
     ds.attrs = _clean_attrs(ds.attrs)
     for var in list(ds.data_vars) + list(ds.coords):

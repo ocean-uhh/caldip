@@ -29,7 +29,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from pathlib import Path
-from typing import Dict, Union, Optional
+from typing import Dict, Tuple, Union, Optional
 import yaml
 from datetime import datetime
 import warnings
@@ -67,6 +67,16 @@ from .sbe_hex_reader import sbe37_hex_reader
 # Conductivity source names that are in S/m and require ×10 to reach mS/cm
 _CONDUCTIVITY_S_PER_M = frozenset({"c0S/m", "c1S/m", "cond0S/m", "cond1S/m"})
 
+# Conductivity *unit strings*, normalised (stripped, lowercased, whitespace
+# collapsed) for a units-driven S/m→mS/cm conversion. Anything non-empty that is
+# in neither set is an unrecognised unit and must warn, not be assumed mS/cm.
+_CONDUCTIVITY_SPM_UNITS = frozenset(
+    {"s/m", "s m-1", "s m^-1", "siemens/m", "siemens/meter", "s·m-1"}
+)
+_CONDUCTIVITY_MSCM_UNITS = frozenset(
+    {"ms/cm", "ms cm-1", "ms cm^-1", "ms·cm-1", "millisiemens/cm"}
+)
+
 # Map caldip YAML file_type keys to seasenselib format keys where they differ.
 # 'sbe-asc' is a deprecated caldip alias for the seasenselib 'sbe-ascii' key;
 # kept here so existing YAML configs don't break. Use 'sbe-ascii' in new configs.
@@ -80,33 +90,41 @@ _CALDIP_SUPPLEMENT = {
 
 
 def _normalize_conductivity(ds: xr.Dataset) -> xr.Dataset:
-    """Convert conductivity to mS/cm where sl.read() returns S/m units.
+    """Convert conductivity to mS/cm, units-driven, warning on an unknown unit.
 
-    sl.read() always renames conductivity columns (cond0S/m, cond0mS/cm, etc.)
-    to 'conductivity' via its mapping pipeline (parameters.py default_mappings
-    and format_mappings) before returning. The resulting variable retains the
-    original S/m unit attribute, so this function checks and converts.
+    The ``conductivity`` variable's ``units`` attribute is normalised (stripped,
+    lowercased, whitespace collapsed) and matched against the known S/m and
+    mS/cm unit strings. S/m is multiplied by ten; mS/cm is left as is; any other
+    **non-empty** unit warns loudly and is left unconverted (rather than silently
+    assumed to be mS/cm — a 10× error). An empty unit is left unconverted without
+    a warning, since it carries no claim to check.
 
     Parameters
     ----------
     ds : xr.Dataset
-        Dataset as returned by sl.read().
+        Dataset with a ``conductivity`` variable (e.g. from ``sl.read()`` or a
+        ctdcast stage file), or without one.
 
     Returns
     -------
     xr.Dataset
-        Dataset with conductivity in mS/cm, or unchanged if no conductivity
-        variable is present.
+        Dataset with conductivity in mS/cm where the unit was S/m, otherwise
+        unchanged.
     """
-    # sl.read() renames all conductivity columns to 'conductivity' but keeps
-    # the original S/m unit attribute. Unit strings observed: 'S m-1', 'S/m',
-    # 'Siemens/m'.
-    if "conductivity" in ds.data_vars:
-        units = ds["conductivity"].attrs.get("units", "")
-        if units.lower() in ("s/m", "siemens/m", "s m-1", "s·m-1"):
-            ds["conductivity"] = ds["conductivity"] * 10.0
-            ds["conductivity"].attrs["units"] = "mS/cm"
-
+    if "conductivity" not in ds.data_vars:
+        return ds
+    raw = ds["conductivity"].attrs.get("units", "")
+    unit = " ".join(str(raw).strip().lower().split())
+    if unit in _CONDUCTIVITY_SPM_UNITS:
+        ds["conductivity"] = ds["conductivity"] * 10.0
+        ds["conductivity"].attrs["units"] = "mS/cm"
+    elif unit and unit not in _CONDUCTIVITY_MSCM_UNITS:
+        warnings.warn(
+            f"conductivity has unrecognised units {raw!r}; leaving it unconverted "
+            f"and assuming mS/cm. Confirm the file's conductivity unit.",
+            UserWarning,
+            stacklevel=2,
+        )
     return ds
 
 
@@ -309,6 +327,104 @@ def resolve_instrument_class(
     )
 
 
+#: Fixed name of the cruise-level YAML, distinct from the per-cast ``*.caldip.yaml``.
+CRUISE_CONFIG_NAME = "caldip.cruise.yaml"
+
+#: Cruise-level facts a per-cast config inherits from the cruise YAML.
+_CRUISE_INHERITED = ("cruise", "ship", "year")
+
+
+def find_cruise_config(start: Union[str, Path]) -> Optional[Path]:
+    """Return the nearest ``caldip.cruise.yaml`` at or above ``start``, or ``None``.
+
+    Parameters
+    ----------
+    start : str or pathlib.Path
+        A directory (or file) to search from, climbing toward the filesystem root.
+
+    Returns
+    -------
+    pathlib.Path or None
+        The nearest cruise YAML, or ``None`` if none is found.
+    """
+    start = Path(start)
+    for parent in (start, *start.parents):
+        candidate = parent / CRUISE_CONFIG_NAME
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def load_cruise_config(path: Union[str, Path]) -> Dict:
+    """Parse a cruise-level YAML (``cruise``/``ship``/``year`` + ``cal_dip`` dir).
+
+    Parameters
+    ----------
+    path : str or pathlib.Path
+        Path to a ``caldip.cruise.yaml`` file.
+
+    Returns
+    -------
+    dict
+        The parsed cruise configuration (empty dict if the file is empty).
+    """
+    with open(path, "r") as f:
+        return yaml.safe_load(f) or {}
+
+
+def discover_cast_configs(cal_dip_dir: Union[str, Path]) -> list:
+    """Return the per-cast ``*.caldip.yaml`` configs discovered under a directory.
+
+    The cruise sweep discovers casts from the directory rather than a hand-kept
+    list, so it cannot drift from what is on disk. The cruise YAML itself
+    (``caldip.cruise.yaml``) does not match ``*.caldip.yaml`` and is not returned.
+
+    Parameters
+    ----------
+    cal_dip_dir : str or pathlib.Path
+        The ``cal_dip`` directory holding one subdirectory per cast.
+
+    Returns
+    -------
+    list of pathlib.Path
+        The per-cast config paths, sorted.
+    """
+    cal_dip_dir = Path(cal_dip_dir)
+    configs = []
+    for sub in sorted(p for p in cal_dip_dir.iterdir() if p.is_dir()):
+        configs.extend(sorted(sub.glob("*.caldip.yaml")))
+    return configs
+
+
+def _merge_cruise_defaults(config: Dict, config_path: Path) -> None:
+    """Fill/override ``cruise``/``ship``/``year`` from the nearest cruise YAML.
+
+    The cruise YAML is the source of truth for these shared facts (they had drifted
+    across per-cast configs); a disagreeing per-cast value warns and the cruise
+    value wins. No-op when no cruise YAML is present, so existing configs are
+    unchanged.
+    """
+    cruise_file = find_cruise_config(config_path.parent)
+    if cruise_file is None:
+        return
+    cruise = load_cruise_config(cruise_file)
+    for key in _CRUISE_INHERITED:
+        if key not in cruise:
+            continue
+        existing = config.get(key)
+        if (
+            existing not in (None, "")
+            and str(existing).strip().lower() != str(cruise[key]).strip().lower()
+        ):
+            warnings.warn(
+                f"{key}={existing!r} in {config_path.name} disagrees with "
+                f"{cruise_file.name} ({cruise[key]!r}); using the cruise value.",
+                UserWarning,
+                stacklevel=3,
+            )
+        config[key] = cruise[key]
+
+
 def load_config(yaml_file: Union[str, Path]) -> Dict:
     """Load caldip configuration from YAML file.
 
@@ -318,10 +434,12 @@ def load_config(yaml_file: Union[str, Path]) -> Dict:
     ``instrument_type`` written to the netCDF use the single controlled
     vocabulary. Blank ``instrument:``/``serial:`` fields (an unfinished scaffold
     stub) are left untouched to be filled in later; a serial that two
-    instruments share after normalisation is rejected.
+    instruments share after normalisation is rejected. ``cruise``/``ship``/``year``
+    are inherited from the nearest ``caldip.cruise.yaml`` when one is present.
     """
     with open(yaml_file, "r") as f:
-        config = yaml.safe_load(f)
+        config = yaml.safe_load(f) or {}
+    _merge_cruise_defaults(config, Path(yaml_file))
     seen_serials: Dict[str, str] = {}
     for instrument in config.get("instruments", []) or []:
         if instrument.get("instrument"):
@@ -598,24 +716,40 @@ def load_reference_data(
         try:
             if nc_path.exists():
                 dataset = xr.open_dataset(nc_path, engine="netcdf4")
-                cached_sensor = int(dataset.attrs.get("ctd_sensor", 1))
-                if cached_sensor != requested_sensor:
-                    raise ValueError(
-                        f"Cached CTD '{nc_path.name}' was built with ctd_sensor={cached_sensor} "
-                        f"but config (or --ctd-sensor) requests sensor {requested_sensor}. "
-                        f"Delete {nc_path.name} and re-run 'caldip ctd' to rebuild."
+                if _is_ctdcast_nc(dataset):
+                    source = dataset
+                    dataset, provenance = read_ctdcast_reference(
+                        source, requested_sensor, config
                     )
-                print(
-                    f"  ✅ Loaded pre-processed CTD from {nc_path.name} ({len(dataset.time)} samples)"
-                )
+                    source.close()  # the resampled reference is independent of it
+                    print(
+                        f"  ✅ Loaded ctdcast reference from {nc_path.name} "
+                        f"(stage {provenance['ctd_stage']}, {len(dataset.time)} samples)"
+                    )
+                    reference_data[ctd_name] = {
+                        "data": dataset,
+                        "file": str(ctd_path),
+                        "provenance": provenance,
+                    }
+                else:
+                    cached_sensor = int(dataset.attrs.get("ctd_sensor", 1))
+                    if cached_sensor != requested_sensor:
+                        raise ValueError(
+                            f"Cached CTD '{nc_path.name}' was built with ctd_sensor={cached_sensor} "
+                            f"but config (or --ctd-sensor) requests sensor {requested_sensor}. "
+                            f"Delete {nc_path.name} and re-run 'caldip ctd' to rebuild."
+                        )
+                    print(
+                        f"  ✅ Loaded pre-processed CTD from {nc_path.name} ({len(dataset.time)} samples)"
+                    )
+                    reference_data[ctd_name] = {"data": dataset, "file": str(ctd_path)}
             else:
                 dataset = load_instrument_data(ctd_path, "ctd-cnv")
                 dataset = _normalize_ctd_vars(dataset, ctd_sensor=requested_sensor)
                 dataset = _wild_edit_ctd(dataset, config)
                 dataset = _resample_1hz(dataset)
                 print(f"  ✅ Loaded: {len(dataset.time)} samples")
-
-            reference_data[ctd_name] = {"data": dataset, "file": str(ctd_path)}
+                reference_data[ctd_name] = {"data": dataset, "file": str(ctd_path)}
 
         except ValueError:
             raise
@@ -623,6 +757,186 @@ def load_reference_data(
             print(f"  ❌ Failed to load CTD: {e}")
 
     return reference_data
+
+
+_CTDCAST_UNK = "UNK"
+
+# QARTOD "fail" flag value; a compared reference sample carrying it is masked.
+_QARTOD_FAIL = 4
+
+
+def _is_ctdcast_nc(ds: xr.Dataset) -> bool:
+    """Return ``True`` if ``ds`` is a ctdcast per-cast stage netCDF.
+
+    Distinguishes a ctdcast product (declares its own ``processing_stage`` and
+    carries the ``ctd_temperature`` / ``conductivity`` naming) from caldip's own
+    CTD cache (canonical ``temperature`` plus a ``ctd_sensor`` attribute).
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        A dataset opened from the configured ``ctd_file`` path.
+
+    Returns
+    -------
+    bool
+        Whether to route ``ds`` to :func:`read_ctdcast_reference`.
+    """
+    if "processing_stage" not in ds.attrs:
+        return False
+    markers = ("ctd_temperature_1", "ctd_temperature", "conductivity_1", "conductivity")
+    return any(name in ds.data_vars for name in markers)
+
+
+def _ctdcast_sensor_meta(ds: xr.Dataset, var: Optional[str]) -> Tuple[str, str]:
+    """Return ``(serial, calibration_date)`` for the sensor behind ``var``.
+
+    The data variable links to its ``SENSOR_<TYPE>_<SERIAL>`` catalog entry via a
+    ``sensor`` attribute; ``UNK`` is returned where the link or field is absent.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        The ctdcast stage dataset.
+    var : str or None
+        The measured variable whose sensor is wanted.
+
+    Returns
+    -------
+    tuple of str
+        The sensor serial number and calibration date, or ``UNK`` each.
+    """
+    if not var or var not in ds:
+        return _CTDCAST_UNK, _CTDCAST_UNK
+    sensor_name = ds[var].attrs.get("sensor")
+    if not sensor_name or sensor_name not in ds:
+        return _CTDCAST_UNK, _CTDCAST_UNK
+    attrs = ds[sensor_name].attrs
+    return (
+        str(attrs.get("sensor_serial_number", _CTDCAST_UNK)),
+        str(attrs.get("sensor_calibration_date", _CTDCAST_UNK)),
+    )
+
+
+def read_ctdcast_reference(
+    ds: xr.Dataset, ctd_sensor: int, config: Optional[Dict] = None
+) -> Tuple[xr.Dataset, Dict]:
+    """Map a ctdcast stage netCDF to caldip's CTD reference, with provenance.
+
+    The dual-sensor ctdcast variables (``ctd_temperature_1``/``_2``,
+    ``conductivity_1``/``_2``, or the single-sensor forms) are mapped to caldip's
+    canonical ``temperature`` / ``conductivity`` / ``pressure`` for the requested
+    ``ctd_sensor``, honouring each compared variable's QARTOD ``_qc`` companion
+    (a ``fail`` flag masks that sample). Provenance is copied from the file's
+    global attributes and the ``SENSOR_*`` catalog; ``cruise`` is taken verbatim.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        A ctdcast per-cast stage dataset (see :func:`_is_ctdcast_nc`).
+    ctd_sensor : int
+        Which CTD sensor (1 or 2) to use as the reference.
+    config : dict, optional
+        The cast configuration; used only to warn when its ``cruise`` disagrees
+        case-insensitively with the file's ``cruise``.
+
+    Returns
+    -------
+    tuple
+        ``(dataset, provenance)`` — the canonical-named CTD reference resampled
+        to 1 Hz, and a dict of provenance attributes with ``UNK`` where unsourced.
+    """
+
+    def _pick(base: str) -> Tuple[Optional[str], Optional[int]]:
+        exact = f"{base}_{ctd_sensor}"
+        if exact in ds.data_vars:
+            return exact, ctd_sensor
+        if base in ds.data_vars:  # single-sensor file (stage 1 strips the _1)
+            return base, 1
+        return None, None
+
+    temp_var, temp_sensor = _pick("ctd_temperature")
+    cond_var, _ = _pick("conductivity")
+    press_var = "pressure" if "pressure" in ds.data_vars else None
+
+    # Record the sensor actually used, not the one requested; warn on a fallback
+    # so the serials recorded below are not silently attributed to the wrong sensor.
+    sensor_used = temp_sensor if temp_sensor is not None else ctd_sensor
+    if temp_var is not None and temp_sensor != ctd_sensor:
+        warnings.warn(
+            f"ctd_sensor={ctd_sensor} requested but only a single-sensor "
+            f"temperature is present; recording ctd_sensor_used={sensor_used}.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    # Build the canonical reference, honouring QARTOD on the compared variables
+    # in the same pass: a `fail` masks that sample. Pressure is left intact so
+    # bottle-stop detection is not broken by gaps.
+    data_vars = {}
+    qc_applied = False
+    for canonical, src in (("temperature", temp_var), ("conductivity", cond_var)):
+        if src is None:
+            continue
+        da = ds[src]
+        qc_name = f"{src}_qc"
+        if qc_name in ds:
+            da = da.where(ds[qc_name] != _QARTOD_FAIL)
+            qc_applied = True
+        data_vars[canonical] = da
+    if press_var is not None:
+        data_vars["pressure"] = ds[press_var]
+    out = xr.Dataset(data_vars)
+
+    # Conductivity to mS/cm is units-driven and lives in one place; a ctdcast file
+    # may write either unit under the same variable name, so the name-driven cnv
+    # scaling is not applicable here.
+    out = _normalize_conductivity(out)
+    out = _resample_1hz(out)
+
+    temp_serial, temp_caldate = _ctdcast_sensor_meta(ds, temp_var)
+    cond_serial, cond_caldate = _ctdcast_sensor_meta(ds, cond_var)
+    slope = ds[cond_var].attrs.get("calibration_slope") if cond_var else None
+    file_cruise = str(ds.attrs.get("cruise", _CTDCAST_UNK))
+
+    yaml_cruise = str((config or {}).get("cruise") or "")
+    if (
+        yaml_cruise
+        and file_cruise not in ("", _CTDCAST_UNK)
+        and yaml_cruise.lower() != file_cruise.lower()
+    ):
+        warnings.warn(
+            f"cruise disagreement: cruise-YAML {yaml_cruise!r} vs ctdcast file "
+            f"{file_cruise!r}; the file's value is recorded verbatim.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    def _plevel(var: Optional[str]) -> str:
+        if var and var in ds:
+            return str(ds[var].attrs.get("processing_level", _CTDCAST_UNK))
+        return _CTDCAST_UNK
+
+    provenance = {
+        "source_tracking_id": str(ds.attrs.get("tracking_id", _CTDCAST_UNK)),
+        "ctd_stage": str(ds.attrs.get("processing_stage", _CTDCAST_UNK)),
+        "data_mode": "D" if str(ds.attrs.get("data_mode", "")).upper() == "D" else "P",
+        "ctd_sensor_used": str(sensor_used),
+        "qc_flags_honoured": "true" if qc_applied else "false",
+        "qc_masked_flag_values": str(_QARTOD_FAIL) if qc_applied else _CTDCAST_UNK,
+        "ctd_temp_sensor_serial": temp_serial,
+        "ctd_temp_sensor_caldate": temp_caldate,
+        "ctd_cond_sensor_serial": cond_serial,
+        "ctd_cond_sensor_caldate": cond_caldate,
+        "ctd_conductivity_slope": (str(slope) if slope is not None else _CTDCAST_UNK),
+        "ctd_cond_slope_adjusted": "true" if slope is not None else "false",
+        "ctd_temp_processing_level": _plevel(temp_var),
+        "ctd_cond_processing_level": _plevel(cond_var),
+        "ctd_press_processing_level": _plevel(press_var),
+        "preferred_pair": str(ds.attrs.get("preferred_pair", "undeclared")),
+        "cruise": file_cruise,
+    }
+    return out, provenance
 
 
 def _resample_1hz(ds: "xr.Dataset") -> "xr.Dataset":

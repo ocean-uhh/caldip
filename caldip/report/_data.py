@@ -32,6 +32,74 @@ _SUMMARY_SUFFIX = "_summary_statistics.csv"
 _NC_SUFFIX = "_caldip.nc"
 _FLAG_VARS = ("temp_flag", "cond_flag", "press_flag")
 
+#: Human labels for the CTD-reference sensor number.
+_SENSOR_LABELS = {"1": "primary", "2": "secondary"}
+
+#: CTD-reference global attributes surfaced once per cast, in display order.
+#: The sensor used and the reference data mode are always shown; the rest are
+#: shown only when populated (the ctdcast-netCDF path fills the serials, cal
+#: dates and slope; the raw-CNV path leaves them ``UNK`` and they are omitted).
+_CTD_REF_FIELDS = (
+    ("ctd_sensor_used", "CTD sensor used"),
+    ("preferred_pair", "Preferred pair (reference)"),
+    ("data_mode_meaning", "Reference data mode"),
+    ("ctd_stage", "Reference processing stage"),
+    ("ctd_temp_sensor_serial", "Temperature sensor S/N"),
+    ("ctd_temp_sensor_caldate", "Temperature calibration date"),
+    ("ctd_cond_sensor_serial", "Conductivity sensor S/N"),
+    ("ctd_cond_sensor_caldate", "Conductivity calibration date"),
+    ("ctd_conductivity_slope", "Conductivity slope applied"),
+    ("ctd_cond_slope_adjusted", "Conductivity slope-adjusted"),
+    ("ctd_temp_processing_level", "Temperature processing level"),
+    ("ctd_cond_processing_level", "Conductivity processing level"),
+    ("ctd_press_processing_level", "Pressure processing level"),
+    ("ctd_path", "Reference file"),
+    ("source_tracking_id", "Source tracking id"),
+)
+
+#: Fields always shown, even when their recorded value is a placeholder.
+_CTD_REF_ALWAYS = frozenset({"ctd_sensor_used", "data_mode_meaning"})
+
+#: Placeholder values that suppress an optional CTD-reference row.
+_CTD_REF_PLACEHOLDER = frozenset({"", "UNK", "undeclared", "—"})
+
+
+def _format_sensor_used(value: str) -> str:
+    """Return e.g. ``"secondary (2)"`` for a CTD sensor number, or the raw value."""
+    name = _SENSOR_LABELS.get(value)
+    return f"{name} ({value})" if name else (value or "UNK")
+
+
+def ctd_reference_rows(attrs: dict[str, str]) -> tuple[tuple[str, str], ...]:
+    """Reduce a cast netCDF's global attributes to display CTD-reference rows.
+
+    Cast-level facts (the CTD sensor used and its provenance) that are constant
+    for the whole cast, surfaced once rather than repeated per stop. The sensor
+    used and the reference data mode are always included; optional provenance
+    rows are dropped when their recorded value is a placeholder (``UNK`` etc.),
+    so the raw-CNV path yields a short table and the ctdcast-netCDF path a full
+    one.
+
+    Parameters
+    ----------
+    attrs : dict of str to str
+        The cast netCDF's global attributes (values as strings).
+
+    Returns
+    -------
+    tuple of (str, str)
+        Ordered ``(label, value)`` rows for :func:`caldip.report._html.key_value_table`.
+    """
+    rows = []
+    for key, label in _CTD_REF_FIELDS:
+        value = str(attrs.get(key, "")).strip()
+        if key == "ctd_sensor_used":
+            value = _format_sensor_used(value)
+        if value in _CTD_REF_PLACEHOLDER and key not in _CTD_REF_ALWAYS:
+            continue
+        rows.append((label, value or "UNK"))
+    return tuple(rows)
+
 
 @dataclass(frozen=True)
 class FlagData:
@@ -49,6 +117,9 @@ class FlagData:
         Count of flag cells that are ``unknown`` (drives a warning).
     cruise : str
         Cruise recovered from the netCDF ``cruise`` attribute, or ``"UNK"``.
+    ctd_reference : tuple of (str, str)
+        Cast-level CTD-reference rows (sensor used and provenance) from the
+        netCDF global attributes; see :func:`ctd_reference_rows`.
     """
 
     serial: np.ndarray
@@ -56,6 +127,7 @@ class FlagData:
     flagged: np.ndarray
     n_unknown: int
     cruise: str
+    ctd_reference: tuple[tuple[str, str], ...]
 
 
 def load_flags(nc_path: Path) -> FlagData | None:
@@ -80,6 +152,9 @@ def load_flags(nc_path: Path) -> FlagData | None:
         return None
     with xr.open_dataset(nc_path, engine="netcdf4") as ds:
         cruise = str(ds.attrs.get("cruise", "UNK"))
+        ctd_reference = ctd_reference_rows(
+            {str(k): str(v) for k, v in ds.attrs.items()}
+        )
         # Same canonical melt the CSV export uses, so the flag rows align with the
         # detailed CSV rows the report displays.
         flat = flatten_stats_grid(ds)
@@ -96,6 +171,7 @@ def load_flags(nc_path: Path) -> FlagData | None:
         flagged,
         n_unknown,
         cruise,
+        ctd_reference,
     )
 
 

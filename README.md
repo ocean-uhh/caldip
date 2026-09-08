@@ -322,3 +322,9 @@ bash generate_all_caldip_plots.sh
 ---
 
 The package is designed for oceanographic researchers performing instrument calibration checks and requires familiarity with CTD operations and oceanographic data formats.
+
+---
+
+## 🙏 Acknowledgements
+
+Development was assisted by Claude Code (Anthropic) and GitHub Copilot code review.

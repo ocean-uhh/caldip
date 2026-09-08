@@ -172,6 +172,7 @@ cython_debug/
 plots/
 output/
 outputs/
+reports/
 temp/
 
 # generated per-instrument caches (rebuilt by the reader on every run; not committed)

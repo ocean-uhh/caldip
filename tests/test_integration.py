@@ -168,6 +168,15 @@ def test_config_validation_missing_name(tmp_path):
     assert config == config_content
 
 
+def test_config_validation_empty_yaml(tmp_path):
+    """An empty per-cast YAML loads as an empty config rather than raising."""
+    config_file = tmp_path / "empty.yaml"
+    config_file.write_text("")  # yaml.safe_load -> None
+
+    config = readers.load_config(config_file)
+    assert config == {}
+
+
 def test_config_validation_empty_instruments(tmp_path):
     """Test handling of empty instruments list."""
     config_content = {
