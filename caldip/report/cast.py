@@ -10,12 +10,21 @@ import pandas as pd
 
 from caldip.report._data import CastSummary, FlagData
 from caldip.report._figure import check_version_skew, extract_figure
-from caldip.report._html import dataframe_to_table, figure_block, masthead, page
+from caldip.report._html import (
+    dataframe_to_table,
+    figure_block,
+    key_value_table,
+    masthead,
+    page,
+)
 
 _INDEX_HREF = "../index.html"
 #: Stop-level columns repeated per instrument in the detailed CSV; lifted into a
 #: separate bottle-stops table and dropped from the per-stop detail.
 _STOP_COLUMNS = ("date", "time_start", "time_end")
+#: Cast-level columns constant across every row; shown once in the CTD-reference
+#: block and dropped from the repeated per-stop detail table.
+_CAST_COLUMNS = ("ctd_sensor_used",)
 
 #: Sign convention and notation, stated in every table caption that shows a diff.
 _DIFF_NOTE = (
@@ -173,6 +182,16 @@ def build_cast_page_html(
         parts.append(f"<p class='warn'>{escape(skew_note)}</p>")
     parts.append(figure_block(fragment, fallback_href=fallback_href))
 
+    if summary.flag_data is not None and summary.flag_data.ctd_reference:
+        parts.append("<h2>CTD reference</h2>")
+        parts.append(
+            "<p class='caption'>The CTD channel used as the comparison reference "
+            "for every offset on this page, with its provenance. This is constant "
+            "for the cast, so it is stated once here rather than on every row; "
+            "&Delta; is instrument &minus; this CTD sensor.</p>"
+        )
+        parts.append(key_value_table(summary.flag_data.ctd_reference))
+
     detail = _read_csv(summary.detailed_path)
 
     stops = _bottle_stops(detail)
@@ -204,7 +223,7 @@ def build_cast_page_html(
         "flagged as reading out of tolerance are shaded amber.</p>"
     )
     detail_display = detail.drop(
-        columns=[c for c in _STOP_COLUMNS if c in detail.columns]
+        columns=[c for c in (*_STOP_COLUMNS, *_CAST_COLUMNS) if c in detail.columns]
     ).reset_index(drop=True)
     flag_data = summary.flag_data
     row_flagged = None

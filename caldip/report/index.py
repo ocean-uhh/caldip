@@ -10,18 +10,17 @@ from caldip.report._html import masthead, page
 _CAST_SUBDIR = "casts"
 
 
-def _row(summary: CastSummary, *, show_cruise: bool) -> str:
+def _row(summary: CastSummary) -> str:
     """Return one ``<tr>`` for a cast, linking to its per-cast page."""
     href = f"{_CAST_SUBDIR}/{summary.name}.html"
     flagged = str(summary.n_flagged)
     if summary.n_unknown:
         flagged += f" (+{summary.n_unknown} unknown)"
     flag_class = "num flag" if summary.n_flagged else "num"
-    cruise_cell = f"<td>{escape(summary.cruise)}</td>" if show_cruise else ""
     return (
         "<tr>"
         f"<td><a href='{escape(href)}'>{escape(summary.name)}</a></td>"
-        f"{cruise_cell}"
+        f"<td>{escape(summary.cruise)}</td>"
         f"<td>{escape(summary.date)}</td>"
         f"<td class='num'>{summary.n_instruments}</td>"
         f"<td class='{flag_class}'>{escape(flagged)}</td>"
@@ -32,9 +31,9 @@ def _row(summary: CastSummary, *, show_cruise: bool) -> str:
 def build_index_html(summaries: list[CastSummary], *, cruise_name: str) -> str:
     """Build the cruise index HTML from per-cast summaries.
 
-    A Cruise column is shown only when the casts span more than one cruise (e.g. a
-    directory mixing casts from different cruises); for a single cruise the label
-    is in the masthead and the column would be redundant.
+    The per-cast cruise (read from each ``{cast}_caldip.nc``) is always shown as a
+    column: it is the cruise recorded with the cast, which need not match the
+    report heading when a directory mixes casts from more than one cruise.
 
     Parameters
     ----------
@@ -48,9 +47,7 @@ def build_index_html(summaries: list[CastSummary], *, cruise_name: str) -> str:
     str
         A complete HTML document for the index page.
     """
-    show_cruise = len({s.cruise for s in summaries if s.cruise != "UNK"}) > 1
-    rows = "\n".join(_row(s, show_cruise=show_cruise) for s in summaries)
-    cruise_header = "<th>Cruise</th>" if show_cruise else ""
+    rows = "\n".join(_row(s) for s in summaries)
     head = masthead(
         "Calibration report",
         type_label=cruise_name,
@@ -63,7 +60,7 @@ def build_index_html(summaries: list[CastSummary], *, cruise_name: str) -> str:
         "it is not an absolute pass/fail. Variables an instrument does not measure "
         "are not counted.</p>\n"
         "<table>\n<thead><tr>"
-        f"<th>Cast</th>{cruise_header}<th>Date</th><th class='num'>Instruments</th>"
+        "<th>Cast</th><th>Cruise</th><th>Date</th><th class='num'>Instruments</th>"
         "<th class='num'>Flagged by caldip</th>"
         "</tr></thead>\n<tbody>\n"
         f"{rows}\n</tbody>\n</table>"
