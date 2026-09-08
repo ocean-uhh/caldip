@@ -296,3 +296,80 @@ def test_every_provenance_key_is_a_seeded_nc_attribute(tmp_path):
     ds = xr.open_dataset(out, engine="netcdf4")
     missing = [k for k in prov if k not in ds.attrs]
     assert not missing, f"provenance keys not seeded in _global_attrs: {missing}"
+
+
+def test_preferred_pair_read_from_file_and_recorded(tmp_path):
+    """preferred_pair is copied from the ctdcast file (undeclared until it ships)."""
+    ds = _ctdcast_ds()
+    _, prov = read_ctdcast_reference(ds, ctd_sensor=2)
+    assert prov["preferred_pair"] == "undeclared"  # fixture has no such attr yet
+    ds.attrs["preferred_pair"] = "secondary"
+    _, prov2 = read_ctdcast_reference(ds, ctd_sensor=2)
+    assert prov2["preferred_pair"] == "secondary"
+    out = writers.write_stats_netcdf(
+        _stats_frame(),
+        _CFG,
+        tmp_path / "castM4_caldip.nc",
+        thresholds=_THRESHOLDS,
+        input_mode="netcdf",
+        ctd_provenance=prov2,
+    )
+    assert xr.open_dataset(out, engine="netcdf4").attrs["preferred_pair"] == "secondary"
+
+
+def test_config_digest_ignores_cosmetics_tracks_clock_offset():
+    """config_digest is stable to comment/label/depth but changes on clock_offset."""
+    from caldip._writers import _config_digest
+
+    base = {
+        "instruments": [
+            {
+                "serial": "13874",
+                "instrument": "tr1050",
+                "file_type": "rbr-matlab-legacy",
+                "filename": "a.mat",
+                "clock_offset": 7175,
+            },
+        ]
+    }
+    cosmetic = {
+        "instruments": [
+            {
+                "serial": "13874",
+                "instrument": "tr1050",
+                "file_type": "rbr-matlab-legacy",
+                "filename": "a.mat",
+                "clock_offset": 7175,
+                "label": "x",
+                "depth": 0,
+            },
+        ]
+    }
+    shifted = {
+        "instruments": [
+            {
+                "serial": "13874",
+                "instrument": "tr1050",
+                "file_type": "rbr-matlab-legacy",
+                "filename": "a.mat",
+                "clock_offset": 9999,
+            },
+        ]
+    }
+    assert _config_digest(base) == _config_digest(cosmetic)
+    assert _config_digest(base) != _config_digest(shifted)
+
+
+def test_config_digest_written_to_netcdf(tmp_path):
+    """Every output carries a config_digest attribute (both input paths)."""
+    _, prov = read_ctdcast_reference(_ctdcast_ds(), ctd_sensor=2)
+    out = writers.write_stats_netcdf(
+        _stats_frame(),
+        _CFG,
+        tmp_path / "castM4_caldip.nc",
+        thresholds=_THRESHOLDS,
+        input_mode="netcdf",
+        ctd_provenance=prov,
+    )
+    digest = xr.open_dataset(out, engine="netcdf4").attrs["config_digest"]
+    assert len(digest) == 16 and digest != "UNK"

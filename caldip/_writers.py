@@ -16,6 +16,8 @@ Currently Used Functions:
 """
 
 import datetime
+import hashlib
+import json
 import uuid
 import warnings
 from importlib.metadata import PackageNotFoundError, version
@@ -174,6 +176,42 @@ def _units_for(column: str) -> Optional[str]:
     return None
 
 
+def _config_digest(config: Dict) -> str:
+    """Return a short digest over the result-affecting config subset.
+
+    Covers the parts that change the numbers but carry no named attribute — the
+    instrument list (serial, class, file_type, filename) and per-instrument
+    ``clock_offset`` — canonicalised (sorted, only these keys) so that comments
+    and formatting do not trip it. It reports that the config changed, not what,
+    behind the named ``ctd_file`` / ``ctd_sensor`` / threshold comparisons.
+
+    Parameters
+    ----------
+    config : dict
+        The cast configuration.
+
+    Returns
+    -------
+    str
+        A 16-character hex digest of the canonicalised subset.
+    """
+    subset = sorted(
+        (
+            {
+                "serial": str(inst.get("serial", "")),
+                "instrument": str(inst.get("instrument", "")),
+                "file_type": str(inst.get("file_type", "")),
+                "filename": str(inst.get("filename", "")),
+                "clock_offset": inst.get("clock_offset", 0),
+            }
+            for inst in config.get("instruments", []) or []
+        ),
+        key=lambda d: (d["serial"], d["filename"]),
+    )
+    canonical = json.dumps(subset, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+
+
 def _global_attrs(
     stats_df: pd.DataFrame,
     config: Dict,
@@ -248,12 +286,19 @@ def _global_attrs(
         "caldip_version": _caldip_version(),
         "cast_id": str(config.get("name", UNK)),
         "cruise": str(config.get("cruise") or UNK),
+        # Digest over the result-affecting config subset (instrument list +
+        # clock_offset) — the backstop for "config unchanged" behind the named
+        # ctd_file / ctd_sensor / threshold comparisons.
+        "config_digest": _config_digest(config),
         "input_mode": input_mode,
         # No QARTOD flags travel on the .cnv path, so none were excluded; the
         # ctdcast-input branch sets these from the flags it actually honoured.
         "qc_flags_honoured": "false",
         "qc_masked_flag_values": "none",
         "data_mode": "P",
+        # Which CTD sensor pair the reference declares as preferred; "undeclared"
+        # until ctdcast writes it. One of the two finality gates.
+        "preferred_pair": "undeclared",
         # data_mode_meaning is derived from data_mode after the provenance overlay
         # (below), so the two can never disagree.
         # Lineage. source_tracking_id is the *reference* root the staleness

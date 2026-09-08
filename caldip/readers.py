@@ -327,6 +327,104 @@ def resolve_instrument_class(
     )
 
 
+#: Fixed name of the cruise-level YAML, distinct from the per-cast ``*.caldip.yaml``.
+CRUISE_CONFIG_NAME = "caldip.cruise.yaml"
+
+#: Cruise-level facts a per-cast config inherits from the cruise YAML.
+_CRUISE_INHERITED = ("cruise", "ship", "year")
+
+
+def find_cruise_config(start: Union[str, Path]) -> Optional[Path]:
+    """Return the nearest ``caldip.cruise.yaml`` at or above ``start``, or ``None``.
+
+    Parameters
+    ----------
+    start : str or pathlib.Path
+        A directory (or file) to search from, climbing toward the filesystem root.
+
+    Returns
+    -------
+    pathlib.Path or None
+        The nearest cruise YAML, or ``None`` if none is found.
+    """
+    start = Path(start)
+    for parent in (start, *start.parents):
+        candidate = parent / CRUISE_CONFIG_NAME
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def load_cruise_config(path: Union[str, Path]) -> Dict:
+    """Parse a cruise-level YAML (``cruise``/``ship``/``year`` + ``cal_dip`` dir).
+
+    Parameters
+    ----------
+    path : str or pathlib.Path
+        Path to a ``caldip.cruise.yaml`` file.
+
+    Returns
+    -------
+    dict
+        The parsed cruise configuration (empty dict if the file is empty).
+    """
+    with open(path, "r") as f:
+        return yaml.safe_load(f) or {}
+
+
+def discover_cast_configs(cal_dip_dir: Union[str, Path]) -> list:
+    """Return the per-cast ``*.caldip.yaml`` configs discovered under a directory.
+
+    The cruise sweep discovers casts from the directory rather than a hand-kept
+    list, so it cannot drift from what is on disk. The cruise YAML itself
+    (``caldip.cruise.yaml``) does not match ``*.caldip.yaml`` and is not returned.
+
+    Parameters
+    ----------
+    cal_dip_dir : str or pathlib.Path
+        The ``cal_dip`` directory holding one subdirectory per cast.
+
+    Returns
+    -------
+    list of pathlib.Path
+        The per-cast config paths, sorted.
+    """
+    cal_dip_dir = Path(cal_dip_dir)
+    configs = []
+    for sub in sorted(p for p in cal_dip_dir.iterdir() if p.is_dir()):
+        configs.extend(sorted(sub.glob("*.caldip.yaml")))
+    return configs
+
+
+def _merge_cruise_defaults(config: Dict, config_path: Path) -> None:
+    """Fill/override ``cruise``/``ship``/``year`` from the nearest cruise YAML.
+
+    The cruise YAML is the source of truth for these shared facts (they had drifted
+    across per-cast configs); a disagreeing per-cast value warns and the cruise
+    value wins. No-op when no cruise YAML is present, so existing configs are
+    unchanged.
+    """
+    cruise_file = find_cruise_config(config_path.parent)
+    if cruise_file is None:
+        return
+    cruise = load_cruise_config(cruise_file)
+    for key in _CRUISE_INHERITED:
+        if key not in cruise:
+            continue
+        existing = config.get(key)
+        if (
+            existing not in (None, "")
+            and str(existing).strip().lower() != str(cruise[key]).strip().lower()
+        ):
+            warnings.warn(
+                f"{key}={existing!r} in {config_path.name} disagrees with "
+                f"{cruise_file.name} ({cruise[key]!r}); using the cruise value.",
+                UserWarning,
+                stacklevel=3,
+            )
+        config[key] = cruise[key]
+
+
 def load_config(yaml_file: Union[str, Path]) -> Dict:
     """Load caldip configuration from YAML file.
 
@@ -336,10 +434,12 @@ def load_config(yaml_file: Union[str, Path]) -> Dict:
     ``instrument_type`` written to the netCDF use the single controlled
     vocabulary. Blank ``instrument:``/``serial:`` fields (an unfinished scaffold
     stub) are left untouched to be filled in later; a serial that two
-    instruments share after normalisation is rejected.
+    instruments share after normalisation is rejected. ``cruise``/``ship``/``year``
+    are inherited from the nearest ``caldip.cruise.yaml`` when one is present.
     """
     with open(yaml_file, "r") as f:
         config = yaml.safe_load(f)
+    _merge_cruise_defaults(config, Path(yaml_file))
     seen_serials: Dict[str, str] = {}
     for instrument in config.get("instruments", []) or []:
         if instrument.get("instrument"):
@@ -833,6 +933,7 @@ def read_ctdcast_reference(
         "ctd_temp_processing_level": _plevel(temp_var),
         "ctd_cond_processing_level": _plevel(cond_var),
         "ctd_press_processing_level": _plevel(press_var),
+        "preferred_pair": str(ds.attrs.get("preferred_pair", "undeclared")),
         "cruise": file_cruise,
     }
     return out, provenance

@@ -5,6 +5,7 @@ import argparse
 from pathlib import Path
 
 from caldip.report import build_report
+from caldip.report.finality import FINAL, check_cruise
 
 
 def build_parser(subparsers=None):
@@ -52,11 +53,27 @@ Examples:
         "--cruise",
         help="Cruise label for the index heading (default: inferred from path)",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Report each cast's finality (recorded vs current) instead of building "
+        "the HTML: one line per cast, exit non-zero if any cast is not 'final'. The "
+        "argument may be a caldip.cruise.yaml or a cal_dip directory.",
+    )
+    parser.add_argument(
+        "--nc-dir",
+        dest="nc_dir",
+        help="Where the {cast}_caldip.nc outputs live, if not beside the configs "
+        "(used with --check).",
+    )
     return parser
 
 
 def run(args):
     """Execute the report subcommand. Returns exit code."""
+    if args.check:
+        return _run_check(args)
+
     results_dir = Path(args.results_dir)
     if not results_dir.is_dir():
         print(f"Error: Not a directory: {results_dir}")
@@ -72,6 +89,23 @@ def run(args):
 
     print(f"Report written to: {index_path}")
     return 0
+
+
+def _run_check(args):
+    """Run the finality sweep: one line per cast, exit non-zero if any is not final."""
+    target = Path(args.results_dir)
+    if not target.exists():
+        print(f"Error: No such file or directory: {target}")
+        return 1
+    nc_dir = Path(args.nc_dir) if args.nc_dir else None
+    results = check_cruise(target, results_dir=nc_dir)
+    if not results:
+        print(f"No casts discovered under {target}")
+        return 1
+    for cast, state, detail in results:
+        print(f"{cast:12s} {state:22s} {detail}")
+    unfinished = [c for c, state, _ in results if state != FINAL]
+    return 1 if unfinished else 0
 
 
 def main(argv=None):

@@ -132,6 +132,19 @@ The report is a self-contained folder: `index.html`, a `casts/` subfolder of per
 
 > **Gotcha — regenerate plots after upgrading plotly:** the report reuses the figure saved in each `{cast}_plot.html`, but loads the Plotly library once at report level from the installed version. If a saved plot was made with a different Plotly version, `caldip report` warns and that figure may render blank; re-run `caldip plot` for the affected cast.
 
+### Checking finality (`--check`)
+
+`caldip report --check <path>` answers, for a cruise, "should any casts be re-run?" — one line per cast, and a non-zero exit code if any cast is not `final`, so it fits a post-cruise checklist or CI. It reads recorded values against current ones (never file mtimes): the config against the output (`ctd_file`, `ctd_sensor`, thresholds, and a `config_digest` over the instrument list and clock offsets), the output against the CTD reference file it recorded, and the two finality gates — the reference is delayed-mode (`data_mode = D`) and its `preferred_pair` is declared.
+
+`<path>` is either a `caldip.cruise.yaml` (casts are discovered under its `cal_dip` directory) or a directory of per-cast configs; add `--nc-dir` if the `{cast}_caldip.nc` outputs are not beside the configs. States: `final` (done, never asked again), `waiting on reference` (output current, reference not yet finalised), `rerun needed` (config or reference changed since the run), `not run`, `no reference (cnv input)`, `unknown`. The same recorded-vs-now comparison is shown per attribute on each cast's `caldip inspect` inventory page.
+
+```bash
+caldip report --check data/proc_calib/msm142_2026/caldip.cruise.yaml
+caldip report --check data/proc_calib/msm142_2026/cal_dip/ --nc-dir outputs/
+```
+
+A **cruise YAML** (`caldip.cruise.yaml`, placed at the cruise directory) holds the per-cruise facts — `cruise`, `ship`, `year`, and the `cal_dip` directory — so they live in one place instead of being repeated (and drifting) across every per-cast config. A per-cast config inherits them from the nearest cruise YAML; a per-cast value that disagrees warns and the cruise value wins.
+
 ---
 
 ## Batch processing a cruise
