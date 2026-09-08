@@ -1,0 +1,311 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caldip.report &mdash; caldip v0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=393fce2e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=fa47ad08"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            caldip
+              <img src="../../_static/caldip_icon.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart: single cast</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Users guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../running.html">Running caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">YAML Configuration Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../outputs.html">Outputs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Help and reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="http://github.com/ocean-uhh/caldip">GitHub Repo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../caldip.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">API</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../aboutcaldip.html">About caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../bottle_stops.html">Bottle stop detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../faq.html">FAQ / Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../funding.html">Acknowledgments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../funding.html#funding">Funding</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">caldip</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">caldip.report</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for caldip.report</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Build per-cruise HTML calibration reports from caldip results.</span>
+
+<span class="sd">``build_report`` reads a directory of ``caldip stats`` output CSVs (and the saved</span>
+<span class="sd">``{cast}_plot.html`` figures beside them) and writes an index page plus one page</span>
+<span class="sd">per cast. It adds no data model: everything comes from files already on disk, so</span>
+<span class="sd">a report is reproducible from an archive of results without the raw instrument</span>
+<span class="sd">data.</span>
+
+<span class="sd">The report is a self-contained *folder* (an index, a ``casts/`` subfolder, and one</span>
+<span class="sd">shared ``plotly.min.js``), not a set of self-contained files: the interactive</span>
+<span class="sd">figures are Plotly and share the sibling bundle. This is the deliberate trade for</span>
+<span class="sd">hover/zoom on bottle stops, but it means there is no PDF path — a headless</span>
+<span class="sd">renderer such as WeasyPrint will not execute the Plotly script, so a cast page has</span>
+<span class="sd">no figure in print. If PDF output is ever wanted, a static PNG must be produced</span>
+<span class="sd">alongside the interactive figure (the shared design system's ``print_css`` and</span>
+<span class="sd">``&lt;figure&gt;&lt;img&gt;`` path already support that shape).</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">caldip.report._data</span><span class="w"> </span><span class="kn">import</span> <span class="n">discover_casts</span><span class="p">,</span> <span class="n">summarize_cast</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">caldip.report._html</span><span class="w"> </span><span class="kn">import</span> <span class="n">PLOTLY_BUNDLE_FILENAME</span><span class="p">,</span> <span class="n">write_plotly_bundle</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">caldip.report.cast</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_cast_page_html</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">caldip.report.index</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_index_html</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">caldip.report.inventory</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_inventory</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"build_report"</span><span class="p">]</span>
+
+<span class="n">_CAST_SUBDIR</span> <span class="o">=</span> <span class="s2">"casts"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_rel_href</span><span class="p">(</span><span class="n">target</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a relative href from ``start`` to ``target`` with forward slashes.</span>
+
+<span class="sd">    ``os.path.relpath`` uses the OS separator (backslash on Windows), which is</span>
+<span class="sd">    wrong for an HTML ``href``; this normalises to POSIX separators so the report</span>
+<span class="sd">    links work on every platform.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    target : pathlib.Path</span>
+<span class="sd">        The file being linked to.</span>
+<span class="sd">    start : pathlib.Path</span>
+<span class="sd">        The directory the link is written from.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        The relative path using ``/`` separators.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">start</span><span class="p">))</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_infer_cruise_name</span><span class="p">(</span><span class="n">results_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a cruise label only for the case the path justifies, else None.</span>
+
+<span class="sd">    The one defensible inference is the parent of a ``cal_dip/`` directory, which</span>
+<span class="sd">    is how caldip lays out a cruise. Any other directory name (e.g. ``outputs/``)</span>
+<span class="sd">    is not a cruise, so this returns ``None`` rather than stamping a guess.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    results_dir : pathlib.Path</span>
+<span class="sd">        The results directory.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str or None</span>
+<span class="sd">        The inferred cruise name, or ``None`` if it cannot be justified.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">results_dir</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"cal_dip"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">results_dir</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_cruise_name</span><span class="p">(</span><span class="n">results_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">summaries</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Resolve the masthead cruise label from the casts, then the path.</span>
+
+<span class="sd">    Preference order: a single cruise recorded in the casts' CSVs; ``"multiple</span>
+<span class="sd">    cruises"`` if the casts span more than one; else the path inference; else</span>
+<span class="sd">    ``"UNK"`` with a warning (never a guess).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    results_dir : pathlib.Path</span>
+<span class="sd">        The results directory.</span>
+<span class="sd">    summaries : list of CastSummary</span>
+<span class="sd">        The per-cast summaries, carrying each cast's recorded cruise.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        The cruise label for the masthead.</span>
+<span class="sd">    """</span>
+    <span class="n">known</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">s</span><span class="o">.</span><span class="n">cruise</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">summaries</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">cruise</span> <span class="o">!=</span> <span class="s2">"UNK"</span><span class="p">})</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">known</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">known</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">known</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"multiple cruises"</span>
+    <span class="n">inferred</span> <span class="o">=</span> <span class="n">_infer_cruise_name</span><span class="p">(</span><span class="n">results_dir</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">inferred</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">inferred</span>
+    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"cruise: UNK (not recorded in the CSVs and not inferable from the "</span>
+        <span class="sa">f</span><span class="s2">"results directory '</span><span class="si">{</span><span class="n">results_dir</span><span class="si">}</span><span class="s2">'; pass --cruise to name it)"</span><span class="p">,</span>
+        <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="s2">"UNK"</span>
+
+
+<div class="viewcode-block" id="build_report">
+<a class="viewcode-back" href="../../caldip.html#caldip.report.build_report">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_report</span><span class="p">(</span>
+    <span class="n">results_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">out_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">cruise_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Build a per-cruise HTML report from a directory of caldip results.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    results_dir : str or pathlib.Path</span>
+<span class="sd">        Directory holding ``{cast}_detailed_statistics.csv`` (and, ideally,</span>
+<span class="sd">        ``{cast}_summary_statistics.csv`` and ``{cast}_plot.html``) for each cast.</span>
+<span class="sd">    out_dir : str or pathlib.Path</span>
+<span class="sd">        Directory to write the report into; created if absent. The index is</span>
+<span class="sd">        written to ``out_dir/index.html`` and cast pages to</span>
+<span class="sd">        ``out_dir/casts/{cast}.html``.</span>
+<span class="sd">    cruise_name : str or None, optional</span>
+<span class="sd">        Cruise label for the index heading. If omitted, it is inferred only when</span>
+<span class="sd">        the results directory is a ``cal_dip/`` folder (from its parent); otherwise</span>
+<span class="sd">        it is set to ``"UNK"`` with a warning rather than guessing.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pathlib.Path</span>
+<span class="sd">        Path to the written index page.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    FileNotFoundError</span>
+<span class="sd">        If no ``*_detailed_statistics.csv`` files are found in ``results_dir``.</span>
+<span class="sd">    """</span>
+    <span class="n">results_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">results_dir</span><span class="p">)</span>
+    <span class="n">out_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_dir</span><span class="p">)</span>
+
+    <span class="n">cast_names</span> <span class="o">=</span> <span class="n">discover_casts</span><span class="p">(</span><span class="n">results_dir</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">cast_names</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"No '*_detailed_statistics.csv' files found in </span><span class="si">{</span><span class="n">results_dir</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+
+    <span class="n">cast_dir</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="n">_CAST_SUBDIR</span>
+    <span class="n">cast_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">summaries</span> <span class="o">=</span> <span class="p">[</span><span class="n">summarize_cast</span><span class="p">(</span><span class="n">results_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">cast_names</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">cruise_name</span><span class="p">:</span>
+        <span class="n">cruise_name</span> <span class="o">=</span> <span class="n">_resolve_cruise_name</span><span class="p">(</span><span class="n">results_dir</span><span class="p">,</span> <span class="n">summaries</span><span class="p">)</span>
+
+    <span class="n">write_plotly_bundle</span><span class="p">(</span><span class="n">out_dir</span><span class="p">)</span>
+    <span class="n">plotly_src</span> <span class="o">=</span> <span class="n">_rel_href</span><span class="p">(</span><span class="n">out_dir</span> <span class="o">/</span> <span class="n">PLOTLY_BUNDLE_FILENAME</span><span class="p">,</span> <span class="n">cast_dir</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">summary</span> <span class="ow">in</span> <span class="n">summaries</span><span class="p">:</span>
+        <span class="n">fallback_href</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">summary</span><span class="o">.</span><span class="n">plot_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fallback_href</span> <span class="o">=</span> <span class="n">_rel_href</span><span class="p">(</span><span class="n">summary</span><span class="o">.</span><span class="n">plot_path</span><span class="p">,</span> <span class="n">cast_dir</span><span class="p">)</span>
+        <span class="n">inventory_href</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">summary</span><span class="o">.</span><span class="n">nc_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">inventory_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">summary</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_inventory.html"</span>
+            <span class="n">write_inventory</span><span class="p">(</span><span class="n">summary</span><span class="o">.</span><span class="n">nc_path</span><span class="p">,</span> <span class="n">cast_dir</span> <span class="o">/</span> <span class="n">inventory_name</span><span class="p">)</span>
+            <span class="n">inventory_href</span> <span class="o">=</span> <span class="n">inventory_name</span>
+        <span class="n">html</span> <span class="o">=</span> <span class="n">build_cast_page_html</span><span class="p">(</span>
+            <span class="n">summary</span><span class="p">,</span>
+            <span class="n">fallback_href</span><span class="o">=</span><span class="n">fallback_href</span><span class="p">,</span>
+            <span class="n">plotly_src</span><span class="o">=</span><span class="n">plotly_src</span><span class="p">,</span>
+            <span class="n">inventory_href</span><span class="o">=</span><span class="n">inventory_href</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="p">(</span><span class="n">cast_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">summary</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.html"</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">html</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+
+    <span class="n">index_html</span> <span class="o">=</span> <span class="n">build_index_html</span><span class="p">(</span><span class="n">summaries</span><span class="p">,</span> <span class="n">cruise_name</span><span class="o">=</span><span class="n">cruise_name</span><span class="p">)</span>
+    <span class="n">index_path</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">"index.html"</span>
+    <span class="n">index_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">index_html</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">index_path</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Eleanor Frajka-Williams.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

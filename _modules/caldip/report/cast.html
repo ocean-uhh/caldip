@@ -1,0 +1,374 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caldip.report.cast &mdash; caldip v0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=393fce2e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=fa47ad08"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            caldip
+              <img src="../../../_static/caldip_icon.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart: single cast</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Users guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../running.html">Running caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../configuration.html">YAML Configuration Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../outputs.html">Outputs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Help and reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="http://github.com/ocean-uhh/caldip">GitHub Repo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../caldip.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">API</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../aboutcaldip.html">About caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../bottle_stops.html">Bottle stop detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq.html">FAQ / Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funding.html">Acknowledgments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../funding.html#funding">Funding</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">caldip</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../report.html">caldip.report</a></li>
+      <li class="breadcrumb-item active">caldip.report.cast</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for caldip.report.cast</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Build a per-cast page: bottle stops, summary, embedded figure, per-stop detail."""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">html</span><span class="w"> </span><span class="kn">import</span> <span class="n">escape</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">caldip.report._data</span><span class="w"> </span><span class="kn">import</span> <span class="n">CastSummary</span><span class="p">,</span> <span class="n">FlagData</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">caldip.report._figure</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_version_skew</span><span class="p">,</span> <span class="n">extract_figure</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">caldip.report._html</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">dataframe_to_table</span><span class="p">,</span>
+    <span class="n">figure_block</span><span class="p">,</span>
+    <span class="n">key_value_table</span><span class="p">,</span>
+    <span class="n">masthead</span><span class="p">,</span>
+    <span class="n">page</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">_INDEX_HREF</span> <span class="o">=</span> <span class="s2">"../index.html"</span>
+<span class="c1">#: Stop-level columns repeated per instrument in the detailed CSV; lifted into a</span>
+<span class="c1">#: separate bottle-stops table and dropped from the per-stop detail.</span>
+<span class="n">_STOP_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"date"</span><span class="p">,</span> <span class="s2">"time_start"</span><span class="p">,</span> <span class="s2">"time_end"</span><span class="p">)</span>
+<span class="c1">#: Cast-level columns constant across every row; shown once in the CTD-reference</span>
+<span class="c1">#: block and dropped from the repeated per-stop detail table.</span>
+<span class="n">_CAST_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"ctd_sensor_used"</span><span class="p">,)</span>
+
+<span class="c1">#: Sign convention and notation, stated in every table caption that shows a diff.</span>
+<span class="n">_DIFF_NOTE</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"&amp;Delta; = instrument &amp;minus; CTD (positive: the instrument reads higher "</span>
+    <span class="s2">"than the CTD; correct with measured &amp;minus; &amp;Delta;)."</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Read a stats CSV as strings so values render exactly as caldip wrote them."""</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">keep_default_na</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_bottle_stops</span><span class="p">(</span><span class="n">detail</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the unique bottle stops (pressure + times), deepest first.</span>
+
+<span class="sd">    The detailed CSV repeats each stop's pressure and time window on every</span>
+<span class="sd">    instrument's row; this collapses them to one row per stop.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    detail : pandas.DataFrame</span>
+<span class="sd">        The per-stop detail frame (read as strings).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.DataFrame</span>
+<span class="sd">        One row per stop with ``bl_press`` and any available time columns.</span>
+<span class="sd">    """</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"bl_press"</span><span class="p">,</span> <span class="o">*</span><span class="n">_STOP_COLUMNS</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">detail</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+    <span class="n">stops</span> <span class="o">=</span> <span class="n">detail</span><span class="p">[</span><span class="n">cols</span><span class="p">]</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">"bl_press"</span> <span class="ow">in</span> <span class="n">stops</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">stops</span><span class="p">[</span><span class="s2">"bl_press"</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"coerce"</span><span class="p">)</span>
+        <span class="n">stops</span> <span class="o">=</span> <span class="n">stops</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">_p</span><span class="o">=</span><span class="n">order</span><span class="p">)</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"_p"</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"stable"</span><span class="p">)</span>
+        <span class="n">stops</span> <span class="o">=</span> <span class="n">stops</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">"_p"</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">stops</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_bl_int</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return an integer-dbar bottle-stop pressure, or ``None`` if unparseable."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_rows_aligned</span><span class="p">(</span><span class="n">detail</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">flag_data</span><span class="p">:</span> <span class="n">FlagData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return whether the detail frame and the netCDF flags are row-for-row aligned.</span>
+
+<span class="sd">    The CSV is a derived export of the netCDF, so row *i* of one is row *i* of the</span>
+<span class="sd">    other; this verifies that invariant on ``(serial, bl_press)`` before the flags</span>
+<span class="sd">    are used to shade rows positionally. A silent mis-join would shade the wrong</span>
+<span class="sd">    rows with no error, so a mismatch disables shading with a warning rather than</span>
+<span class="sd">    guessing.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    detail : pandas.DataFrame</span>
+<span class="sd">        The per-stop detail frame, read as strings, indexed ``0..n-1``.</span>
+<span class="sd">    flag_data : FlagData</span>
+<span class="sd">        Per-row flags read from the cast netCDF.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool</span>
+<span class="sd">        ``True`` if every row's serial and integer pressure match positionally.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">detail</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">flag_data</span><span class="o">.</span><span class="n">flagged</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">serials</span> <span class="o">=</span> <span class="n">detail</span><span class="p">[</span><span class="s2">"serial"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span> <span class="k">if</span> <span class="s2">"serial"</span> <span class="ow">in</span> <span class="n">detail</span><span class="o">.</span><span class="n">columns</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">pressures</span> <span class="o">=</span> <span class="n">detail</span><span class="p">[</span><span class="s2">"bl_press"</span><span class="p">]</span> <span class="k">if</span> <span class="s2">"bl_press"</span> <span class="ow">in</span> <span class="n">detail</span><span class="o">.</span><span class="n">columns</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">serials</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">pressures</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">detail</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">flag_data</span><span class="o">.</span><span class="n">serial</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">!=</span> <span class="n">serials</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">flag_data</span><span class="o">.</span><span class="n">bl_press</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">!=</span> <span class="n">_bl_int</span><span class="p">(</span><span class="n">pressures</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="kc">True</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_over_threshold</span><span class="p">(</span><span class="n">row_flagged</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">],</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return a ``row_class`` callback shading rows flagged in the netCDF.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    row_flagged : numpy.ndarray or None</span>
+<span class="sd">        Per-row boolean flag aligned to the frame, or ``None`` to disable shading.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    callable</span>
+<span class="sd">        A function returning ``"over-threshold"`` for a flagged row, else ``None``.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_over_threshold</span><span class="p">(</span><span class="n">row</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">row_flagged</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="s2">"over-threshold"</span> <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">row_flagged</span><span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">name</span><span class="p">])</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">_over_threshold</span>
+
+
+<div class="viewcode-block" id="build_cast_page_html">
+<a class="viewcode-back" href="../../../caldip.html#caldip.report.cast.build_cast_page_html">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_cast_page_html</span><span class="p">(</span>
+    <span class="n">summary</span><span class="p">:</span> <span class="n">CastSummary</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">fallback_href</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">plotly_src</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">inventory_href</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Build the HTML page for a single cast.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    summary : CastSummary</span>
+<span class="sd">        The cast's resolved paths and counts.</span>
+<span class="sd">    fallback_href : str or None</span>
+<span class="sd">        Relative href from this page to the saved plot file, used only if the</span>
+<span class="sd">        figure cannot be embedded. ``None`` if no saved plot exists.</span>
+<span class="sd">    plotly_src : str</span>
+<span class="sd">        Relative href from this page to the shared ``plotly.min.js``.</span>
+<span class="sd">    inventory_href : str or None, optional</span>
+<span class="sd">        Relative href to this cast's netCDF inventory page, linked in the nav.</span>
+<span class="sd">        ``None`` when the cast has no netCDF.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        A complete HTML document for the cast page.</span>
+<span class="sd">    """</span>
+    <span class="n">fragment</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">skew_note</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">summary</span><span class="o">.</span><span class="n">plot_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">fragment</span> <span class="o">=</span> <span class="n">extract_figure</span><span class="p">(</span><span class="n">summary</span><span class="o">.</span><span class="n">plot_path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fragment</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">skew_note</span> <span class="o">=</span> <span class="n">check_version_skew</span><span class="p">(</span><span class="n">fragment</span><span class="p">,</span> <span class="n">cast_name</span><span class="o">=</span><span class="n">summary</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="n">head</span> <span class="o">=</span> <span class="n">masthead</span><span class="p">(</span>
+        <span class="n">summary</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">type_label</span><span class="o">=</span><span class="s2">"cast"</span><span class="p">,</span>
+        <span class="n">sub</span><span class="o">=</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">summary</span><span class="o">.</span><span class="n">date</span><span class="si">}</span><span class="s2"> · </span><span class="si">{</span><span class="n">summary</span><span class="o">.</span><span class="n">n_instruments</span><span class="si">}</span><span class="s2"> instrument(s) · "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">summary</span><span class="o">.</span><span class="n">n_flagged</span><span class="si">}</span><span class="s2"> flagged by caldip"</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">nav_links</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"&lt;a href='</span><span class="si">{</span><span class="n">_INDEX_HREF</span><span class="si">}</span><span class="s2">'&gt;all casts&lt;/a&gt;"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">inventory_href</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">nav_links</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"&lt;a href='</span><span class="si">{</span><span class="n">escape</span><span class="p">(</span><span class="n">inventory_href</span><span class="p">)</span><span class="si">}</span><span class="s2">'&gt;netCDF inventory&lt;/a&gt;"</span><span class="p">)</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">head</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">"&lt;div class='jump-nav'&gt;</span><span class="si">{</span><span class="s1">' '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">nav_links</span><span class="p">)</span><span class="si">}</span><span class="s2">&lt;/div&gt;"</span><span class="p">,</span>
+        <span class="s2">"&lt;h2&gt;Instruments vs CTD&lt;/h2&gt;"</span><span class="p">,</span>
+    <span class="p">]</span>
+    <span class="k">if</span> <span class="n">skew_note</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"&lt;p class='warn'&gt;</span><span class="si">{</span><span class="n">escape</span><span class="p">(</span><span class="n">skew_note</span><span class="p">)</span><span class="si">}</span><span class="s2">&lt;/p&gt;"</span><span class="p">)</span>
+    <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">figure_block</span><span class="p">(</span><span class="n">fragment</span><span class="p">,</span> <span class="n">fallback_href</span><span class="o">=</span><span class="n">fallback_href</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">summary</span><span class="o">.</span><span class="n">flag_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">summary</span><span class="o">.</span><span class="n">flag_data</span><span class="o">.</span><span class="n">ctd_reference</span><span class="p">:</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"&lt;h2&gt;CTD reference&lt;/h2&gt;"</span><span class="p">)</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="s2">"&lt;p class='caption'&gt;The CTD channel used as the comparison reference "</span>
+            <span class="s2">"for every offset on this page, with its provenance. This is constant "</span>
+            <span class="s2">"for the cast, so it is stated once here rather than on every row; "</span>
+            <span class="s2">"&amp;Delta; is instrument &amp;minus; this CTD sensor.&lt;/p&gt;"</span>
+        <span class="p">)</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key_value_table</span><span class="p">(</span><span class="n">summary</span><span class="o">.</span><span class="n">flag_data</span><span class="o">.</span><span class="n">ctd_reference</span><span class="p">))</span>
+
+    <span class="n">detail</span> <span class="o">=</span> <span class="n">_read_csv</span><span class="p">(</span><span class="n">summary</span><span class="o">.</span><span class="n">detailed_path</span><span class="p">)</span>
+
+    <span class="n">stops</span> <span class="o">=</span> <span class="n">_bottle_stops</span><span class="p">(</span><span class="n">detail</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">stops</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"&lt;h2&gt;Bottle stops&lt;/h2&gt;"</span><span class="p">)</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="s2">"&lt;p class='caption'&gt;The stops held during this cast, deepest first. "</span>
+            <span class="s2">"P&lt;sub&gt;bl&lt;/sub&gt; is the pressure at the bottle stop; t&lt;sub&gt;start&lt;/sub&gt; "</span>
+            <span class="s2">"and t&lt;sub&gt;end&lt;/sub&gt; bound the comparison period (dashed black in the "</span>
+            <span class="s2">"figure), not the whole stop.&lt;/p&gt;"</span>
+        <span class="p">)</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dataframe_to_table</span><span class="p">(</span><span class="n">stops</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">summary</span><span class="o">.</span><span class="n">summary_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"&lt;h2&gt;Summary (deepest stop only)&lt;/h2&gt;"</span><span class="p">)</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="s2">"&lt;p class='caption'&gt;A single-stop snapshot at the deepest bottle "</span>
+            <span class="sa">f</span><span class="s2">"stop, not an average across stops. </span><span class="si">{</span><span class="n">_DIFF_NOTE</span><span class="si">}</span><span class="s2"> &amp;langle;&amp;middot;&amp;rangle; "</span>
+            <span class="s2">"is the mean over that stop's samples; &amp;sigma; is their standard "</span>
+            <span class="s2">"deviation.&lt;/p&gt;"</span>
+        <span class="p">)</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dataframe_to_table</span><span class="p">(</span><span class="n">_read_csv</span><span class="p">(</span><span class="n">summary</span><span class="o">.</span><span class="n">summary_path</span><span class="p">)))</span>
+
+    <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"&lt;h2&gt;Per-stop detail&lt;/h2&gt;"</span><span class="p">)</span>
+    <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="s2">"&lt;p class='caption'&gt;One row per instrument per stop. P&lt;sub&gt;bl&lt;/sub&gt; is the "</span>
+        <span class="sa">f</span><span class="s2">"pressure at the bottle stop (times are in the bottle-stops table above). "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_DIFF_NOTE</span><span class="si">}</span><span class="s2"> &amp;sigma; is the within-stop standard deviation. Rows caldip "</span>
+        <span class="s2">"flagged as reading out of tolerance are shaded amber.&lt;/p&gt;"</span>
+    <span class="p">)</span>
+    <span class="n">detail_display</span> <span class="o">=</span> <span class="n">detail</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="n">_STOP_COLUMNS</span><span class="p">,</span> <span class="o">*</span><span class="n">_CAST_COLUMNS</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">detail</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">flag_data</span> <span class="o">=</span> <span class="n">summary</span><span class="o">.</span><span class="n">flag_data</span>
+    <span class="n">row_flagged</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">flag_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">_rows_aligned</span><span class="p">(</span><span class="n">detail_display</span><span class="p">,</span> <span class="n">flag_data</span><span class="p">):</span>
+            <span class="n">row_flagged</span> <span class="o">=</span> <span class="n">flag_data</span><span class="o">.</span><span class="n">flagged</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">summary</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: netCDF flag rows do not align with the detailed "</span>
+                <span class="s2">"CSV; amber shading disabled to avoid shading the wrong rows."</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="p">)</span>
+    <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="n">dataframe_to_table</span><span class="p">(</span><span class="n">detail_display</span><span class="p">,</span> <span class="n">row_class</span><span class="o">=</span><span class="n">_make_over_threshold</span><span class="p">(</span><span class="n">row_flagged</span><span class="p">))</span>
+    <span class="p">)</span>
+
+    <span class="n">body</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">page</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">summary</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> — caldip report"</span><span class="p">,</span>
+        <span class="n">body</span><span class="p">,</span>
+        <span class="n">plotly_src</span><span class="o">=</span><span class="n">plotly_src</span> <span class="k">if</span> <span class="n">fragment</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Eleanor Frajka-Williams.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

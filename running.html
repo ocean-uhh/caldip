@@ -1,0 +1,406 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Running caldip &mdash; caldip v0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=393fce2e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=fa47ad08"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="YAML Configuration Reference" href="configuration.html" />
+    <link rel="prev" title="Quickstart: single cast" href="quickstart.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            caldip
+              <img src="_static/caldip_icon.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart: single cast</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Users guide</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Running caldip</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-main-commands">The main commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#caldip-plot">caldip plot</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#inspecting-a-bottle-stop-in-the-plot">Inspecting a bottle stop in the plot</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#caldip-stats">caldip stats</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#choosing-the-ctd-sensor">Choosing the CTD sensor</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#caldip-report">caldip report</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#checking-finality-check">Checking finality (<code class="docutils literal notranslate"><span class="pre">--check</span></code>)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#batch-processing-a-cruise">Batch processing a cruise</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#template">Template</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#switching-ctd-sensor">Switching CTD sensor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#adding-a-new-cast">Adding a new cast</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">YAML Configuration Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Outputs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Help and reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="http://github.com/ocean-uhh/caldip">GitHub Repo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="caldip.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">API</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="aboutcaldip.html">About caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bottle_stops.html">Bottle stop detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ / Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="funding.html">Acknowledgments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="funding.html#funding">Funding</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">caldip</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Running caldip</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/running.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="running-caldip">
+<h1>Running caldip<a class="headerlink" href="#running-caldip" title="Link to this heading"></a></h1>
+<section id="the-main-commands">
+<h2>The main commands<a class="headerlink" href="#the-main-commands" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">plot</span></code> and <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">stats</span></code> operate on the same YAML configuration file but produce different outputs. <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">report</span></code> gathers their outputs for a whole cruise into a browsable HTML report.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Command</p></th>
+<th class="head"><p>Output</p></th>
+<th class="head"><p>Use for</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">plot</span></code></p></td>
+<td><p>Interactive HTML plot</p></td>
+<td><p>Visual inspection, QC at sea</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">stats</span></code></p></td>
+<td><p>Summary + detailed statistics CSVs</p></td>
+<td><p>Quantitative calibration offsets</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">report</span></code></p></td>
+<td><p>Per-cruise HTML report (index + per-cast pages)</p></td>
+<td><p>Reviewing a whole cruise at once</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">plot</span></code> and <code class="docutils literal notranslate"><span class="pre">stats</span></code> accept either a path to the YAML file or the cast directory (caldip will find the YAML automatically). <code class="docutils literal notranslate"><span class="pre">report</span></code> takes the directory the CSVs and plots were written to.</p>
+</section>
+<hr class="docutils" />
+<section id="caldip-plot">
+<h2>caldip plot<a class="headerlink" href="#caldip-plot" title="Link to this heading"></a></h2>
+<p>Generates an interactive Plotly time series showing all instruments alongside the CTD reference, with bottle stop periods highlighted.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>caldip<span class="w"> </span>plot<span class="w"> </span>&lt;config_path&gt;<span class="w"> </span><span class="o">[</span>options<span class="o">]</span>
+</pre></div>
+</div>
+<p><strong>Key options:</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--output</span> <span class="pre">NAME</span></code></p></td>
+<td><p>—</p></td>
+<td><p>Base filename for the HTML file (no extension; <code class="docutils literal notranslate"><span class="pre">_plot.html</span></code> is appended)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-o</span> <span class="pre">DIR</span></code>, <code class="docutils literal notranslate"><span class="pre">--output-dir</span> <span class="pre">DIR</span></code></p></td>
+<td><p>parent of cast dir</p></td>
+<td><p>Directory to write the HTML file</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--title</span> <span class="pre">TEXT</span></code></p></td>
+<td><p>from config</p></td>
+<td><p>Plot title</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--threshold</span> <span class="pre">FLOAT</span></code></p></td>
+<td><p>10.0</p></td>
+<td><p>Bottle stop detection threshold (dbar/min)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--min-duration</span> <span class="pre">FLOAT</span></code></p></td>
+<td><p>180.0</p></td>
+<td><p>Minimum bottle stop duration (seconds)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--no-bottle-stops</span></code></p></td>
+<td><p>—</p></td>
+<td><p>Disable bottle stop markers</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--show</span></code></p></td>
+<td><p>—</p></td>
+<td><p>Open browser even when <code class="docutils literal notranslate"><span class="pre">--output</span></code> is set</p></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<div><p><strong>Note:</strong> <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">plot</span></code> does not have a <code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span></code> flag — it always shows all CTD channels. Sensor selection only applies to <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">stats</span></code>.</p>
+</div></blockquote>
+<p><strong>Example:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>caldip<span class="w"> </span>plot<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--output<span class="w"> </span>castM4<span class="w"> </span>-o<span class="w"> </span>outputs/<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--title<span class="w"> </span><span class="s2">"castM4: Instruments vs CTD"</span>
+</pre></div>
+</div>
+<p>This writes <code class="docutils literal notranslate"><span class="pre">outputs/castM4_plot.html</span></code>.</p>
+<section id="inspecting-a-bottle-stop-in-the-plot">
+<h3>Inspecting a bottle stop in the plot<a class="headerlink" href="#inspecting-a-bottle-stop-in-the-plot" title="Link to this heading"></a></h3>
+<p>The plot has three synchronised panels (pressure, temperature, conductivity). To check instrument agreement within a single bottle stop:</p>
+<ol class="arabic simple">
+<li><p>Find the bottle stop in the <strong>pressure panel</strong> — it appears as a flat segment flanked by blue (start) and red (end) vertical lines.</p></li>
+<li><p>Click and drag across that flat segment in the pressure panel to zoom in. All three panels zoom together on the time axis.</p></li>
+<li><p>Check that instrument temperatures (and conductivities, if available) lie close to the CTD reference (black) within that window.</p></li>
+<li><p>Double-click anywhere to zoom back out.</p></li>
+</ol>
+<p>Zooming on the pressure panel first makes it easy to confirm the CTD was actually stationary, before checking the temperature and conductivity agreement.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="caldip-stats">
+<h2>caldip stats<a class="headerlink" href="#caldip-stats" title="Link to this heading"></a></h2>
+<p>Detects bottle stops, computes per-instrument statistics during each stop, and writes CSV and timing output.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>caldip<span class="w"> </span>stats<span class="w"> </span>&lt;config_path&gt;<span class="w"> </span><span class="o">[</span>options<span class="o">]</span>
+</pre></div>
+</div>
+<p><strong>Key options:</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span> <span class="pre">{1,2}</span></code></p></td>
+<td><p>from YAML, else 1</p></td>
+<td><p>Which CTD sensor pair to use</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--output</span> <span class="pre">NAME</span></code></p></td>
+<td><p>cast name from YAML</p></td>
+<td><p>Base filename for output files (no extension)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-o</span> <span class="pre">DIR</span></code>, <code class="docutils literal notranslate"><span class="pre">--output-dir</span> <span class="pre">DIR</span></code></p></td>
+<td><p>parent of cast dir</p></td>
+<td><p>Directory for all output files</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--threshold</span> <span class="pre">FLOAT</span></code></p></td>
+<td><p>10.0</p></td>
+<td><p>Bottle stop detection threshold (dbar/min)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--min-duration</span> <span class="pre">FLOAT</span></code></p></td>
+<td><p>180.0</p></td>
+<td><p>Minimum bottle stop duration (seconds)</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>caldip<span class="w"> </span>stats<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM4/castM4.caldip.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--ctd-sensor<span class="w"> </span><span class="m">2</span><span class="w"> </span>-o<span class="w"> </span>outputs/
+</pre></div>
+</div>
+<p>This writes to <code class="docutils literal notranslate"><span class="pre">outputs/</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">castM4_caldip.nc</span></code> — the machine-readable statistics (the primary output)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">castM4_detailed_statistics.csv</span></code> — a CSV export of the netCDF</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">castM4_summary_statistics.csv</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">castM4_timing.txt</span></code></p></li>
+</ul>
+<p>See <a class="reference internal" href="outputs.html"><span class="std std-doc">Outputs</span></a> for a description of the variables and columns.</p>
+<section id="choosing-the-ctd-sensor">
+<h3>Choosing the CTD sensor<a class="headerlink" href="#choosing-the-ctd-sensor" title="Link to this heading"></a></h3>
+<p>CTD rosettes typically carry two independent sensor packages. Use <code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span> <span class="pre">2</span></code> (secondary) if the primary sensor had problems during the cast. You can also set <code class="docutils literal notranslate"><span class="pre">ctd_sensors:</span> <span class="pre">2</span></code> in the YAML so the default is applied automatically without passing the flag each time.</p>
+<blockquote>
+<div><p><strong>Gotcha — sensor consistency:</strong> <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">plot</span></code> has no <code class="docutils literal notranslate"><span class="pre">--ctd-sensor</span></code> flag and always shows all CTD data. If you run <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">stats</span> <span class="pre">--ctd-sensor</span> <span class="pre">2</span></code>, verify in the plot that sensor 2 is the one that looks correct (no spikes, not flagged during the cast) or that sensor 2 is the one confirmed better by checks with a stable thermistor (temperature) or salinometer values.</p>
+</div></blockquote>
+<blockquote>
+<div><p><strong>Gotcha — threshold/duration consistency:</strong> If you change <code class="docutils literal notranslate"><span class="pre">--threshold</span></code> or <code class="docutils literal notranslate"><span class="pre">--min-duration</span></code> from the defaults, apply the same values to both <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">plot</span></code> and <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">stats</span></code>. Otherwise the bottle stops shown in the plot will not match those used to compute the statistics.</p>
+</div></blockquote>
+<blockquote>
+<div><p><strong>Gotcha — rerunning after CTD reprocessing:</strong> If the CTD <code class="docutils literal notranslate"><span class="pre">.cnv</span></code> file is updated (spike removal, pressure drift correction, conductivity slope corrections, sensor swap), regenerate all <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">stats</span></code> outputs for that cast.</p>
+</div></blockquote>
+</section>
+</section>
+<hr class="docutils" />
+<section id="caldip-report">
+<h2>caldip report<a class="headerlink" href="#caldip-report" title="Link to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">caldip</span> <span class="n">report</span> <span class="o">&lt;</span><span class="n">results_dir</span><span class="o">&gt;</span> <span class="p">[</span><span class="n">options</span><span class="p">]</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">report</span></code> reads the CSVs and saved plots that <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">stats</span></code> and <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">plot</span></code> already wrote for a cruise, and builds a browsable HTML report: a per-cruise index listing every cast, and one page per cast with its summary table, per-stop detail, and the interactive figure. It reads only files already on disk — no reprocessing, no access to the raw instrument data needed.</p>
+<p><code class="docutils literal notranslate"><span class="pre">results_dir</span></code> is the directory those outputs were written to (the cruise <code class="docutils literal notranslate"><span class="pre">cal_dip/</span></code> folder by default, or wherever <code class="docutils literal notranslate"><span class="pre">-o</span></code> sent them).</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--output-dir</span> <span class="pre">DIR</span></code>, <code class="docutils literal notranslate"><span class="pre">-o</span> <span class="pre">DIR</span></code></p></td>
+<td><p>Where to write the report (default: <code class="docutils literal notranslate"><span class="pre">&lt;results_dir&gt;/report</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--cruise</span> <span class="pre">NAME</span></code></p></td>
+<td><p>Cruise label for the index heading (default: inferred from the path)</p></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">caldip</span> <span class="n">report</span> <span class="n">data</span><span class="o">/</span><span class="n">proc_calib</span><span class="o">/</span><span class="n">odb_2026</span><span class="o">/</span><span class="n">cal_dip</span><span class="o">/</span>
+<span class="n">caldip</span> <span class="n">report</span> <span class="n">outputs</span><span class="o">/</span> <span class="o">--</span><span class="n">cruise</span> <span class="n">msm142_2026</span> <span class="o">-</span><span class="n">o</span> <span class="n">reports</span><span class="o">/</span><span class="n">msm142_2026</span>
+</pre></div>
+</div>
+<p>Every page ends with a footer naming caldip, its version and the UTC time the page was generated. The report is a self-contained folder: <code class="docutils literal notranslate"><span class="pre">index.html</span></code>, a <code class="docutils literal notranslate"><span class="pre">casts/</span></code> subfolder of per-cast pages, and one shared <code class="docutils literal notranslate"><span class="pre">plotly.min.js</span></code>. Open <code class="docutils literal notranslate"><span class="pre">index.html</span></code> in a browser; it works offline. It is a folder rather than single files because the figures are interactive Plotly sharing one bundle — which also means there is no print/PDF version: a headless renderer will not run the figure script, so a printed cast page has no figure. If PDF is ever needed, the figures would have to be saved as static images alongside the interactive ones.</p>
+<p><strong>Index findings.</strong> The index’s “Flagged by caldip” column counts <em>instruments</em> (not stops) that caldip marked as reading high or low, using its configured thresholds — it is not an absolute pass/fail. Variables an instrument does not measure (for example conductivity on a temperature-only RBRsolo) are not counted as flags. A Cruise column is always shown, read per cast from its <code class="docutils literal notranslate"><span class="pre">{cast}_caldip.nc</span></code> (<code class="docutils literal notranslate"><span class="pre">UNK</span></code> when the netCDF is absent); it is the cruise recorded with that cast, which need not match the report heading when a directory mixes casts from more than one cruise (the heading then reads <code class="docutils literal notranslate"><span class="pre">multiple</span> <span class="pre">cruises</span></code>).</p>
+<p><strong>Cast pages.</strong> Each cast page shows the interactive figure, a <strong>CTD reference</strong> block, a bottle-stops table (pressure and the comparison-period times, deepest first), the deepest-stop summary, and the full per-stop detail. The CTD reference block names the CTD sensor used for the comparison (primary or secondary) and its provenance — reference file, data mode, and, when the reference is a ctdcast netCDF, the temperature and conductivity sensor serials, calibration dates and any conductivity slope applied. These are constant for the cast, so they are stated once here rather than repeated on every detail row. Table headers use compact symbols with units on a second line (<code class="docutils literal notranslate"><span class="pre">ΔT</span></code> °C, <code class="docutils literal notranslate"><span class="pre">σ</span></code>​<code class="docutils literal notranslate"><span class="pre">C</span></code> mS/cm, <code class="docutils literal notranslate"><span class="pre">⟨ΔP⟩</span></code> dbar, …); <code class="docutils literal notranslate"><span class="pre">Δ</span></code> is instrument − CTD. Per-stop rows caldip flagged as out of tolerance are shaded amber.</p>
+<blockquote>
+<div><p><strong>Gotcha — regenerate plots after upgrading plotly:</strong> the report reuses the figure saved in each <code class="docutils literal notranslate"><span class="pre">{cast}_plot.html</span></code>, but loads the Plotly library once at report level from the installed version. If a saved plot was made with a different Plotly version, <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">report</span></code> warns and that figure may render blank; re-run <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">plot</span></code> for the affected cast.</p>
+</div></blockquote>
+<section id="checking-finality-check">
+<h3>Checking finality (<code class="docutils literal notranslate"><span class="pre">--check</span></code>)<a class="headerlink" href="#checking-finality-check" title="Link to this heading"></a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">report</span> <span class="pre">--check</span> <span class="pre">&lt;path&gt;</span></code> answers, for a cruise, “should any casts be re-run?” — one line per cast, and a non-zero exit code if any cast is not <code class="docutils literal notranslate"><span class="pre">final</span></code>, so it fits a post-cruise checklist or CI. It reads recorded values against current ones (never file mtimes): the config against the output (<code class="docutils literal notranslate"><span class="pre">ctd_file</span></code>, <code class="docutils literal notranslate"><span class="pre">ctd_sensor</span></code>, thresholds, and a <code class="docutils literal notranslate"><span class="pre">config_digest</span></code> over the instrument list and clock offsets), the output against the CTD reference file it recorded, and the two finality gates — the reference is delayed-mode (<code class="docutils literal notranslate"><span class="pre">data_mode</span> <span class="pre">=</span> <span class="pre">D</span></code>) and its <code class="docutils literal notranslate"><span class="pre">preferred_pair</span></code> is declared.</p>
+<p><code class="docutils literal notranslate"><span class="pre">&lt;path&gt;</span></code> is either a <code class="docutils literal notranslate"><span class="pre">caldip.cruise.yaml</span></code> (casts are discovered under its <code class="docutils literal notranslate"><span class="pre">cal_dip</span></code> directory) or a directory of per-cast configs; add <code class="docutils literal notranslate"><span class="pre">--nc-dir</span></code> if the <code class="docutils literal notranslate"><span class="pre">{cast}_caldip.nc</span></code> outputs are not beside the configs. States: <code class="docutils literal notranslate"><span class="pre">final</span></code> (done, never asked again), <code class="docutils literal notranslate"><span class="pre">waiting</span> <span class="pre">on</span> <span class="pre">reference</span></code> (output current, reference not yet finalised), <code class="docutils literal notranslate"><span class="pre">rerun</span> <span class="pre">needed</span></code> (config or reference changed since the run), <code class="docutils literal notranslate"><span class="pre">not</span> <span class="pre">run</span></code>, <code class="docutils literal notranslate"><span class="pre">no</span> <span class="pre">reference</span> <span class="pre">(cnv</span> <span class="pre">input)</span></code>, <code class="docutils literal notranslate"><span class="pre">unknown</span></code>. The same recorded-vs-now comparison is shown per attribute on each cast’s <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">inspect</span></code> inventory page.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>caldip<span class="w"> </span>report<span class="w"> </span>--check<span class="w"> </span>data/proc_calib/msm142_2026/caldip.cruise.yaml
+caldip<span class="w"> </span>report<span class="w"> </span>--check<span class="w"> </span>data/proc_calib/msm142_2026/cal_dip/<span class="w"> </span>--nc-dir<span class="w"> </span>outputs/
+</pre></div>
+</div>
+<p>A <strong>cruise YAML</strong> (<code class="docutils literal notranslate"><span class="pre">caldip.cruise.yaml</span></code>, placed at the cruise directory) holds the per-cruise facts — <code class="docutils literal notranslate"><span class="pre">cruise</span></code>, <code class="docutils literal notranslate"><span class="pre">ship</span></code>, <code class="docutils literal notranslate"><span class="pre">year</span></code>, and the <code class="docutils literal notranslate"><span class="pre">cal_dip</span></code> directory — so they live in one place instead of being repeated (and drifting) across every per-cast config. A per-cast config inherits them from the nearest cruise YAML; a per-cast value that disagrees warns and the cruise value wins.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="batch-processing-a-cruise">
+<h2>Batch processing a cruise<a class="headerlink" href="#batch-processing-a-cruise" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">scripts/generate_all_caldip_plots.sh</span></code> is a shell script that runs both commands for every cast in a cruise.
+Copy and edit it for each cruise, uncommenting casts as their data become available.</p>
+<section id="template">
+<h3>Template<a class="headerlink" href="#template" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env bash</span>
+<span class="c1"># Generate caldip plots and statistics for cruise msm142_2026</span>
+<span class="c1"># Requires: pip install -e .</span>
+
+<span class="nv">CTD_SENSOR</span><span class="o">=</span><span class="m">2</span>
+<span class="nv">CRUISE</span><span class="o">=</span>msm142_2026
+<span class="nv">DATA</span><span class="o">=</span>moor/proc_calib/<span class="si">${</span><span class="nv">CRUISE</span><span class="si">}</span>/cal_dip
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">"Generating plots and statistics (CTD sensor </span><span class="si">${</span><span class="nv">CTD_SENSOR</span><span class="si">}</span><span class="s2">)..."</span>
+
+<span class="c1"># castM3</span>
+caldip<span class="w"> </span>plot<span class="w">  </span><span class="si">${</span><span class="nv">DATA</span><span class="si">}</span>/castM3/<span class="w"> </span>--output<span class="w"> </span>castM3<span class="w"> </span>-o<span class="w"> </span>outputs/<span class="w"> </span>--title<span class="w"> </span><span class="s2">"castM3: Instruments vs CTD"</span>
+caldip<span class="w"> </span>stats<span class="w"> </span><span class="si">${</span><span class="nv">DATA</span><span class="si">}</span>/castM3/<span class="w"> </span>--output<span class="w"> </span>castM3<span class="w"> </span>-o<span class="w"> </span>outputs/<span class="w"> </span>--ctd-sensor<span class="w"> </span><span class="si">${</span><span class="nv">CTD_SENSOR</span><span class="si">}</span>
+
+<span class="c1"># castM4</span>
+caldip<span class="w"> </span>plot<span class="w">  </span><span class="si">${</span><span class="nv">DATA</span><span class="si">}</span>/castM4/<span class="w"> </span>--output<span class="w"> </span>castM4<span class="w"> </span>-o<span class="w"> </span>outputs/<span class="w"> </span>--title<span class="w"> </span><span class="s2">"castM4: Instruments vs CTD"</span>
+caldip<span class="w"> </span>stats<span class="w"> </span><span class="si">${</span><span class="nv">DATA</span><span class="si">}</span>/castM4/<span class="w"> </span>--output<span class="w"> </span>castM4<span class="w"> </span>-o<span class="w"> </span>outputs/<span class="w"> </span>--ctd-sensor<span class="w"> </span><span class="si">${</span><span class="nv">CTD_SENSOR</span><span class="si">}</span>
+
+<span class="c1"># castM5 — uncomment when data are available</span>
+<span class="c1"># caldip plot  ${DATA}/castM5/ --output castM5 -o outputs/ --title "castM5: Instruments vs CTD"</span>
+<span class="c1"># caldip stats ${DATA}/castM5/ --output castM5 -o outputs/ --ctd-sensor ${CTD_SENSOR}</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">"Done. Outputs written to outputs/"</span>
+</pre></div>
+</div>
+</section>
+<section id="switching-ctd-sensor">
+<h3>Switching CTD sensor<a class="headerlink" href="#switching-ctd-sensor" title="Link to this heading"></a></h3>
+<p>To reprocess an entire cruise with the other sensor, change <code class="docutils literal notranslate"><span class="pre">CTD_SENSOR=2</span></code> to <code class="docutils literal notranslate"><span class="pre">CTD_SENSOR=1</span></code> at the top and rerun.
+Comment out any casts you do not want to reprocess.</p>
+</section>
+<section id="adding-a-new-cast">
+<h3>Adding a new cast<a class="headerlink" href="#adding-a-new-cast" title="Link to this heading"></a></h3>
+<ol class="arabic">
+<li><p>Create the cast directory and copy instrument files into it.</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">init</span></code> to create the stub YAML (see <a class="reference internal" href="quickstart.html"><span class="std std-doc">Quickstart</span></a>):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>caldip<span class="w"> </span>init<span class="w"> </span>moor/proc_calib/msm142_2026/cal_dip/castM5/
+</pre></div>
+</div>
+</li>
+<li><p>Fill in the YAML fields (deployment/recovery times, clock offsets).</p></li>
+<li><p>Add the cast block to the script and run.</p></li>
+</ol>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quickstart.html" class="btn btn-neutral float-left" title="Quickstart: single cast" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="configuration.html" class="btn btn-neutral float-right" title="YAML Configuration Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Eleanor Frajka-Williams.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

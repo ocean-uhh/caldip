@@ -1,0 +1,361 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caldip.tools &mdash; caldip v0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=393fce2e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=fa47ad08"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            caldip
+              <img src="../../_static/caldip_icon.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart: single cast</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Users guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../running.html">Running caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">YAML Configuration Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../outputs.html">Outputs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Help and reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="http://github.com/ocean-uhh/caldip">GitHub Repo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../caldip.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">API</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../aboutcaldip.html">About caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../bottle_stops.html">Bottle stop detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../faq.html">FAQ / Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../funding.html">Acknowledgments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../funding.html#funding">Funding</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">caldip</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">caldip.tools</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for caldip.tools</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Shared, general-purpose utilities used across the caldip package.</span>
+
+<span class="sd">Primary functions:</span>
+
+<span class="sd">- ``to_xarray()`` -&gt; xarray.Dataset: convert seabirdscientific objects to xarray Datasets.</span>
+<span class="sd">- ``trim_to_deployment()`` -&gt; tuple: trim instrument and reference data to deployment/recovery times.</span>
+<span class="sd">- ``summary_stats()`` -&gt; pandas.DataFrame: extract summary statistics from detailed bottle-stop statistics.</span>
+
+<span class="sd">Used by ``caldip.readers``, ``caldip.core``, and the CLI entry points in ``caldip.cli``.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+
+
+<div class="viewcode-block" id="to_xarray">
+<a class="viewcode-back" href="../../caldip.html#caldip.tools.to_xarray">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">to_xarray</span><span class="p">(</span><span class="n">instrument_data</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Convert seabirdscientific InstrumentData object to xarray Dataset.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    instrument_data : seabirdscientific.InstrumentData</span>
+<span class="sd">        The InstrumentData object from seabirdscientific.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xarray.Dataset</span>
+<span class="sd">        Dataset with measurements as data variables and time coordinate.</span>
+<span class="sd">    """</span>
+    <span class="n">measurements</span> <span class="o">=</span> <span class="n">instrument_data</span><span class="o">.</span><span class="n">measurements</span>
+
+    <span class="c1"># Handle interval_s safely - default to 1.0 if not available or None</span>
+    <span class="n">interval_s</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">instrument_data</span><span class="p">,</span> <span class="s2">"interval_s"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">interval_s</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># For CTD data without interval, try to infer from timestamps or use default</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="nb">hasattr</span><span class="p">(</span><span class="n">instrument_data</span><span class="p">,</span> <span class="s2">"sample_count"</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">instrument_data</span><span class="o">.</span><span class="n">sample_count</span>
+            <span class="ow">and</span> <span class="n">instrument_data</span><span class="o">.</span><span class="n">sample_count</span> <span class="o">&gt;</span> <span class="mi">1</span>
+        <span class="p">):</span>
+            <span class="c1"># Use first two timestamps if available in measurements</span>
+            <span class="n">time_keys</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">measurements</span> <span class="k">if</span> <span class="s2">"time"</span> <span class="ow">in</span> <span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+            <span class="k">if</span> <span class="n">time_keys</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">measurements</span><span class="p">[</span><span class="n">time_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">dt</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">measurements</span><span class="p">[</span><span class="n">time_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="o">-</span> <span class="n">measurements</span><span class="p">[</span><span class="n">time_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="p">)</span>
+                <span class="n">interval_s</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Default interval for CTD data</span>
+                <span class="n">interval_s</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">interval_s</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+    <span class="c1"># Create time coordinate</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="n">instrument_data</span><span class="o">.</span><span class="n">start_time</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="ow">and</span> <span class="n">instrument_data</span><span class="o">.</span><span class="n">sample_count</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="n">time_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span>
+            <span class="n">start</span><span class="o">=</span><span class="n">instrument_data</span><span class="o">.</span><span class="n">start_time</span><span class="p">,</span>
+            <span class="n">periods</span><span class="o">=</span><span class="n">instrument_data</span><span class="o">.</span><span class="n">sample_count</span><span class="p">,</span>
+            <span class="n">freq</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">interval_s</span><span class="si">}</span><span class="s2">s"</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Fallback: create index from data length</span>
+        <span class="n">data_length</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">measurements</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="k">if</span> <span class="n">measurements</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="n">time_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span>
+            <span class="n">start</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="o">.</span><span class="n">now</span><span class="p">(),</span>
+            <span class="n">periods</span><span class="o">=</span><span class="n">data_length</span><span class="p">,</span>
+            <span class="n">freq</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">interval_s</span><span class="si">}</span><span class="s2">s"</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Create data variables dict</span>
+    <span class="n">data_vars</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">measurement_series</span> <span class="ow">in</span> <span class="n">measurements</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">data_vars</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">([</span><span class="s2">"time"</span><span class="p">],</span> <span class="n">measurement_series</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+
+    <span class="c1"># Create Dataset</span>
+    <span class="k">return</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span>
+        <span class="n">data_vars</span><span class="p">,</span>
+        <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="n">time_index</span><span class="p">},</span>
+        <span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">"latitude"</span><span class="p">:</span> <span class="n">instrument_data</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span>
+            <span class="s2">"longitude"</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">instrument_data</span><span class="p">,</span> <span class="s2">"longitude"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">"start_time"</span><span class="p">:</span> <span class="n">instrument_data</span><span class="o">.</span><span class="n">start_time</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+            <span class="s2">"sample_count"</span><span class="p">:</span> <span class="n">instrument_data</span><span class="o">.</span><span class="n">sample_count</span><span class="p">,</span>
+            <span class="s2">"interval_s"</span><span class="p">:</span> <span class="n">instrument_data</span><span class="o">.</span><span class="n">interval_s</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="trim_to_deployment">
+<a class="viewcode-back" href="../../caldip.html#caldip.tools.trim_to_deployment">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">trim_to_deployment</span><span class="p">(</span>
+    <span class="n">instruments</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">],</span> <span class="n">reference_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">],</span> <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Trim instrument and reference data to deployment/recovery times.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    instruments : dict</span>
+<span class="sd">        Instrument data dictionary</span>
+<span class="sd">    reference_data : dict</span>
+<span class="sd">        Reference data dictionary</span>
+<span class="sd">    config : dict</span>
+<span class="sd">        Configuration with deployment_time and recovery_time</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        (trimmed_instruments, trimmed_reference_data)</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="s2">"deployment_time"</span> <span class="ow">in</span> <span class="n">config</span> <span class="ow">and</span> <span class="s2">"recovery_time"</span> <span class="ow">in</span> <span class="n">config</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"No deployment/recovery times in config - skipping trimming"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">instruments</span><span class="p">,</span> <span class="n">reference_data</span>
+
+    <span class="n">deployment_time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">"deployment_time"</span><span class="p">])</span><span class="o">.</span><span class="n">to_datetime64</span><span class="p">()</span>
+    <span class="n">recovery_time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">"recovery_time"</span><span class="p">])</span><span class="o">.</span><span class="n">to_datetime64</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Trimming data to: </span><span class="si">{</span><span class="n">deployment_time</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">recovery_time</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="c1"># Trim instrument data</span>
+    <span class="n">trimmed_instruments</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">serial</span><span class="p">,</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">instruments</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">"data"</span><span class="p">]</span>
+        <span class="n">time_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span> <span class="o">&gt;=</span> <span class="n">deployment_time</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span> <span class="o">&lt;=</span> <span class="n">recovery_time</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">time_mask</span><span class="p">):</span>
+            <span class="n">trimmed_info</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">trimmed_info</span><span class="p">[</span><span class="s2">"data"</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">time_mask</span><span class="p">)</span>
+            <span class="n">trimmed_instruments</span><span class="p">[</span><span class="n">serial</span><span class="p">]</span> <span class="o">=</span> <span class="n">trimmed_info</span>
+            <span class="n">n_samples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">time_mask</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Trimmed </span><span class="si">{</span><span class="n">serial</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">n_samples</span><span class="si">}</span><span class="s2"> samples"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Warning: No data for </span><span class="si">{</span><span class="n">serial</span><span class="si">}</span><span class="s2"> in deployment period"</span><span class="p">)</span>
+
+    <span class="c1"># Trim reference data</span>
+    <span class="n">trimmed_reference</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">reference_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">"data"</span><span class="p">]</span>
+        <span class="n">time_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span> <span class="o">&gt;=</span> <span class="n">deployment_time</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">time</span> <span class="o">&lt;=</span> <span class="n">recovery_time</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">time_mask</span><span class="p">):</span>
+            <span class="n">trimmed_info</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">trimmed_info</span><span class="p">[</span><span class="s2">"data"</span><span class="p">]</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">time_mask</span><span class="p">)</span>
+            <span class="n">trimmed_reference</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">trimmed_info</span>
+            <span class="n">n_samples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">time_mask</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Trimmed </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">n_samples</span><span class="si">}</span><span class="s2"> samples"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Warning: No reference data for </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> in deployment period"</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">trimmed_instruments</span><span class="p">,</span> <span class="n">trimmed_reference</span></div>
+
+
+
+<div class="viewcode-block" id="summary_stats">
+<a class="viewcode-back" href="../../caldip.html#caldip.tools.summary_stats">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">summary_stats</span><span class="p">(</span><span class="n">detailed_stats_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>  <span class="c1"># noqa: ARG001  # config is unused but part of the public signature</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Extract summary statistics from detailed bottle stop statistics.</span>
+
+<span class="sd">    Uses the deepest bottle stop data for each instrument.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    detailed_stats_df : pandas.DataFrame</span>
+<span class="sd">        Per-bottle-stop detailed statistics.</span>
+<span class="sd">    config : dict</span>
+<span class="sd">        Configuration dictionary (unused; retained for call-site compatibility).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.DataFrame</span>
+<span class="sd">        One summary row per instrument, using its deepest bottle stop.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">detailed_stats_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+    <span class="c1"># Find deepest bottle stop for each instrument</span>
+    <span class="n">summary_rows</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">serial</span> <span class="ow">in</span> <span class="n">detailed_stats_df</span><span class="p">[</span><span class="s2">"serial"</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+        <span class="n">inst_data</span> <span class="o">=</span> <span class="n">detailed_stats_df</span><span class="p">[</span><span class="n">detailed_stats_df</span><span class="p">[</span><span class="s2">"serial"</span><span class="p">]</span> <span class="o">==</span> <span class="n">serial</span><span class="p">]</span>
+
+        <span class="c1"># Get the deepest bottle stop row for this instrument</span>
+        <span class="n">deepest_row</span> <span class="o">=</span> <span class="n">inst_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">inst_data</span><span class="p">[</span><span class="s2">"bl_press"</span><span class="p">]</span><span class="o">.</span><span class="n">idxmax</span><span class="p">()]</span>
+
+        <span class="c1"># Convert empty strings to NaN for proper numeric handling</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">convert_empty_to_nan</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">"""Return NaN for empty-string placeholders, otherwise return value unchanged."""</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="s2">""</span> <span class="k">else</span> <span class="n">value</span>
+
+        <span class="n">summary_rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">"serial"</span><span class="p">:</span> <span class="n">deepest_row</span><span class="p">[</span><span class="s2">"serial"</span><span class="p">],</span>
+                <span class="s2">"instrument_type"</span><span class="p">:</span> <span class="n">deepest_row</span><span class="p">[</span><span class="s2">"instrument_type"</span><span class="p">],</span>
+                <span class="s2">"label"</span><span class="p">:</span> <span class="n">deepest_row</span><span class="p">[</span><span class="s2">"label"</span><span class="p">],</span>
+                <span class="s2">"N"</span><span class="p">:</span> <span class="n">deepest_row</span><span class="p">[</span><span class="s2">"N"</span><span class="p">],</span>  <span class="c1"># Column is named 'N' in detailed stats</span>
+                <span class="s2">"bl_press"</span><span class="p">:</span> <span class="n">deepest_row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"bl_press"</span><span class="p">),</span>  <span class="c1"># May not exist</span>
+                <span class="s2">"temp_diff"</span><span class="p">:</span> <span class="n">convert_empty_to_nan</span><span class="p">(</span><span class="n">deepest_row</span><span class="p">[</span><span class="s2">"temp_diff"</span><span class="p">]),</span>
+                <span class="s2">"temp_diff_std"</span><span class="p">:</span> <span class="n">convert_empty_to_nan</span><span class="p">(</span><span class="n">deepest_row</span><span class="p">[</span><span class="s2">"temp_std"</span><span class="p">]),</span>
+                <span class="s2">"cond_diff"</span><span class="p">:</span> <span class="n">convert_empty_to_nan</span><span class="p">(</span><span class="n">deepest_row</span><span class="p">[</span><span class="s2">"cond_diff"</span><span class="p">]),</span>
+                <span class="s2">"cond_diff_std"</span><span class="p">:</span> <span class="n">convert_empty_to_nan</span><span class="p">(</span><span class="n">deepest_row</span><span class="p">[</span><span class="s2">"cond_std"</span><span class="p">]),</span>
+                <span class="s2">"press_diff"</span><span class="p">:</span> <span class="n">convert_empty_to_nan</span><span class="p">(</span><span class="n">deepest_row</span><span class="p">[</span><span class="s2">"press_diff"</span><span class="p">]),</span>
+                <span class="s2">"press_diff_std"</span><span class="p">:</span> <span class="n">convert_empty_to_nan</span><span class="p">(</span><span class="n">deepest_row</span><span class="p">[</span><span class="s2">"press_std"</span><span class="p">]),</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+
+    <span class="n">summary_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">summary_rows</span><span class="p">)</span>
+
+    <span class="c1"># Add ctd_stats using the deepest bottle stop data (same as what's used for instruments)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">detailed_stats_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="c1"># Find the deepest bottle stop row (same logic as instruments)</span>
+        <span class="n">deepest_ctd_row</span> <span class="o">=</span> <span class="n">detailed_stats_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">detailed_stats_df</span><span class="p">[</span><span class="s2">"bl_press"</span><span class="p">]</span><span class="o">.</span><span class="n">idxmax</span><span class="p">()]</span>
+
+        <span class="n">ctd_stats</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"comparison_start"</span><span class="p">:</span> <span class="n">deepest_ctd_row</span><span class="p">[</span><span class="s2">"time_start"</span><span class="p">],</span>
+            <span class="s2">"comparison_end"</span><span class="p">:</span> <span class="n">deepest_ctd_row</span><span class="p">[</span><span class="s2">"time_end"</span><span class="p">],</span>
+            <span class="s2">"mean_temp"</span><span class="p">:</span> <span class="n">deepest_ctd_row</span><span class="p">[</span><span class="s2">"ctd_temp"</span><span class="p">],</span>
+            <span class="s2">"mean_cond"</span><span class="p">:</span> <span class="n">deepest_ctd_row</span><span class="p">[</span><span class="s2">"ctd_cond"</span><span class="p">],</span>
+            <span class="s2">"mean_pressure"</span><span class="p">:</span> <span class="n">deepest_ctd_row</span><span class="p">[</span><span class="s2">"bl_press"</span><span class="p">],</span>
+            <span class="s2">"bl_press"</span><span class="p">:</span> <span class="n">deepest_ctd_row</span><span class="p">[</span><span class="s2">"bl_press"</span><span class="p">],</span>  <span class="c1"># For print statement</span>
+            <span class="s2">"ctd_temp"</span><span class="p">:</span> <span class="n">deepest_ctd_row</span><span class="p">[</span><span class="s2">"ctd_temp"</span><span class="p">],</span>  <span class="c1"># For print statement</span>
+            <span class="s2">"ctd_cond"</span><span class="p">:</span> <span class="n">deepest_ctd_row</span><span class="p">[</span><span class="s2">"ctd_cond"</span><span class="p">],</span>  <span class="c1"># For print statement</span>
+            <span class="c1"># Note: CTD std values aren't in detailed stats - using placeholder</span>
+            <span class="s2">"press_std"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>  <span class="c1"># Placeholder - not available in detailed stats</span>
+            <span class="s2">"temp_std"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>  <span class="c1"># Placeholder - not available in detailed stats</span>
+            <span class="s2">"cond_std"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>  <span class="c1"># Placeholder - not available in detailed stats</span>
+            <span class="s2">"timing_info"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"bottle_stops"</span><span class="p">:</span> <span class="p">[]},</span>  <span class="c1"># placeholder</span>
+        <span class="p">}</span>
+        <span class="n">summary_df</span><span class="p">[</span><span class="s2">"ctd_stats"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">ctd_stats</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">summary_df</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">summary_df</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Eleanor Frajka-Williams.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

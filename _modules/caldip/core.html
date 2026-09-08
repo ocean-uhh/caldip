@@ -1,0 +1,714 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caldip.core &mdash; caldip v0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=393fce2e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=fa47ad08"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            caldip
+              <img src="../../_static/caldip_icon.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart: single cast</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Users guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../running.html">Running caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">YAML Configuration Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../outputs.html">Outputs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Help and reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="http://github.com/ocean-uhh/caldip">GitHub Repo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../caldip.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">caldip</span> <span class="pre">API</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../aboutcaldip.html">About caldip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../bottle_stops.html">Bottle stop detection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../faq.html">FAQ / Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../funding.html">Acknowledgments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../funding.html#funding">Funding</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">caldip</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">caldip.core</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for caldip.core</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Functional calibration-dip processing using xarray and numpy.</span>
+
+<span class="sd">Primary functions:</span>
+
+<span class="sd">- ``find_bottle_stops()`` -&gt; list of dict: detect bottle stops from CTD pressure data.</span>
+<span class="sd">- ``stats_for_time_period()`` -&gt; dict: statistics for a dataset within a time period.</span>
+<span class="sd">- ``stats()`` -&gt; pandas.DataFrame: statistics for each bottle stop and instrument.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">caldip.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">parameters</span> <span class="k">as</span> <span class="n">params</span>
+
+
+<div class="viewcode-block" id="find_bottle_stops">
+<a class="viewcode-back" href="../../caldip.html#caldip.core.find_bottle_stops">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">find_bottle_stops</span><span class="p">(</span>
+    <span class="n">ctd_data</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">,</span>
+    <span class="n">threshold_dbar_per_min</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">min_duration_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Find bottle stops in CTD data based on pressure rate of change.</span>
+
+<span class="sd">    Looks for periods where pressure change rate is &lt; threshold_dbar_per_min</span>
+<span class="sd">    (typically &lt; 15 dbar/min for bottle stops vs 30-60 dbar/min for normal ops).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ctd_data : xr.Dataset</span>
+<span class="sd">        CTD dataset with pressure and time variables</span>
+<span class="sd">    threshold_dbar_per_min : float, optional</span>
+<span class="sd">        Maximum pressure change rate for bottle stops (dbar/min). Defaults to</span>
+<span class="sd">        ``caldip.config.parameters.BOTTLE_STOP_THRESHOLD_DBAR_PER_MIN``.</span>
+<span class="sd">    min_duration_seconds : float, optional</span>
+<span class="sd">        Minimum duration for valid bottle stops (seconds). Defaults to</span>
+<span class="sd">        ``caldip.config.parameters.BOTTLE_STOP_MIN_DURATION_SECONDS``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    List[Dict]</span>
+<span class="sd">        List of bottle stop dictionaries with keys:</span>
+<span class="sd">        - start_idx, end_idx: indices in the data</span>
+<span class="sd">        - start_time, end_time: timestamps</span>
+<span class="sd">        - pressure: mean pressure during stop</span>
+<span class="sd">        - duration_seconds: duration in seconds</span>
+<span class="sd">    """</span>
+    <span class="c1"># Resolved at call time (not import) so a runtime reassignment of the</span>
+    <span class="c1"># ``params`` constant takes effect, matching the sibling override convention.</span>
+    <span class="k">if</span> <span class="n">threshold_dbar_per_min</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">threshold_dbar_per_min</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">BOTTLE_STOP_THRESHOLD_DBAR_PER_MIN</span>
+    <span class="k">if</span> <span class="n">min_duration_seconds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">min_duration_seconds</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">BOTTLE_STOP_MIN_DURATION_SECONDS</span>
+
+    <span class="n">bottle_stops</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Get pressure variable</span>
+    <span class="n">pressure_var</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"pressure"</span><span class="p">,</span> <span class="s2">"prDM"</span><span class="p">,</span> <span class="s2">"press"</span><span class="p">,</span> <span class="s2">"PRES"</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">ctd_data</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+            <span class="n">pressure_var</span> <span class="o">=</span> <span class="n">var</span>
+            <span class="k">break</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pressure_var</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">bottle_stops</span>
+
+    <span class="n">pressure</span> <span class="o">=</span> <span class="n">ctd_data</span><span class="p">[</span><span class="n">pressure_var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">time</span> <span class="o">=</span> <span class="n">ctd_data</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span>
+
+    <span class="c1"># Convert time to seconds for rate calculation</span>
+    <span class="n">time_dt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">time</span><span class="p">)</span>
+    <span class="n">time_seconds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">t</span><span class="o">.</span><span class="n">timestamp</span><span class="p">()</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">time_dt</span><span class="p">])</span>
+
+    <span class="c1"># Calculate pressure rate of change (dbar/min)</span>
+    <span class="n">window_seconds</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">BOTTLE_STOP_WINDOW_SECONDS</span>
+
+    <span class="c1"># Find max pressure point</span>
+    <span class="n">max_pressure_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">pressure</span><span class="p">)</span>
+    <span class="n">max_pressure</span> <span class="o">=</span> <span class="n">pressure</span><span class="p">[</span><span class="n">max_pressure_idx</span><span class="p">]</span>
+
+    <span class="c1"># Start looking once within the search margin of max pressure, so stops at or</span>
+    <span class="c1"># near maximum depth are found without scanning the whole downcast.</span>
+    <span class="n">search_threshold</span> <span class="o">=</span> <span class="n">max_pressure</span> <span class="o">-</span> <span class="n">params</span><span class="o">.</span><span class="n">BOTTLE_STOP_SEARCH_MARGIN_DBAR</span>
+    <span class="n">deep_enough_mask</span> <span class="o">=</span> <span class="n">pressure</span> <span class="o">&gt;=</span> <span class="n">search_threshold</span>
+
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">deep_enough_mask</span><span class="p">):</span>
+        <span class="n">search_start_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">deep_enough_mask</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Fallback to old behavior if we never reach the threshold</span>
+        <span class="n">search_start_idx</span> <span class="o">=</span> <span class="n">max_pressure_idx</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="c1"># Only look for bottle stops after reaching deep enough depth</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">search_start_idx</span>
+    <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">pressure</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># Look 1 minute ahead</span>
+        <span class="n">future_idx</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="k">while</span> <span class="p">(</span>
+            <span class="n">future_idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">pressure</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="p">(</span><span class="n">time_seconds</span><span class="p">[</span><span class="n">future_idx</span><span class="p">]</span> <span class="o">-</span> <span class="n">time_seconds</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">&lt;</span> <span class="n">window_seconds</span>
+        <span class="p">):</span>
+            <span class="n">future_idx</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">future_idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">pressure</span><span class="p">):</span>
+            <span class="n">time_diff_min</span> <span class="o">=</span> <span class="p">(</span><span class="n">time_seconds</span><span class="p">[</span><span class="n">future_idx</span><span class="p">]</span> <span class="o">-</span> <span class="n">time_seconds</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">/</span> <span class="mi">60</span>
+            <span class="n">pressure_diff</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">pressure</span><span class="p">[</span><span class="n">future_idx</span><span class="p">]</span> <span class="o">-</span> <span class="n">pressure</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+            <span class="k">if</span> <span class="n">time_diff_min</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">rate</span> <span class="o">=</span> <span class="n">pressure_diff</span> <span class="o">/</span> <span class="n">time_diff_min</span>
+
+                <span class="c1"># Check if we're in a stable period</span>
+                <span class="k">if</span> <span class="n">rate</span> <span class="o">&lt;</span> <span class="n">threshold_dbar_per_min</span><span class="p">:</span>
+                    <span class="c1"># Find the end of this stable period</span>
+                    <span class="n">end_idx</span> <span class="o">=</span> <span class="n">future_idx</span>
+                    <span class="k">while</span> <span class="n">end_idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">pressure</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">next_idx</span> <span class="o">=</span> <span class="n">end_idx</span> <span class="o">+</span> <span class="mi">1</span>
+                        <span class="n">time_diff_min</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="n">time_seconds</span><span class="p">[</span><span class="n">next_idx</span><span class="p">]</span> <span class="o">-</span> <span class="n">time_seconds</span><span class="p">[</span><span class="n">end_idx</span><span class="p">]</span>
+                        <span class="p">)</span> <span class="o">/</span> <span class="mi">60</span>
+                        <span class="k">if</span> <span class="n">time_diff_min</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">pressure_diff</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">pressure</span><span class="p">[</span><span class="n">next_idx</span><span class="p">]</span> <span class="o">-</span> <span class="n">pressure</span><span class="p">[</span><span class="n">end_idx</span><span class="p">])</span>
+                            <span class="n">rate</span> <span class="o">=</span> <span class="n">pressure_diff</span> <span class="o">/</span> <span class="n">time_diff_min</span>
+                            <span class="k">if</span> <span class="n">rate</span> <span class="o">&gt;=</span> <span class="n">threshold_dbar_per_min</span><span class="p">:</span>
+                                <span class="k">break</span>
+                        <span class="n">end_idx</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                    <span class="c1"># Initial pre-gate; the final MIN_DURATION_SECONDS filter is</span>
+                    <span class="c1"># applied after merging, below.</span>
+                    <span class="n">duration</span> <span class="o">=</span> <span class="n">time_seconds</span><span class="p">[</span><span class="n">end_idx</span><span class="p">]</span> <span class="o">-</span> <span class="n">time_seconds</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">duration</span> <span class="o">&gt;=</span> <span class="n">params</span><span class="o">.</span><span class="n">BOTTLE_STOP_INITIAL_MIN_SECONDS</span><span class="p">:</span>
+                        <span class="c1"># Calculate median pressure during the original stop boundaries</span>
+                        <span class="n">median_pressure</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">pressure</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">end_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]))</span>
+
+                        <span class="c1"># Refine boundaries to within the tolerance of the median.</span>
+                        <span class="n">tol</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">BOTTLE_STOP_BOUNDARY_TOL_DBAR</span>
+                        <span class="c1"># First point within tolerance (searching from original start).</span>
+                        <span class="n">refined_start</span> <span class="o">=</span> <span class="n">i</span>
+                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">end_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">pressure</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">median_pressure</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">tol</span><span class="p">:</span>
+                                <span class="n">refined_start</span> <span class="o">=</span> <span class="n">j</span>
+                                <span class="k">break</span>
+
+                        <span class="c1"># Last point within tolerance (searching from the end back).</span>
+                        <span class="n">refined_end</span> <span class="o">=</span> <span class="n">end_idx</span>
+                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">end_idx</span><span class="p">,</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+                            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">pressure</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">median_pressure</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">tol</span><span class="p">:</span>
+                                <span class="n">refined_end</span> <span class="o">=</span> <span class="n">j</span>
+                                <span class="k">break</span>
+
+                        <span class="c1"># Calculate refined duration (this will be slightly less than original)</span>
+                        <span class="n">refined_duration</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="n">time_seconds</span><span class="p">[</span><span class="n">refined_end</span><span class="p">]</span> <span class="o">-</span> <span class="n">time_seconds</span><span class="p">[</span><span class="n">refined_start</span><span class="p">]</span>
+                        <span class="p">)</span>
+
+                        <span class="n">bottle_stops</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="p">{</span>
+                                <span class="s2">"start_idx"</span><span class="p">:</span> <span class="n">refined_start</span><span class="p">,</span>
+                                <span class="s2">"end_idx"</span><span class="p">:</span> <span class="n">refined_end</span><span class="p">,</span>
+                                <span class="s2">"start_time"</span><span class="p">:</span> <span class="n">time</span><span class="p">[</span><span class="n">refined_start</span><span class="p">],</span>
+                                <span class="s2">"end_time"</span><span class="p">:</span> <span class="n">time</span><span class="p">[</span><span class="n">refined_end</span><span class="p">],</span>
+                                <span class="s2">"pressure"</span><span class="p">:</span> <span class="n">median_pressure</span><span class="p">,</span>
+                                <span class="s2">"duration_seconds"</span><span class="p">:</span> <span class="n">refined_duration</span><span class="p">,</span>
+                                <span class="s2">"original_duration"</span><span class="p">:</span> <span class="n">duration</span><span class="p">,</span>  <span class="c1"># Keep track of original duration too</span>
+                            <span class="p">}</span>
+                        <span class="p">)</span>
+
+                        <span class="c1"># Skip to end of this bottle stop</span>
+                        <span class="n">i</span> <span class="o">=</span> <span class="n">end_idx</span>
+
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="c1"># Merge overlapping or very close bottle stops</span>
+    <span class="n">merged_stops</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">stop</span> <span class="ow">in</span> <span class="n">bottle_stops</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">merged_stops</span><span class="p">:</span>
+            <span class="n">merged_stops</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">stop</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">last_stop</span> <span class="o">=</span> <span class="n">merged_stops</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="c1"># If this stop starts very close to the last one ending, merge them.</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">stop</span><span class="p">[</span><span class="s2">"start_idx"</span><span class="p">]</span> <span class="o">-</span> <span class="n">last_stop</span><span class="p">[</span><span class="s2">"end_idx"</span><span class="p">]</span>
+                <span class="o">&lt;</span> <span class="n">params</span><span class="o">.</span><span class="n">BOTTLE_STOP_MERGE_GAP_SAMPLES</span>
+            <span class="p">):</span>
+                <span class="n">last_stop</span><span class="p">[</span><span class="s2">"end_idx"</span><span class="p">]</span> <span class="o">=</span> <span class="n">stop</span><span class="p">[</span><span class="s2">"end_idx"</span><span class="p">]</span>
+                <span class="n">last_stop</span><span class="p">[</span><span class="s2">"end_time"</span><span class="p">]</span> <span class="o">=</span> <span class="n">stop</span><span class="p">[</span><span class="s2">"end_time"</span><span class="p">]</span>
+                <span class="n">last_stop</span><span class="p">[</span><span class="s2">"duration_seconds"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">time_seconds</span><span class="p">[</span><span class="n">stop</span><span class="p">[</span><span class="s2">"end_idx"</span><span class="p">]]</span> <span class="o">-</span> <span class="n">time_seconds</span><span class="p">[</span><span class="n">last_stop</span><span class="p">[</span><span class="s2">"start_idx"</span><span class="p">]]</span>
+                <span class="p">)</span>
+                <span class="n">last_stop</span><span class="p">[</span><span class="s2">"pressure"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">pressure</span><span class="p">[</span><span class="n">last_stop</span><span class="p">[</span><span class="s2">"start_idx"</span><span class="p">]</span> <span class="p">:</span> <span class="n">last_stop</span><span class="p">[</span><span class="s2">"end_idx"</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">merged_stops</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">stop</span><span class="p">)</span>
+
+    <span class="c1"># Sub-select to only keep bottle stops &gt;= minimum duration</span>
+    <span class="k">return</span> <span class="p">[</span>
+        <span class="n">stop</span>
+        <span class="k">for</span> <span class="n">stop</span> <span class="ow">in</span> <span class="n">merged_stops</span>
+        <span class="k">if</span> <span class="n">stop</span><span class="p">[</span><span class="s2">"duration_seconds"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">min_duration_seconds</span>
+    <span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="stats_for_time_period">
+<a class="viewcode-back" href="../../caldip.html#caldip.core.stats_for_time_period">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">stats_for_time_period</span><span class="p">(</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">,</span>
+    <span class="n">start_time</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">,</span>
+    <span class="n">end_time</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">,</span>
+    <span class="n">variables</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Calculate statistics for any dataset within a specified time period.  Normally this time period will be 3 minutes long ending 30 seconds before the end of a bottle stop, but this function can be used for any time period and any variables.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : xr.Dataset</span>
+<span class="sd">        Dataset to analyze</span>
+<span class="sd">    start_time : pd.Timestamp</span>
+<span class="sd">        Start of time period</span>
+<span class="sd">    end_time : pd.Timestamp</span>
+<span class="sd">        End of time period</span>
+<span class="sd">    variables : List[str]</span>
+<span class="sd">        List of variable names to calculate statistics for</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Dict</span>
+<span class="sd">        Statistics dictionary with means, stds, and sample count for each variable</span>
+<span class="sd">    """</span>
+    <span class="c1"># Normalize to nanoseconds before int64 so xarray (μs) and pandas (ns) agree</span>
+    <span class="n">time_numeric</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"datetime64[ns]"</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span> <span class="o">/</span> <span class="mf">1e9</span>
+    <span class="p">)</span>
+    <span class="n">start_ts</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">start_time</span><span class="p">)</span><span class="o">.</span><span class="n">value</span> <span class="o">/</span> <span class="mf">1e9</span>
+    <span class="n">end_ts</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">end_time</span><span class="p">)</span><span class="o">.</span><span class="n">value</span> <span class="o">/</span> <span class="mf">1e9</span>
+
+    <span class="c1"># Create time mask</span>
+    <span class="n">time_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">time_numeric</span> <span class="o">&gt;=</span> <span class="n">start_ts</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">time_numeric</span> <span class="o">&lt;=</span> <span class="n">end_ts</span><span class="p">)</span>
+    <span class="n">n_samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">time_mask</span><span class="p">)</span>
+
+    <span class="n">stats</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"n_samples"</span><span class="p">:</span> <span class="n">n_samples</span><span class="p">}</span>
+
+    <span class="c1"># Calculate stats for each requested variable</span>
+    <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">data_vars</span> <span class="ow">and</span> <span class="n">n_samples</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">var_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">time_mask</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">var_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">stats</span><span class="p">[</span><span class="sa">f</span><span class="s2">"mean_</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">var_data</span><span class="p">)</span>
+                <span class="n">stats</span><span class="p">[</span><span class="sa">f</span><span class="s2">"std_</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanstd</span><span class="p">(</span><span class="n">var_data</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">stats</span><span class="p">[</span><span class="sa">f</span><span class="s2">"mean_</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+                <span class="n">stats</span><span class="p">[</span><span class="sa">f</span><span class="s2">"std_</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">stats</span><span class="p">[</span><span class="sa">f</span><span class="s2">"mean_</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="n">stats</span><span class="p">[</span><span class="sa">f</span><span class="s2">"std_</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="k">return</span> <span class="n">stats</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_format_status</span><span class="p">(</span><span class="n">diff</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">var_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a human-readable quality flag string for a single variable difference."""</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">diff</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2"> NO DATA"</span>
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">threshold</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2"> OK"</span>
+    <span class="c1"># Pressure reads to 0.1 dbar; temperature and conductivity to 3 dp.</span>
+    <span class="n">decimals</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">var_name</span> <span class="o">==</span> <span class="s2">"P"</span> <span class="k">else</span> <span class="mi">3</span>
+    <span class="n">direction</span> <span class="o">=</span> <span class="s2">"high"</span> <span class="k">if</span> <span class="n">diff</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">"low"</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2"> reads </span><span class="si">{</span><span class="n">direction</span><span class="si">}</span><span class="s2"> by </span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span><span class="si">:</span><span class="s2">.</span><span class="si">{</span><span class="n">decimals</span><span class="si">}</span><span class="s2">f</span><span class="si">}</span><span class="s2">"</span>
+
+
+<div class="viewcode-block" id="resolve_quality_thresholds">
+<a class="viewcode-back" href="../../caldip.html#caldip.core.resolve_quality_thresholds">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_quality_thresholds</span><span class="p">(</span>
+    <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">temp_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cond_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">press_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the per-variable quality-flag thresholds for a cast.</span>
+
+<span class="sd">    Precedence per variable: an explicit argument, then the cast YAML's</span>
+<span class="sd">    ``quality_flags`` mapping, then the built-in default in</span>
+<span class="sd">    :mod:`caldip.config.parameters`. Shared by :func:`stats` and the netCDF</span>
+<span class="sd">    writer so the flag variable's threshold attribute matches the value used to</span>
+<span class="sd">    set the flag.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    config : dict</span>
+<span class="sd">        Cast configuration; may carry a ``quality_flags`` mapping.</span>
+<span class="sd">    temp_threshold, cond_threshold, press_threshold : float or None</span>
+<span class="sd">        Explicit overrides; ``None`` falls through to YAML then default.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        Mapping ``{"temp": float, "cond": float, "press": float}`` in</span>
+<span class="sd">        ``degree_C`` / ``mS cm-1`` / ``dbar``.</span>
+<span class="sd">    """</span>
+    <span class="n">yaml_flags</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"quality_flags"</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="k">if</span> <span class="n">temp_threshold</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">temp_threshold</span> <span class="o">=</span> <span class="n">yaml_flags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"temp_threshold"</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">QUALITY_TEMP_THRESHOLD</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cond_threshold</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cond_threshold</span> <span class="o">=</span> <span class="n">yaml_flags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"cond_threshold"</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">QUALITY_COND_THRESHOLD</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">press_threshold</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">press_threshold</span> <span class="o">=</span> <span class="n">yaml_flags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">"press_threshold"</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">QUALITY_PRESS_THRESHOLD</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"temp"</span><span class="p">:</span> <span class="n">temp_threshold</span><span class="p">,</span>
+        <span class="s2">"cond"</span><span class="p">:</span> <span class="n">cond_threshold</span><span class="p">,</span>
+        <span class="s2">"press"</span><span class="p">:</span> <span class="n">press_threshold</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_usability_flag</span><span class="p">(</span><span class="n">diff</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">has_sensor</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the machine-readable usability flag for one variable difference.</span>
+
+<span class="sd">    The numeric counterpart of :func:`_format_status`, drawn from the closed set</span>
+<span class="sd">    in :mod:`caldip.config.parameters` and written to the netCDF as a CF flag</span>
+<span class="sd">    variable. A ``NaN`` difference is ``missing`` when the instrument carries no</span>
+<span class="sd">    such sensor and ``no_data`` when it does but the comparison window held none.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    diff : float</span>
+<span class="sd">        Instrument-minus-CTD difference for the variable.</span>
+<span class="sd">    threshold : float</span>
+<span class="sd">        Absolute difference at or below which the variable is ``ok``.</span>
+<span class="sd">    has_sensor : bool</span>
+<span class="sd">        Whether the instrument measures this variable at all.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    int</span>
+<span class="sd">        One of the ``USABILITY_FLAG_*`` values (ok / no_data / flagged / missing).</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">diff</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">params</span><span class="o">.</span><span class="n">USABILITY_FLAG_NO_DATA</span>
+            <span class="k">if</span> <span class="n">has_sensor</span>
+            <span class="k">else</span> <span class="n">params</span><span class="o">.</span><span class="n">USABILITY_FLAG_MISSING</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">threshold</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">params</span><span class="o">.</span><span class="n">USABILITY_FLAG_OK</span>
+    <span class="k">return</span> <span class="n">params</span><span class="o">.</span><span class="n">USABILITY_FLAG_FLAGGED</span>
+
+
+<div class="viewcode-block" id="stats">
+<a class="viewcode-back" href="../../caldip.html#caldip.core.stats">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">stats</span><span class="p">(</span>
+    <span class="n">instrument_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">reference_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">threshold_dbar_per_min</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">min_duration_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">temp_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cond_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">press_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Calculate statistics for each bottle stop and each instrument (any type).</span>
+
+<span class="sd">    Returns DataFrame with one row per bottle stop per instrument.</span>
+
+<span class="sd">    Quality flag thresholds (``temp_threshold``, ``cond_threshold``,</span>
+<span class="sd">    ``press_threshold``) determine when a difference is flagged as</span>
+<span class="sd">    "reads high/low" vs "OK".  They can also be set per-cast in the YAML</span>
+<span class="sd">    under ``quality_flags: {temp_threshold: 0.005, ...}``; explicit</span>
+<span class="sd">    arguments take precedence over YAML values, which in turn override the</span>
+<span class="sd">    built-in defaults (±0.005 °C, ±0.02 mS/cm, ±5 dbar).</span>
+<span class="sd">    """</span>
+    <span class="n">thresholds</span> <span class="o">=</span> <span class="n">resolve_quality_thresholds</span><span class="p">(</span>
+        <span class="n">config</span><span class="p">,</span>
+        <span class="n">temp_threshold</span><span class="o">=</span><span class="n">temp_threshold</span><span class="p">,</span>
+        <span class="n">cond_threshold</span><span class="o">=</span><span class="n">cond_threshold</span><span class="p">,</span>
+        <span class="n">press_threshold</span><span class="o">=</span><span class="n">press_threshold</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">temp_threshold</span> <span class="o">=</span> <span class="n">thresholds</span><span class="p">[</span><span class="s2">"temp"</span><span class="p">]</span>
+    <span class="n">cond_threshold</span> <span class="o">=</span> <span class="n">thresholds</span><span class="p">[</span><span class="s2">"cond"</span><span class="p">]</span>
+    <span class="n">press_threshold</span> <span class="o">=</span> <span class="n">thresholds</span><span class="p">[</span><span class="s2">"press"</span><span class="p">]</span>
+    <span class="c1"># Get the first (and likely only) reference dataset</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">reference_data</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"No reference data available!"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+    <span class="n">ref_name</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">reference_data</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">ctd_data</span> <span class="o">=</span> <span class="n">reference_data</span><span class="p">[</span><span class="n">ref_name</span><span class="p">][</span><span class="s2">"data"</span><span class="p">]</span>
+
+    <span class="c1"># Get bottle stops using the detection function</span>
+    <span class="n">bottle_stops</span> <span class="o">=</span> <span class="n">find_bottle_stops</span><span class="p">(</span>
+        <span class="n">ctd_data</span><span class="p">,</span>
+        <span class="n">threshold_dbar_per_min</span><span class="o">=</span><span class="n">threshold_dbar_per_min</span><span class="p">,</span>
+        <span class="n">min_duration_seconds</span><span class="o">=</span><span class="n">min_duration_seconds</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">bottle_stops</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"No bottle stops found!"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">bottle_stops</span><span class="p">)</span><span class="si">}</span><span class="s2"> bottle stops for analysis"</span><span class="p">)</span>
+
+    <span class="c1"># CTD variables are canonical names after normalization in load_reference_data</span>
+    <span class="n">ctd_temp</span> <span class="o">=</span> <span class="s2">"temperature"</span>
+    <span class="n">ctd_cond</span> <span class="o">=</span> <span class="s2">"conductivity"</span>
+    <span class="n">ctd_press</span> <span class="o">=</span> <span class="s2">"pressure"</span>
+
+    <span class="c1"># Validate canonical names exist in the CTD data</span>
+    <span class="k">for</span> <span class="n">var_name</span><span class="p">,</span> <span class="n">_var_label</span> <span class="ow">in</span> <span class="p">[(</span><span class="n">ctd_temp</span><span class="p">,</span> <span class="s2">"temperature"</span><span class="p">),</span> <span class="p">(</span><span class="n">ctd_press</span><span class="p">,</span> <span class="s2">"pressure"</span><span class="p">)]:</span>
+        <span class="k">if</span> <span class="n">var_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ctd_data</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"CTD variable '</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2">' not found. "</span>
+                <span class="sa">f</span><span class="s2">"Available variables: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">ctd_data</span><span class="o">.</span><span class="n">data_vars</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="sa">f</span><span class="s2">"Run 'caldip ctd &lt;yaml&gt;' to pre-process the CTD file."</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Convert CTD time to numeric for time comparisons</span>
+    <span class="n">ctd_time_dt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">ctd_data</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="n">ctd_time_numeric</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">t</span><span class="o">.</span><span class="n">timestamp</span><span class="p">()</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">ctd_time_dt</span><span class="p">])</span>
+
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Loop through each bottle stop</span>
+    <span class="k">for</span> <span class="n">stop_num</span><span class="p">,</span> <span class="n">stop</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">bottle_stops</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="c1"># Calculate comparison period (last 2 minutes ending 30 seconds before stop end)</span>
+        <span class="n">stop_end_dt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">stop</span><span class="p">[</span><span class="s2">"end_time"</span><span class="p">])</span>
+        <span class="n">comp_end</span> <span class="o">=</span> <span class="n">stop_end_dt</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+        <span class="n">comp_start</span> <span class="o">=</span> <span class="n">comp_end</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="n">comp_start_ts</span> <span class="o">=</span> <span class="n">comp_start</span><span class="o">.</span><span class="n">timestamp</span><span class="p">()</span>
+        <span class="n">comp_end_ts</span> <span class="o">=</span> <span class="n">comp_end</span><span class="o">.</span><span class="n">timestamp</span><span class="p">()</span>
+
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"  Stop </span><span class="si">{</span><span class="n">stop_num</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">stop</span><span class="p">[</span><span class="s1">'pressure'</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> dbar: comparison period </span><span class="si">{</span><span class="n">comp_start</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">comp_end</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Get CTD data during comparison period</span>
+        <span class="n">comp_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">ctd_time_numeric</span> <span class="o">&gt;=</span> <span class="n">comp_start_ts</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span>
+            <span class="n">ctd_time_numeric</span> <span class="o">&lt;=</span> <span class="n">comp_end_ts</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">comp_mask</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"    Warning: No CTD data in comparison period"</span><span class="p">)</span>
+            <span class="k">continue</span>
+
+        <span class="n">ctd_press_comp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">ctd_data</span><span class="p">[</span><span class="n">ctd_press</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">comp_mask</span><span class="p">])</span>
+        <span class="n">ctd_temp_comp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">ctd_data</span><span class="p">[</span><span class="n">ctd_temp</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">comp_mask</span><span class="p">])</span>
+
+        <span class="c1"># Only get CTD conductivity if available</span>
+        <span class="k">if</span> <span class="n">ctd_cond</span> <span class="ow">in</span> <span class="n">ctd_data</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+            <span class="n">ctd_cond_comp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">ctd_data</span><span class="p">[</span><span class="n">ctd_cond</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">comp_mask</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ctd_cond_comp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="c1"># Loop through each instrument</span>
+        <span class="k">for</span> <span class="n">serial</span><span class="p">,</span> <span class="n">inst_info</span> <span class="ow">in</span> <span class="n">instrument_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">inst_data</span> <span class="o">=</span> <span class="n">inst_info</span><span class="p">[</span><span class="s2">"data"</span><span class="p">]</span>
+            <span class="n">inst_config</span> <span class="o">=</span> <span class="n">inst_info</span><span class="p">[</span><span class="s2">"config"</span><span class="p">]</span>
+            <span class="n">_inst_type</span> <span class="o">=</span> <span class="n">inst_info</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span>
+
+            <span class="c1"># Convert instrument time to numeric</span>
+            <span class="n">inst_time_dt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">inst_data</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">inst_time_numeric</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">t</span><span class="o">.</span><span class="n">timestamp</span><span class="p">()</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">inst_time_dt</span><span class="p">])</span>
+
+            <span class="c1"># Find instrument data during comparison period</span>
+            <span class="n">inst_comp_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">inst_time_numeric</span> <span class="o">&gt;=</span> <span class="n">comp_start_ts</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span>
+                <span class="n">inst_time_numeric</span> <span class="o">&lt;=</span> <span class="n">comp_end_ts</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">inst_comp_mask</span><span class="p">):</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># Get instrument variables - handle different naming conventions universally</span>
+
+            <span class="c1"># Temperature</span>
+            <span class="n">inst_temp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="n">inst_temp_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="n">has_temp_var</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">temp_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"tv290C"</span><span class="p">,</span> <span class="s2">"temperature"</span><span class="p">,</span> <span class="s2">"temp"</span><span class="p">,</span> <span class="s2">"TEMP"</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">temp_vars</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">inst_data</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                    <span class="n">has_temp_var</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">inst_temp_values</span> <span class="o">=</span> <span class="n">inst_data</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">inst_comp_mask</span><span class="p">]</span>
+                    <span class="n">inst_temp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">inst_temp_values</span><span class="p">)</span>
+                    <span class="n">inst_temp_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanstd</span><span class="p">(</span><span class="n">inst_temp_values</span><span class="p">)</span>
+                    <span class="k">break</span>
+
+            <span class="c1"># Conductivity (only if instrument has it)</span>
+            <span class="n">inst_cond</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="n">inst_cond_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="n">has_cond_var</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">cond_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"cond0mS/cm"</span><span class="p">,</span> <span class="s2">"conductivity"</span><span class="p">,</span> <span class="s2">"cond"</span><span class="p">,</span> <span class="s2">"COND"</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">cond_vars</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">inst_data</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                    <span class="n">has_cond_var</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">inst_cond_values</span> <span class="o">=</span> <span class="n">inst_data</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">inst_comp_mask</span><span class="p">]</span>
+                    <span class="c1"># Only use if not all NaN</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">inst_cond_values</span><span class="p">)):</span>
+                        <span class="n">inst_cond</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">inst_cond_values</span><span class="p">)</span>
+                        <span class="n">inst_cond_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanstd</span><span class="p">(</span><span class="n">inst_cond_values</span><span class="p">)</span>
+                    <span class="k">break</span>
+
+            <span class="c1"># Pressure (only if instrument has it)</span>
+            <span class="n">inst_press</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="n">inst_press_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="n">has_press_var</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">press_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"prdM"</span><span class="p">,</span> <span class="s2">"pressure"</span><span class="p">,</span> <span class="s2">"press"</span><span class="p">,</span> <span class="s2">"PRES"</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">press_vars</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">inst_data</span><span class="o">.</span><span class="n">data_vars</span><span class="p">:</span>
+                    <span class="n">has_press_var</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">inst_press_values</span> <span class="o">=</span> <span class="n">inst_data</span><span class="p">[</span><span class="n">var</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">inst_comp_mask</span><span class="p">]</span>
+                    <span class="n">inst_press</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">inst_press_values</span><span class="p">)</span>
+                    <span class="n">inst_press_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanstd</span><span class="p">(</span><span class="n">inst_press_values</span><span class="p">)</span>
+                    <span class="k">break</span>
+
+            <span class="c1"># Calculate differences</span>
+            <span class="n">temp_diff</span> <span class="o">=</span> <span class="n">inst_temp</span> <span class="o">-</span> <span class="n">ctd_temp_comp</span>
+            <span class="n">cond_diff</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">inst_cond</span> <span class="o">-</span> <span class="n">ctd_cond_comp</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">inst_cond</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">ctd_cond_comp</span><span class="p">)</span>
+                <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="p">)</span>
+            <span class="n">press_diff</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">inst_press</span> <span class="o">-</span> <span class="n">ctd_press_comp</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">inst_press</span><span class="p">)</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="p">)</span>
+
+            <span class="n">temp_status</span> <span class="o">=</span> <span class="n">_format_status</span><span class="p">(</span><span class="n">temp_diff</span><span class="p">,</span> <span class="n">temp_threshold</span><span class="p">,</span> <span class="s2">"T"</span><span class="p">)</span>
+            <span class="n">cond_status</span> <span class="o">=</span> <span class="n">_format_status</span><span class="p">(</span><span class="n">cond_diff</span><span class="p">,</span> <span class="n">cond_threshold</span><span class="p">,</span> <span class="s2">"C"</span><span class="p">)</span>
+            <span class="n">press_status</span> <span class="o">=</span> <span class="n">_format_status</span><span class="p">(</span><span class="n">press_diff</span><span class="p">,</span> <span class="n">press_threshold</span><span class="p">,</span> <span class="s2">"P"</span><span class="p">)</span>
+
+            <span class="c1"># Machine-readable counterpart of the status strings. has_sensor is</span>
+            <span class="c1"># whether the *instrument* carries the sensor: a present sensor with a</span>
+            <span class="c1"># NaN diff (e.g. the CTD reference lacks conductivity) is no_data, not</span>
+            <span class="c1"># missing, so pass has_cond_var, not "has it and the CTD had it too".</span>
+            <span class="n">temp_flag</span> <span class="o">=</span> <span class="n">_usability_flag</span><span class="p">(</span><span class="n">temp_diff</span><span class="p">,</span> <span class="n">temp_threshold</span><span class="p">,</span> <span class="n">has_temp_var</span><span class="p">)</span>
+            <span class="n">cond_flag</span> <span class="o">=</span> <span class="n">_usability_flag</span><span class="p">(</span><span class="n">cond_diff</span><span class="p">,</span> <span class="n">cond_threshold</span><span class="p">,</span> <span class="n">has_cond_var</span><span class="p">)</span>
+            <span class="n">press_flag</span> <span class="o">=</span> <span class="n">_usability_flag</span><span class="p">(</span><span class="n">press_diff</span><span class="p">,</span> <span class="n">press_threshold</span><span class="p">,</span> <span class="n">has_press_var</span><span class="p">)</span>
+
+            <span class="c1"># Date/time strings for the CSV export; the netCDF carries real</span>
+            <span class="c1"># timestamps (mid-window ``time`` plus the window bounds).</span>
+            <span class="n">date_part</span> <span class="o">=</span> <span class="n">comp_start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">time_start</span> <span class="o">=</span> <span class="n">comp_start</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%H:%M:%S"</span><span class="p">)</span>
+            <span class="n">time_end</span> <span class="o">=</span> <span class="n">comp_end</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%H:%M:%S"</span><span class="p">)</span>
+            <span class="n">time_mid</span> <span class="o">=</span> <span class="n">comp_start</span> <span class="o">+</span> <span class="p">(</span><span class="n">comp_end</span> <span class="o">-</span> <span class="n">comp_start</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">"serial"</span><span class="p">:</span> <span class="n">serial</span><span class="p">,</span>
+                    <span class="s2">"instrument_type"</span><span class="p">:</span> <span class="n">inst_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"instrument"</span><span class="p">,</span> <span class="s2">"unknown"</span><span class="p">),</span>
+                    <span class="s2">"bl_press"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">stop</span><span class="p">[</span><span class="s2">"pressure"</span><span class="p">]),</span>
+                    <span class="c1"># 1-based bottle-stop index; the writer pivots on it to build</span>
+                    <span class="c1"># the (instrument, stop) grid. Order is not load-bearing.</span>
+                    <span class="s2">"stop"</span><span class="p">:</span> <span class="n">stop_num</span><span class="p">,</span>
+                    <span class="c1"># Full-precision authoritative differences; the CSV export</span>
+                    <span class="c1"># rounds them for display, and the prose status is rendered</span>
+                    <span class="c1"># from these same values, so the two never drift.</span>
+                    <span class="s2">"temp_diff"</span><span class="p">:</span> <span class="n">temp_diff</span><span class="p">,</span>
+                    <span class="s2">"temp_std"</span><span class="p">:</span> <span class="n">inst_temp_std</span><span class="p">,</span>
+                    <span class="s2">"cond_diff"</span><span class="p">:</span> <span class="n">cond_diff</span><span class="p">,</span>
+                    <span class="s2">"cond_std"</span><span class="p">:</span> <span class="n">inst_cond_std</span><span class="p">,</span>
+                    <span class="s2">"press_diff"</span><span class="p">:</span> <span class="n">press_diff</span><span class="p">,</span>
+                    <span class="s2">"press_std"</span><span class="p">:</span> <span class="n">inst_press_std</span><span class="p">,</span>
+                    <span class="s2">"temp_status"</span><span class="p">:</span> <span class="n">temp_status</span><span class="p">,</span>
+                    <span class="s2">"cond_status"</span><span class="p">:</span> <span class="n">cond_status</span><span class="p">,</span>
+                    <span class="s2">"press_status"</span><span class="p">:</span> <span class="n">press_status</span><span class="p">,</span>
+                    <span class="s2">"temp_flag"</span><span class="p">:</span> <span class="n">temp_flag</span><span class="p">,</span>
+                    <span class="s2">"cond_flag"</span><span class="p">:</span> <span class="n">cond_flag</span><span class="p">,</span>
+                    <span class="s2">"press_flag"</span><span class="p">:</span> <span class="n">press_flag</span><span class="p">,</span>
+                    <span class="s2">"date"</span><span class="p">:</span> <span class="n">date_part</span><span class="p">,</span>
+                    <span class="s2">"time_start"</span><span class="p">:</span> <span class="n">time_start</span><span class="p">,</span>
+                    <span class="s2">"time_end"</span><span class="p">:</span> <span class="n">time_end</span><span class="p">,</span>
+                    <span class="c1"># Real timestamps for the netCDF time coordinate and bounds.</span>
+                    <span class="s2">"time"</span><span class="p">:</span> <span class="n">time_mid</span><span class="p">,</span>
+                    <span class="s2">"t_start"</span><span class="p">:</span> <span class="n">comp_start</span><span class="p">,</span>
+                    <span class="s2">"t_end"</span><span class="p">:</span> <span class="n">comp_end</span><span class="p">,</span>
+                    <span class="s2">"ctd_temp"</span><span class="p">:</span> <span class="n">ctd_temp_comp</span><span class="p">,</span>
+                    <span class="s2">"ctd_cond"</span><span class="p">:</span> <span class="n">ctd_cond_comp</span><span class="p">,</span>
+                    <span class="s2">"ctd_press"</span><span class="p">:</span> <span class="n">ctd_press_comp</span><span class="p">,</span>
+                    <span class="s2">"inst_temp"</span><span class="p">:</span> <span class="n">inst_temp</span><span class="p">,</span>
+                    <span class="s2">"inst_cond"</span><span class="p">:</span> <span class="n">inst_cond</span><span class="p">,</span>
+                    <span class="s2">"inst_press"</span><span class="p">:</span> <span class="n">inst_press</span><span class="p">,</span>
+                    <span class="s2">"N"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">inst_comp_mask</span><span class="p">)),</span>
+                    <span class="s2">"label"</span><span class="p">:</span> <span class="n">inst_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"label"</span><span class="p">,</span> <span class="s2">"Unknown"</span><span class="p">),</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">results</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Eleanor Frajka-Williams.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
