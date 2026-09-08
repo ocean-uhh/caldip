@@ -155,10 +155,10 @@ caldip stats castM4/castM4.caldip.yaml -o results/
 
 ## Batch processing
 
-`generate_all_caldip_plots.sh` runs both commands across all casts in a cruise:
+`scripts/generate_all_caldip_plots.sh` runs both commands across all casts in a cruise:
 
 ```bash
-bash generate_all_caldip_plots.sh
+bash scripts/generate_all_caldip_plots.sh
 ```
 
 The script uses `caldip plot` and `caldip stats`. Edit the `CTD_SENSOR` variable at the top to switch between primary (1) and secondary (2) sensors for the whole cruise in one step.

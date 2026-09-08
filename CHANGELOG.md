@@ -14,14 +14,16 @@ those changes are listed under **Breaking changes**).
   `test`, `docs` and `dev` extras); `requirements.txt`, `requirements-dev.txt` and
   `requirements-test.txt` are removed. Install for development with
   `pip install -e ".[dev]"`.
-- CI runs on Ubuntu for Python 3.10–3.13 with a coverage floor, and on macOS and
-  Windows for 3.12; the documentation build no longer uses conda (it uses
-  `setup-python` and installs `pandoc` directly).
+- Ruff is configured (`[tool.ruff]`, numpy docstring convention) and replaces
+  `black`; the linter is the source of truth for style and annotations.
+- CI runs on Ubuntu for Python 3.10–3.12 with a coverage floor and 3.13 as an
+  allow-failure cell, and on macOS and Windows for 3.12; the documentation build no
+  longer uses conda (it uses `setup-python` and installs `pandoc` directly).
 
 ### Breaking changes
 
-- `requires-python` is raised to `>=3.10`; Python 3.9 is no longer supported (it
-  was never tested in CI).
+- `requires-python` is now `>=3.10,<3.14`; Python 3.9 is no longer supported (it
+  was never tested in CI) and the upper cap matches the tested range.
 
 ## [0.2.0] - 2026-09-07
 

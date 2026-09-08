@@ -17,8 +17,11 @@ To copy the repository for your own purposes (including to suggest edits):
 pip install -e ".[dev]"
 ```
 
-## Option 2: Install with pip
+## Option 2: Install with pip (or uv)
 
 ```
 pip install caldip
+# or, with uv:
+uv pip install caldip     # into the active environment
+uv tool install caldip    # as a standalone command-line tool
 ```
