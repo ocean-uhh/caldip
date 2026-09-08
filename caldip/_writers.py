@@ -295,6 +295,10 @@ def _global_attrs(
     attrs["data_mode_meaning"] = (
         "delayed-mode" if attrs["data_mode"] == "D" else "provisional"
     )
+    # Same coupling-safety: the masked-flag record is meaningful only when flags
+    # were honoured; otherwise it is the "none" sentinel, so the pair cannot disagree.
+    if attrs["qc_flags_honoured"] != "true":
+        attrs["qc_masked_flag_values"] = "none"
 
     unsourced = sorted(k for k, v in attrs.items() if v == UNK)
     if unsourced:

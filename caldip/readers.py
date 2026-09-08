@@ -617,9 +617,11 @@ def load_reference_data(
             if nc_path.exists():
                 dataset = xr.open_dataset(nc_path, engine="netcdf4")
                 if _is_ctdcast_nc(dataset):
+                    source = dataset
                     dataset, provenance = read_ctdcast_reference(
-                        dataset, requested_sensor, config
+                        source, requested_sensor, config
                     )
+                    source.close()  # the resampled reference is independent of it
                     print(
                         f"  ✅ Loaded ctdcast reference from {nc_path.name} "
                         f"(stage {provenance['ctd_stage']}, {len(dataset.time)} samples)"
@@ -754,7 +756,7 @@ def read_ctdcast_reference(
         return None, None
 
     temp_var, temp_sensor = _pick("ctd_temperature")
-    cond_var, _cond_sensor = _pick("conductivity")
+    cond_var, _ = _pick("conductivity")
     press_var = "pressure" if "pressure" in ds.data_vars else None
 
     # Record the sensor actually used, not the one requested; warn on a fallback
@@ -768,24 +770,23 @@ def read_ctdcast_reference(
             stacklevel=2,
         )
 
+    # Build the canonical reference, honouring QARTOD on the compared variables
+    # in the same pass: a `fail` masks that sample. Pressure is left intact so
+    # bottle-stop detection is not broken by gaps.
     data_vars = {}
-    if temp_var is not None:
-        data_vars["temperature"] = ds[temp_var]
-    if cond_var is not None:
-        data_vars["conductivity"] = ds[cond_var]
+    qc_applied = False
+    for canonical, src in (("temperature", temp_var), ("conductivity", cond_var)):
+        if src is None:
+            continue
+        da = ds[src]
+        qc_name = f"{src}_qc"
+        if qc_name in ds:
+            da = da.where(ds[qc_name] != _QARTOD_FAIL)
+            qc_applied = True
+        data_vars[canonical] = da
     if press_var is not None:
         data_vars["pressure"] = ds[press_var]
     out = xr.Dataset(data_vars)
-
-    # Honour QARTOD on the compared reference variables: a `fail` masks the
-    # sample. Pressure is left intact so bottle-stop detection is not broken by
-    # gaps; temperature/conductivity are the values compared against instruments.
-    qc_applied = False
-    for canonical, src in (("temperature", temp_var), ("conductivity", cond_var)):
-        qc_name = f"{src}_qc" if src else None
-        if canonical in out and qc_name and qc_name in ds:
-            out[canonical] = out[canonical].where(ds[qc_name] != _QARTOD_FAIL)
-            qc_applied = True
 
     # Conductivity to mS/cm is units-driven and lives in one place; a ctdcast file
     # may write either unit under the same variable name, so the name-driven cnv
@@ -798,17 +799,18 @@ def read_ctdcast_reference(
     slope = ds[cond_var].attrs.get("calibration_slope") if cond_var else None
     file_cruise = str(ds.attrs.get("cruise", _CTDCAST_UNK))
 
-    if config and config.get("cruise"):
-        yaml_cruise = str(config["cruise"])
-        if file_cruise not in ("", _CTDCAST_UNK) and (
-            yaml_cruise.lower() != file_cruise.lower()
-        ):
-            warnings.warn(
-                f"cruise disagreement: cruise-YAML {yaml_cruise!r} vs ctdcast file "
-                f"{file_cruise!r}; the file's value is recorded verbatim.",
-                UserWarning,
-                stacklevel=2,
-            )
+    yaml_cruise = str((config or {}).get("cruise") or "")
+    if (
+        yaml_cruise
+        and file_cruise not in ("", _CTDCAST_UNK)
+        and yaml_cruise.lower() != file_cruise.lower()
+    ):
+        warnings.warn(
+            f"cruise disagreement: cruise-YAML {yaml_cruise!r} vs ctdcast file "
+            f"{file_cruise!r}; the file's value is recorded verbatim.",
+            UserWarning,
+            stacklevel=2,
+        )
 
     def _plevel(var: Optional[str]) -> str:
         if var and var in ds:

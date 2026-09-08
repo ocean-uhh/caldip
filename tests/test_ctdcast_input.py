@@ -172,47 +172,9 @@ def test_qc_fail_is_masked():
 def test_provenance_fills_netcdf_attributes(tmp_path):
     """Provenance from the reader fills the ctd_* / cruise / data_mode nc attrs."""
     _, prov = read_ctdcast_reference(_ctdcast_ds(), ctd_sensor=2)
-    t0 = pd.Timestamp("2026-04-03 12:00:00")
-    df = pd.DataFrame(
-        {
-            "serial": ["13874"],
-            "instrument_type": ["tr1050"],
-            "bl_press": [1000],
-            "stop": [1],
-            "time": [t0],
-            "t_start": [t0],
-            "t_end": [t0 + pd.Timedelta(minutes=2)],
-            "temp_diff": [0.006],
-            "temp_std": [0.001],
-            "cond_diff": [np.nan],
-            "cond_std": [np.nan],
-            "press_diff": [np.nan],
-            "press_std": [np.nan],
-            "ctd_temp": [6.0],
-            "ctd_cond": [np.nan],
-            "ctd_press": [1000.0],
-            "inst_temp": [6.006],
-            "inst_cond": [np.nan],
-            "inst_press": [np.nan],
-            "N": [100],
-            "label": ["TR1050"],
-            "temp_flag": [1],
-            "cond_flag": [2],
-            "press_flag": [2],
-            "date": ["2026-04-03"],
-            "time_start": ["12:00:00"],
-            "time_end": ["12:02:00"],
-        }
-    )
-    config = {
-        "name": "castM4",
-        "cruise": "msm142",
-        "ctd_sensor": 2,
-        "instruments": [{}],
-    }
     out = writers.write_stats_netcdf(
-        df,
-        config,
+        _stats_frame(),
+        _CFG,
         tmp_path / "castM4_caldip.nc",
         thresholds=_THRESHOLDS,
         input_mode="netcdf",
@@ -312,3 +274,21 @@ def test_normalize_conductivity_warns_on_unknown_unit():
     with pytest.warns(UserWarning, match="unrecognised units"):
         out = _normalize_conductivity(ds)
     assert float(out["conductivity"][0]) == pytest.approx(3.0)  # left unconverted
+
+
+def test_every_provenance_key_is_a_seeded_nc_attribute(tmp_path):
+    """Guard the seed/overlay coupling: no provenance key silently vanishes.
+
+    The overlay in ``_global_attrs`` only applies keys already seeded in the
+    attribute block, so a provenance field added in ``read_ctdcast_reference``
+    but not seeded there would be dropped without error. This asserts every
+    provenance key is a written attribute, failing CI on that drift.
+    """
+    _, prov = read_ctdcast_reference(_ctdcast_ds(slope=1.0002), ctd_sensor=2)
+    out = writers.write_stats_netcdf(
+        _stats_frame(), _CFG, tmp_path / "castM4_caldip.nc",
+        thresholds=_THRESHOLDS, input_mode="netcdf", ctd_provenance=prov,
+    )
+    ds = xr.open_dataset(out, engine="netcdf4")
+    missing = [k for k in prov if k not in ds.attrs]
+    assert not missing, f"provenance keys not seeded in _global_attrs: {missing}"
