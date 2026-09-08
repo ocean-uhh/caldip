@@ -183,6 +183,7 @@ def _global_attrs(
     input_mode: str,
     date_created: str,
     date_modified: str,
+    ctd_provenance: Optional[Dict] = None,
 ) -> Dict[str, Any]:
     """Build the complete global-attribute block for ``{cast}_caldip.nc``.
 
@@ -276,6 +277,13 @@ def _global_attrs(
         "ctd_press_processing_level": _CNV_PROCESSING_LEVEL,
     }
 
+    # Overlay provenance read from a ctdcast input (see readers.read_ctdcast_reference),
+    # filling the ctd_* / data_mode / cruise / source_tracking_id slots this branch
+    # otherwise leaves UNK. Only keys already in the block are applied, so a stray
+    # provenance key cannot inject an attribute.
+    if ctd_provenance:
+        attrs.update({k: v for k, v in ctd_provenance.items() if k in attrs})
+
     unsourced = sorted(k for k, v in attrs.items() if v == UNK)
     if unsourced:
         warnings.warn(
@@ -296,6 +304,7 @@ def stats_to_dataset(
     input_mode: str = "cnv",
     date_created: Optional[str] = None,
     date_modified: Optional[str] = None,
+    ctd_provenance: Optional[Dict] = None,
 ) -> xr.Dataset:
     """Build the machine-readable per-cast statistics Dataset.
 
@@ -539,6 +548,7 @@ def stats_to_dataset(
         input_mode=input_mode,
         date_created=created,
         date_modified=modified,
+        ctd_provenance=ctd_provenance,
     )
     return ds
 
@@ -552,6 +562,7 @@ def write_stats_netcdf(
     ctd_sensor_used: Optional[Union[int, str]] = None,
     ctd_path: Optional[str] = None,
     input_mode: str = "cnv",
+    ctd_provenance: Optional[Dict] = None,
 ) -> Path:
     """Write the per-cast ``{cast}_caldip.nc`` statistics file.
 
@@ -578,6 +589,10 @@ def write_stats_netcdf(
         CTD reference file path.
     input_mode : str, default "cnv"
         How the CTD reference was read.
+    ctd_provenance : dict or None, optional
+        Provenance read from a ctdcast input (see
+        :func:`caldip.readers.read_ctdcast_reference`); fills the ``ctd_*`` /
+        ``data_mode`` / ``cruise`` / ``source_tracking_id`` global attributes.
 
     Returns
     -------
@@ -601,6 +616,7 @@ def write_stats_netcdf(
         ctd_path=ctd_path,
         input_mode=input_mode,
         date_created=date_created,
+        ctd_provenance=ctd_provenance,
     )
     ds.attrs = _clean_attrs(ds.attrs)
     for var in list(ds.data_vars) + list(ds.coords):

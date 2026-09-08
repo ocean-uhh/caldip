@@ -170,6 +170,13 @@ def run(args):
         sorted_df = detailed_df.sort_values(
             ["serial", "bl_press"], ascending=[True, False]
         ).reset_index(drop=True)
+        # Provenance is present only when the CTD reference was a ctdcast netCDF
+        # (see readers.read_ctdcast_reference); it drives input_mode and fills the
+        # ctd_* / data_mode / cruise global attributes.
+        ctd_provenance = next(
+            (r["provenance"] for r in reference_data.values() if r.get("provenance")),
+            None,
+        )
         try:
             write_stats_netcdf(
                 sorted_df,
@@ -177,6 +184,8 @@ def run(args):
                 detailed_nc,
                 thresholds=thresholds,
                 ctd_path=config.get("ctd_file"),
+                input_mode="netcdf" if ctd_provenance else "cnv",
+                ctd_provenance=ctd_provenance,
             )
             print(f"\nSaved statistics netCDF to {detailed_nc}")
             # The CSV is a derived export of the netCDF, not a second source.

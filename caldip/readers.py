@@ -29,7 +29,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from pathlib import Path
-from typing import Dict, Union, Optional
+from typing import Dict, Tuple, Union, Optional
 import yaml
 from datetime import datetime
 import warnings
@@ -598,24 +598,38 @@ def load_reference_data(
         try:
             if nc_path.exists():
                 dataset = xr.open_dataset(nc_path, engine="netcdf4")
-                cached_sensor = int(dataset.attrs.get("ctd_sensor", 1))
-                if cached_sensor != requested_sensor:
-                    raise ValueError(
-                        f"Cached CTD '{nc_path.name}' was built with ctd_sensor={cached_sensor} "
-                        f"but config (or --ctd-sensor) requests sensor {requested_sensor}. "
-                        f"Delete {nc_path.name} and re-run 'caldip ctd' to rebuild."
+                if _is_ctdcast_nc(dataset):
+                    dataset, provenance = read_ctdcast_reference(
+                        dataset, requested_sensor, config
                     )
-                print(
-                    f"  ✅ Loaded pre-processed CTD from {nc_path.name} ({len(dataset.time)} samples)"
-                )
+                    print(
+                        f"  ✅ Loaded ctdcast reference from {nc_path.name} "
+                        f"(stage {provenance['ctd_stage']}, {len(dataset.time)} samples)"
+                    )
+                    reference_data[ctd_name] = {
+                        "data": dataset,
+                        "file": str(ctd_path),
+                        "provenance": provenance,
+                    }
+                else:
+                    cached_sensor = int(dataset.attrs.get("ctd_sensor", 1))
+                    if cached_sensor != requested_sensor:
+                        raise ValueError(
+                            f"Cached CTD '{nc_path.name}' was built with ctd_sensor={cached_sensor} "
+                            f"but config (or --ctd-sensor) requests sensor {requested_sensor}. "
+                            f"Delete {nc_path.name} and re-run 'caldip ctd' to rebuild."
+                        )
+                    print(
+                        f"  ✅ Loaded pre-processed CTD from {nc_path.name} ({len(dataset.time)} samples)"
+                    )
+                    reference_data[ctd_name] = {"data": dataset, "file": str(ctd_path)}
             else:
                 dataset = load_instrument_data(ctd_path, "ctd-cnv")
                 dataset = _normalize_ctd_vars(dataset, ctd_sensor=requested_sensor)
                 dataset = _wild_edit_ctd(dataset, config)
                 dataset = _resample_1hz(dataset)
                 print(f"  ✅ Loaded: {len(dataset.time)} samples")
-
-            reference_data[ctd_name] = {"data": dataset, "file": str(ctd_path)}
+                reference_data[ctd_name] = {"data": dataset, "file": str(ctd_path)}
 
         except ValueError:
             raise
@@ -623,6 +637,153 @@ def load_reference_data(
             print(f"  ❌ Failed to load CTD: {e}")
 
     return reference_data
+
+
+_CTDCAST_UNK = "UNK"
+
+
+def _is_ctdcast_nc(ds: xr.Dataset) -> bool:
+    """Return ``True`` if ``ds`` is a ctdcast per-cast stage netCDF.
+
+    Distinguishes a ctdcast product (declares its own ``processing_stage`` and
+    carries the ``ctd_temperature`` / ``conductivity`` naming) from caldip's own
+    CTD cache (canonical ``temperature`` plus a ``ctd_sensor`` attribute).
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        A dataset opened from the configured ``ctd_file`` path.
+
+    Returns
+    -------
+    bool
+        Whether to route ``ds`` to :func:`read_ctdcast_reference`.
+    """
+    if "processing_stage" not in ds.attrs:
+        return False
+    markers = ("ctd_temperature_1", "ctd_temperature", "conductivity_1", "conductivity")
+    return any(name in ds.data_vars for name in markers)
+
+
+def _ctdcast_sensor_meta(ds: xr.Dataset, var: Optional[str]) -> Tuple[str, str]:
+    """Return ``(serial, calibration_date)`` for the sensor behind ``var``.
+
+    The data variable links to its ``SENSOR_<TYPE>_<SERIAL>`` catalog entry via a
+    ``sensor`` attribute; ``UNK`` is returned where the link or field is absent.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        The ctdcast stage dataset.
+    var : str or None
+        The measured variable whose sensor is wanted.
+
+    Returns
+    -------
+    tuple of str
+        The sensor serial number and calibration date, or ``UNK`` each.
+    """
+    if not var or var not in ds:
+        return _CTDCAST_UNK, _CTDCAST_UNK
+    sensor_name = ds[var].attrs.get("sensor")
+    if not sensor_name or sensor_name not in ds:
+        return _CTDCAST_UNK, _CTDCAST_UNK
+    attrs = ds[sensor_name].attrs
+    return (
+        str(attrs.get("sensor_serial_number", _CTDCAST_UNK)),
+        str(attrs.get("sensor_calibration_date", _CTDCAST_UNK)),
+    )
+
+
+def read_ctdcast_reference(
+    ds: xr.Dataset, ctd_sensor: int, config: Optional[Dict] = None
+) -> Tuple[xr.Dataset, Dict]:
+    """Map a ctdcast stage netCDF to caldip's CTD reference, with provenance.
+
+    The dual-sensor ctdcast variables (``ctd_temperature_1``/``_2``,
+    ``conductivity_1``/``_2``, or the single-sensor forms) are mapped to caldip's
+    canonical ``temperature`` / ``conductivity`` / ``pressure`` for the requested
+    ``ctd_sensor``, honouring each compared variable's QARTOD ``_qc`` companion
+    (a ``fail`` flag masks that sample). Provenance is copied from the file's
+    global attributes and the ``SENSOR_*`` catalog; ``cruise`` is taken verbatim.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        A ctdcast per-cast stage dataset (see :func:`_is_ctdcast_nc`).
+    ctd_sensor : int
+        Which CTD sensor (1 or 2) to use as the reference.
+    config : dict, optional
+        The cast configuration; used only to warn when its ``cruise`` disagrees
+        case-insensitively with the file's ``cruise``.
+
+    Returns
+    -------
+    tuple
+        ``(dataset, provenance)`` — the canonical-named CTD reference resampled
+        to 1 Hz, and a dict of provenance attributes with ``UNK`` where unsourced.
+    """
+
+    def _pick(base: str) -> Optional[str]:
+        for name in (f"{base}_{ctd_sensor}", base):
+            if name in ds.data_vars:
+                return name
+        return None
+
+    temp_var = _pick("ctd_temperature")
+    cond_var = _pick("conductivity")
+    press_var = "pressure" if "pressure" in ds.data_vars else None
+
+    data_vars = {}
+    if temp_var is not None:
+        data_vars["temperature"] = ds[temp_var]
+    if cond_var is not None:
+        data_vars["conductivity"] = ds[cond_var]
+    if press_var is not None:
+        data_vars["pressure"] = ds[press_var]
+    out = xr.Dataset(data_vars)
+
+    # Honour QARTOD on the compared reference variables: a `fail` (4) masks the
+    # sample. Pressure is left intact so bottle-stop detection is not broken by
+    # gaps; temperature/conductivity are the values compared against instruments.
+    for canonical, src in (("temperature", temp_var), ("conductivity", cond_var)):
+        qc_name = f"{src}_qc" if src else None
+        if canonical in out and qc_name and qc_name in ds:
+            out[canonical] = out[canonical].where(ds[qc_name].values != 4)
+
+    out = _resample_1hz(out)
+
+    temp_serial, temp_caldate = _ctdcast_sensor_meta(ds, temp_var)
+    cond_serial, cond_caldate = _ctdcast_sensor_meta(ds, cond_var)
+    slope = ds[cond_var].attrs.get("calibration_slope") if cond_var else None
+    file_cruise = str(ds.attrs.get("cruise", _CTDCAST_UNK))
+
+    if config and config.get("cruise"):
+        yaml_cruise = str(config["cruise"])
+        if file_cruise not in ("", _CTDCAST_UNK) and (
+            yaml_cruise.lower() != file_cruise.lower()
+        ):
+            warnings.warn(
+                f"cruise disagreement: cruise-YAML {yaml_cruise!r} vs ctdcast file "
+                f"{file_cruise!r}; the file's value is recorded verbatim.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+    provenance = {
+        "source_tracking_id": str(ds.attrs.get("tracking_id", _CTDCAST_UNK)),
+        "ctd_stage": str(ds.attrs.get("processing_stage", _CTDCAST_UNK)),
+        "data_mode": "D" if str(ds.attrs.get("data_mode", "")).upper() == "D" else "P",
+        "qc_flags_honoured": "true",
+        "ctd_temp_sensor_serial": temp_serial,
+        "ctd_temp_sensor_caldate": temp_caldate,
+        "ctd_cond_sensor_serial": cond_serial,
+        "ctd_cond_sensor_caldate": cond_caldate,
+        "ctd_conductivity_slope": (str(slope) if slope is not None else _CTDCAST_UNK),
+        "ctd_cond_slope_adjusted": "true" if slope is not None else "false",
+        "cruise": file_cruise,
+    }
+    return out, provenance
 
 
 def _resample_1hz(ds: "xr.Dataset") -> "xr.Dataset":
