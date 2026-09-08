@@ -31,15 +31,32 @@ def _stats_frame():
     t0 = pd.Timestamp("2026-04-03 12:00:00")
     return pd.DataFrame(
         {
-            "serial": ["13874"], "instrument_type": ["tr1050"], "bl_press": [1000],
-            "stop": [1], "time": [t0], "t_start": [t0],
+            "serial": ["13874"],
+            "instrument_type": ["tr1050"],
+            "bl_press": [1000],
+            "stop": [1],
+            "time": [t0],
+            "t_start": [t0],
             "t_end": [t0 + pd.Timedelta(minutes=2)],
-            "temp_diff": [0.006], "temp_std": [0.001], "cond_diff": [np.nan],
-            "cond_std": [np.nan], "press_diff": [np.nan], "press_std": [np.nan],
-            "ctd_temp": [6.0], "ctd_cond": [np.nan], "ctd_press": [1000.0],
-            "inst_temp": [6.006], "inst_cond": [np.nan], "inst_press": [np.nan],
-            "N": [100], "label": ["TR1050"], "temp_flag": [1], "cond_flag": [2],
-            "press_flag": [2], "date": ["2026-04-03"], "time_start": ["12:00:00"],
+            "temp_diff": [0.006],
+            "temp_std": [0.001],
+            "cond_diff": [np.nan],
+            "cond_std": [np.nan],
+            "press_diff": [np.nan],
+            "press_std": [np.nan],
+            "ctd_temp": [6.0],
+            "ctd_cond": [np.nan],
+            "ctd_press": [1000.0],
+            "inst_temp": [6.006],
+            "inst_cond": [np.nan],
+            "inst_press": [np.nan],
+            "N": [100],
+            "label": ["TR1050"],
+            "temp_flag": [1],
+            "cond_flag": [2],
+            "press_flag": [2],
+            "date": ["2026-04-03"],
+            "time_start": ["12:00:00"],
             "time_end": ["12:02:00"],
         }
     )
@@ -217,8 +234,12 @@ def test_data_mode_meaning_is_derived_not_stale():
     for mode, meaning in (("P", "provisional"), ("D", "delayed-mode")):
         _, prov = read_ctdcast_reference(_ctdcast_ds(data_mode=mode), ctd_sensor=2)
         out = writers.write_stats_netcdf(
-            df, _CFG, __import__("tempfile").mktemp(suffix=".nc"),
-            thresholds=_THRESHOLDS, input_mode="netcdf", ctd_provenance=prov,
+            df,
+            _CFG,
+            __import__("tempfile").mktemp(suffix=".nc"),
+            thresholds=_THRESHOLDS,
+            input_mode="netcdf",
+            ctd_provenance=prov,
         )
         ds = xr.open_dataset(out, engine="netcdf4")
         assert ds.attrs["data_mode"] == mode
@@ -232,10 +253,12 @@ def test_unk_provenance_does_not_clobber_config_cruise(tmp_path):
     _, prov = read_ctdcast_reference(ds_no_cruise, ctd_sensor=2)
     assert prov["cruise"] == "UNK"  # nothing to source from the file
     out = writers.write_stats_netcdf(
-        _stats_frame(), {"name": "castM4", "cruise": "msm142", "ctd_sensor": 2,
-                         "instruments": [{}]},
-        tmp_path / "castM4_caldip.nc", thresholds=_THRESHOLDS,
-        input_mode="netcdf", ctd_provenance=prov,
+        _stats_frame(),
+        {"name": "castM4", "cruise": "msm142", "ctd_sensor": 2, "instruments": [{}]},
+        tmp_path / "castM4_caldip.nc",
+        thresholds=_THRESHOLDS,
+        input_mode="netcdf",
+        ctd_provenance=prov,
     )
     ds = xr.open_dataset(out, engine="netcdf4")
     assert ds.attrs["cruise"] == "msm142"  # config value survived, not UNK
@@ -245,9 +268,11 @@ def test_single_sensor_fallback_records_actual_sensor_and_warns():
     """Requesting sensor 2 on a single-sensor file warns and records sensor 1."""
     time = pd.date_range("2026-04-03T12:00:00", periods=3, freq="1s")
     ds = xr.Dataset(
-        {"ctd_temperature": ("time", [5.0, 5.0, 5.0]),
-         "conductivity": ("time", [30.0, 30.0, 30.0]),
-         "pressure": ("time", [1000.0, 1000.0, 1000.0])},
+        {
+            "ctd_temperature": ("time", [5.0, 5.0, 5.0]),
+            "conductivity": ("time", [30.0, 30.0, 30.0]),
+            "pressure": ("time", [1000.0, 1000.0, 1000.0]),
+        },
         coords={"time": time},
     )
     ds.attrs.update({"processing_stage": 1, "data_mode": "P", "cruise": "MSM142"})
