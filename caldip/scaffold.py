@@ -7,10 +7,9 @@ Public API:
 
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
 
 
-def generate_stub_yaml(directory: str, print_only: bool = False) -> Dict:
+def generate_stub_yaml(directory: str, print_only: bool = False) -> dict:
     """
     Generate a stub YAML configuration for a caldip directory.
 
@@ -26,7 +25,6 @@ def generate_stub_yaml(directory: str, print_only: bool = False) -> Dict:
     Dict
         Configuration dictionary
     """
-
     dir_path = Path(directory)
 
     if not dir_path.exists():
@@ -59,7 +57,8 @@ def generate_stub_yaml(directory: str, print_only: bool = False) -> Dict:
 
         warnings.warn(
             f"Could not auto-detect CTD CNV file in {directory}. "
-            "Set 'ctd_file' manually in the generated YAML."
+            "Set 'ctd_file' manually in the generated YAML.",
+            stacklevel=2,
         )
         ctd_metadata = {
             "start_time": None,
@@ -143,7 +142,7 @@ def generate_stub_yaml(directory: str, print_only: bool = False) -> Dict:
     return config
 
 
-def _find_ctd_file(directory: Path) -> Optional[Path]:
+def _find_ctd_file(directory: Path) -> Path | None:
     """Find the CTD CNV file in the directory.
 
     Prefers *_1sec.cnv (SBEDataProcessing convention). If not found, reads
@@ -167,7 +166,8 @@ def _find_ctd_file(directory: Path) -> Optional[Path]:
 
         warnings.warn(
             f"Multiple SBE 9 CNV files found in {directory}: "
-            f"{[f.name for f in ctd_files]}. Set 'ctd_file' manually in the YAML."
+            f"{[f.name for f in ctd_files]}. Set 'ctd_file' manually in the YAML.",
+            stacklevel=2,
         )
     return None
 
@@ -175,14 +175,14 @@ def _find_ctd_file(directory: Path) -> Optional[Path]:
 def _is_sbe9_cnv(file_path: Path) -> bool:
     """Return True if the CNV file header identifies it as an SBE 9 CTD."""
     try:
-        with open(file_path, "r", encoding="latin1") as f:
+        with open(file_path, encoding="latin1") as f:
             first_line = f.readline()
         return "SBE 9" in first_line
     except OSError:
         return False
 
 
-def _extract_ctd_metadata(ctd_file: Path) -> Dict:
+def _extract_ctd_metadata(ctd_file: Path) -> dict:
     """Extract metadata from CTD .cnv file header."""
     metadata = {
         "start_time": None,
@@ -195,7 +195,7 @@ def _extract_ctd_metadata(ctd_file: Path) -> Dict:
     }
 
     try:
-        with open(ctd_file, "r", encoding="latin1") as f:
+        with open(ctd_file, encoding="latin1") as f:
             # Read header lines (typically first 100 lines contain metadata)
             for i, line in enumerate(f):
                 if i > 200:  # Stop reading after header
@@ -248,7 +248,7 @@ def _extract_ctd_metadata(ctd_file: Path) -> Dict:
                             metadata["start_time"] = match.group(1)
 
                 # Extract ship name
-                if line.startswith("# ship:") or line.startswith("# Ship:"):
+                if line.startswith(("# ship:", "# Ship:")):
                     ship = line.split(":", 1)[1].strip()
                     if ship and ship != "unknown":
                         metadata["ship"] = ship
@@ -329,7 +329,7 @@ def _extract_ctd_metadata(ctd_file: Path) -> Dict:
                     if interval_match:
                         metadata["interval"] = float(interval_match.group(1))
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # best-effort header parse: warn and continue
         print(f"Warning: Could not extract metadata from {ctd_file}: {e}")
 
     # Calculate recovery time if we have all the data
@@ -341,16 +341,16 @@ def _extract_ctd_metadata(ctd_file: Path) -> Dict:
             duration_seconds = metadata["nvalues"] * metadata["interval"]
             end_dt = start_dt + timedelta(seconds=duration_seconds)
             metadata["end_time"] = end_dt.strftime("%Y-%m-%dT%H:%M:%S")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # derived end-time is optional: warn and continue
             print(f"Warning: Could not calculate end time: {e}")
 
     return metadata
 
 
-def _prioritize_files(files: List[Path]) -> List[Path]:
+def _prioritize_files(files: list[Path]) -> list[Path]:
     """Select the best file based on extension priority."""
     # Group files by base name (without extension)
-    by_basename: Dict[str, List[Path]] = {}
+    by_basename: dict[str, list[Path]] = {}
     for f in files:
         basename = f.stem
         # Handle cases like file.12345.cnv -> use just file.12345
@@ -367,7 +367,7 @@ def _prioritize_files(files: List[Path]) -> List[Path]:
 
     # For each basename, pick the best file
     selected = []
-    for basename, file_list in by_basename.items():
+    for file_list in by_basename.values():
         # Priority: .cnv > .mat > .rsk > .hex
         cnv_files = [f for f in file_list if f.suffix.lower() == ".cnv"]
         mat_files = [f for f in file_list if f.suffix.lower() == ".mat"]
@@ -388,7 +388,7 @@ def _prioritize_files(files: List[Path]) -> List[Path]:
     return selected
 
 
-def _detect_instruments(directory: Path) -> List[Dict]:
+def _detect_instruments(directory: Path) -> list[dict]:
     """Detect instruments based on files in directory."""
     instruments = []
 

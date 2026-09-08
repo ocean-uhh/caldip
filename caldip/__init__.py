@@ -6,8 +6,8 @@ calibration dips performed with CTD profiles and multiple instrument types inclu
 MicroCATs and RBR thermistors.
 """
 
-from caldip.core import stats, find_bottle_stops
 from caldip._plot import plot
+from caldip.core import find_bottle_stops, stats
 from caldip.readers import (
     load_config,
     load_instruments_from_config,

@@ -1,33 +1,54 @@
 """caldip ctd — pre-process CTD reference data and save as NetCDF."""
 
-import sys
 import argparse
-import numpy as np
+import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+import numpy as np
+import xarray as xr
+
+if TYPE_CHECKING:
+    import plotly.graph_objects as go
 
 from caldip.readers import (
+    _normalize_ctd_vars,
+    _read_ctd_sensor,
+    _resample_1hz,
+    _wild_edit_ctd,
     find_config_file,
     load_config,
     load_instrument_data,
     resolve_data_dir,
-    _normalize_ctd_vars,
-    _wild_edit_ctd,
-    _resample_1hz,
-    _read_ctd_sensor,
 )
 
 
-def build_parser(subparsers=None):
-    kwargs = dict(
-        help="pre-process CTD file: normalize, wild-edit, 1 Hz resample, save NetCDF + plot",
-        description="Pre-process CTD reference data: normalize, wild-edit, resample to 1 Hz, plot, and save as NetCDF",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+def build_parser(
+    subparsers: argparse._SubParsersAction | None = None,
+) -> argparse.ArgumentParser:
+    """Build the argument parser for ``caldip ctd``.
+
+    Parameters
+    ----------
+    subparsers : argparse._SubParsersAction or None, optional
+        If given, register ``ctd`` on this subparser group; otherwise build a
+        standalone parser.
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        The configured parser.
+    """
+    kwargs = {
+        "help": "pre-process CTD file: normalize, wild-edit, 1 Hz resample, save NetCDF + plot",
+        "description": "Pre-process CTD reference data: normalize, wild-edit, resample to 1 Hz, plot, and save as NetCDF",
+        "formatter_class": argparse.RawDescriptionHelpFormatter,
+        "epilog": """
 Examples:
   caldip ctd data/proc_calib/odb_2026/cal_dip/castB1/castB1.caldip.yaml
   caldip ctd castB1/castB1.caldip.yaml -o outputs/
         """,
-    )
+    }
     if subparsers is not None:
         parser = subparsers.add_parser("ctd", **kwargs)
     else:
@@ -60,7 +81,7 @@ Examples:
     return parser
 
 
-def _count_masked(ds_raw, ds_edited, var):
+def _count_masked(ds_raw: xr.Dataset, ds_edited: xr.Dataset, var: str) -> int:
     """Count samples that were finite in ds_raw but NaN in ds_edited for var."""
     if var not in ds_raw.data_vars or var not in ds_edited.data_vars:
         return 0
@@ -70,8 +91,13 @@ def _count_masked(ds_raw, ds_edited, var):
 
 
 def _make_comparison_plot(
-    ds_raw, ds_edited, ds_processed, ctd_name, n_masked_1, n_masked_2
-):
+    ds_raw: xr.Dataset,
+    ds_edited: xr.Dataset,
+    ds_processed: xr.Dataset,
+    ctd_name: str,
+    n_masked_1: int,
+    n_masked_2: int,
+) -> "go.Figure":
     """Return a Plotly figure comparing raw vs wild-edit+1Hz processed CTD data.
 
     Panel order: Pressure, Temperature, Conductivity (if present), Salinity (if present).
@@ -87,11 +113,23 @@ def _make_comparison_plot(
 
     Parameters
     ----------
-    ds_raw       : normalized, pre-wild-edit (full resolution)
-    ds_edited    : post-wild-edit, pre-resample (full resolution, NaNs inserted)
-    ds_processed : post-wild-edit + 1 Hz median (saved to NetCDF)
-    n_masked_1   : number of samples masked for primary sensor
-    n_masked_2   : number of samples masked for secondary sensor (0 if no secondary)
+    ds_raw : xarray.Dataset
+        Normalized, pre-wild-edit CTD data (full resolution).
+    ds_edited : xarray.Dataset
+        Post-wild-edit, pre-resample data (full resolution, NaNs inserted).
+    ds_processed : xarray.Dataset
+        Post-wild-edit + 1 Hz median data (saved to NetCDF).
+    ctd_name : str
+        CTD file stem used in the figure title.
+    n_masked_1 : int
+        Number of samples masked for the primary sensor.
+    n_masked_2 : int
+        Number of samples masked for the secondary sensor (0 if no secondary).
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        The assembled comparison figure.
     """
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
@@ -129,30 +167,37 @@ def _make_comparison_plot(
     _shown = set()
 
     def _add(
-        row,
-        x,
-        y,
-        name,
-        group,
-        mode="lines",
-        color="black",
-        width=1,
-        opacity=1.0,
-        marker_sym="x",
-        marker_size=6,
-    ):
+        row: int,
+        x: np.ndarray,
+        y: np.ndarray,
+        name: str,
+        group: str,
+        mode: str = "lines",
+        color: str = "black",
+        width: int = 1,
+        opacity: float = 1.0,
+        marker_sym: str = "x",
+        marker_size: int = 6,
+    ) -> None:
         show = group not in _shown
         if show:
             _shown.add(group)
-        kw = dict(x=x, y=y, mode=mode, name=name, legendgroup=group, showlegend=show)
+        kw = {
+            "x": x,
+            "y": y,
+            "mode": mode,
+            "name": name,
+            "legendgroup": group,
+            "showlegend": show,
+        }
         if mode == "lines":
-            kw["line"] = dict(color=color, width=width)
+            kw["line"] = {"color": color, "width": width}
             kw["opacity"] = opacity
         else:
-            kw["marker"] = dict(color=color, size=marker_size, symbol=marker_sym)
+            kw["marker"] = {"color": color, "size": marker_size, "symbol": marker_sym}
         fig.add_trace(go.Scatter(**kw), row=row, col=1)
 
-    def raw_primary(row, var):
+    def raw_primary(row: int, var: str) -> None:
         if var not in ds_raw.data_vars:
             return
         _add(
@@ -166,7 +211,7 @@ def _make_comparison_plot(
             opacity=0.35,
         )
 
-    def raw_secondary(row, var):
+    def raw_secondary(row: int, var: str) -> None:
         if var not in ds_raw.data_vars:
             return
         _add(
@@ -180,7 +225,7 @@ def _make_comparison_plot(
             opacity=0.35,
         )
 
-    def proc_primary(row, var):
+    def proc_primary(row: int, var: str) -> None:
         if var not in ds_processed.data_vars:
             return
         _add(
@@ -193,7 +238,7 @@ def _make_comparison_plot(
             width=3,
         )
 
-    def proc_secondary(row, var):
+    def proc_secondary(row: int, var: str) -> None:
         if var not in ds_processed.data_vars:
             return
         _add(
@@ -206,7 +251,7 @@ def _make_comparison_plot(
             width=2,
         )
 
-    def masked_primary(row, var):
+    def masked_primary(row: int, var: str) -> None:
         if var not in ds_raw.data_vars or var not in ds_edited.data_vars:
             return
         rv = ds_raw[var].values.astype(float)
@@ -225,7 +270,7 @@ def _make_comparison_plot(
             marker_sym="x",
         )
 
-    def masked_secondary(row, var):
+    def masked_secondary(row: int, var: str) -> None:
         if var not in ds_raw.data_vars or var not in ds_edited.data_vars:
             return
         rv = ds_raw[var].values.astype(float)
@@ -294,13 +339,25 @@ def _make_comparison_plot(
     fig.update_layout(
         title=title,
         height=250 * n_rows + 100,
-        legend=dict(orientation="v", x=1.01, xanchor="left"),
+        legend={"orientation": "v", "x": 1.01, "xanchor": "left"},
     )
     return fig
 
 
-def run(args):
-    """Execute the ctd subcommand. Returns exit code."""
+def run(args: argparse.Namespace) -> int:
+    """Execute the ctd subcommand. Returns exit code.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed command-line arguments with ``config_path``, ``output_dir``,
+        ``data_dir`` and ``format``.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success, 1 on error).
+    """
     config_file = find_config_file(args.config_path)
     if not config_file:
         print(f"Error: No caldip configuration file found in {args.config_path}")
@@ -311,7 +368,7 @@ def run(args):
     try:
         config = load_config(config_file)
         print(f"Loaded config for: {config.get('name', 'Unknown')}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # I/O boundary: YAML parse can raise varied errors; report as exit 1
         print(f"Error loading config file: {e}")
         return 1
 
@@ -334,7 +391,7 @@ def run(args):
         ds_raw = _normalize_ctd_vars(ds_raw, ctd_sensor=ctd_sensor)
         ds_edited = _wild_edit_ctd(ds_raw, config)
         ds_processed = _resample_1hz(ds_edited)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # I/O boundary: reading and normalising the CTD file can raise varied errors; report as exit 1
         print(f"Error processing CTD data: {e}")
         return 1
 
@@ -353,7 +410,7 @@ def run(args):
             save_ds.attrs["ctd_sensor"] = ctd_sensor
             save_ds.to_netcdf(nc_path, engine="netcdf4")
             print(f"  Saved: {nc_path}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # I/O boundary: NetCDF write can raise varied backend errors; report as exit 1
             print(f"  Failed to save NetCDF: {e}")
             return 1
 
@@ -372,7 +429,7 @@ def run(args):
             print(f"  Plot saved: {plot_path}")
         except ImportError:
             print("  plotly not available — skipping plot")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # I/O boundary: plot build and HTML write can raise varied errors; warn but do not fail the run
             print(f"  Failed to generate plot: {e}")
             import traceback
 
@@ -382,7 +439,19 @@ def run(args):
     return 0
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
+    """Run ``caldip ctd`` as a standalone command.
+
+    Parameters
+    ----------
+    argv : list of str or None, optional
+        Argument vector to parse; when None, ``sys.argv`` is used.
+
+    Returns
+    -------
+    int
+        Process exit code from :func:`run`.
+    """
     args = build_parser().parse_args(argv)
     return run(args)
 

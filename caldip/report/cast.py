@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Callable
 from html import escape
 from pathlib import Path
 
@@ -106,7 +107,7 @@ def _rows_aligned(detail: pd.DataFrame, flag_data: FlagData) -> bool:
     return True
 
 
-def _make_over_threshold(row_flagged: object):
+def _make_over_threshold(row_flagged: object) -> Callable[[pd.Series], str | None]:
     """Return a ``row_class`` callback shading rows flagged in the netCDF.
 
     Parameters

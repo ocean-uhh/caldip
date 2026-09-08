@@ -1,13 +1,15 @@
 """caldip inspect — build an HTML inventory of a caldip netCDF file."""
 
-import sys
 import argparse
+import sys
 from pathlib import Path
 
 from caldip.report.inventory import write_inventory
 
 
-def build_parser(subparsers=None):
+def build_parser(
+    subparsers: argparse._SubParsersAction | None = None,
+) -> argparse.ArgumentParser:
     """Build the argument parser for ``caldip inspect``.
 
     Parameters
@@ -21,17 +23,17 @@ def build_parser(subparsers=None):
     argparse.ArgumentParser
         The configured parser.
     """
-    kwargs = dict(
-        help="build an HTML inventory of a caldip netCDF file",
-        description="Build a viewable HTML inventory (dims, variables, attributes) "
+    kwargs = {
+        "help": "build an HTML inventory of a caldip netCDF file",
+        "description": "Build a viewable HTML inventory (dims, variables, attributes) "
         "of a caldip netCDF file — a styled counterpart to 'ncdump -h'.",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+        "formatter_class": argparse.RawDescriptionHelpFormatter,
+        "epilog": """
 Examples:
   caldip inspect outputs/castM4_caldip.nc
   caldip inspect outputs/castM4_caldip.nc -o reports/
         """,
-    )
+    }
     if subparsers is not None:
         parser = subparsers.add_parser("inspect", **kwargs)
     else:
@@ -48,8 +50,19 @@ Examples:
     return parser
 
 
-def run(args):
-    """Execute the inspect subcommand. Returns exit code."""
+def run(args: argparse.Namespace) -> int:
+    """Execute the inspect subcommand. Returns exit code.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed command-line arguments with ``nc_path`` and ``output_dir``.
+
+    Returns
+    -------
+    int
+        Process exit code (0 on success, 1 on error).
+    """
     nc_path = Path(args.nc_path)
     if not nc_path.is_file():
         print(f"Error: Not a file: {nc_path}")
@@ -68,8 +81,19 @@ def run(args):
     return 0
 
 
-def main(argv=None):
-    """Run ``caldip inspect`` as a standalone command."""
+def main(argv: list[str] | None = None) -> int:
+    """Run ``caldip inspect`` as a standalone command.
+
+    Parameters
+    ----------
+    argv : list of str or None, optional
+        Argument vector to parse; when None, ``sys.argv`` is used.
+
+    Returns
+    -------
+    int
+        Process exit code from :func:`run`.
+    """
     args = build_parser().parse_args(argv)
     return run(args)
 

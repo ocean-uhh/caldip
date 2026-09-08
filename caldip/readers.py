@@ -25,16 +25,20 @@ _wild_edit_ctd()           — apply SeaBird wild-edit spike removal
 _resample_1hz()            — resample CTD to 1 Hz medians
 """
 
+import json
+import tempfile
+import warnings
+from datetime import datetime
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas as pd
 import xarray as xr
-from pathlib import Path
-from typing import Dict, Tuple, Union, Optional
 import yaml
-from datetime import datetime
-import warnings
-import json
-import tempfile
+
+if TYPE_CHECKING:
+    import xml.etree.ElementTree as ET
 
 from caldip.config import parameters as params
 
@@ -55,11 +59,14 @@ try:
     SEABIRD_AVAILABLE = True
 except ImportError:
     SEABIRD_AVAILABLE = False
-    warnings.warn("seabirdscientific not available. Some features will be limited.")
+    warnings.warn(
+        "seabirdscientific not available. Some features will be limited.",
+        stacklevel=2,
+    )
 
 # Import tools for shared utilities
-from caldip.tools import to_xarray
 from caldip._writers import save_instrument_nc
+from caldip.tools import to_xarray
 
 # Import SBE hex readers
 from .sbe_hex_reader import sbe37_hex_reader
@@ -128,7 +135,7 @@ def _normalize_conductivity(ds: xr.Dataset) -> xr.Dataset:
     return ds
 
 
-def _read_ctd_sensor(config: Dict) -> int:
+def _read_ctd_sensor(config: dict) -> int:
     """Return the CTD sensor number from config, accepting the deprecated plural key.
 
     The canonical key is ``ctd_sensor`` (integer, 1 or 2). Older YAML files use
@@ -200,7 +207,7 @@ def _normalize_instrument_vars(ds: xr.Dataset) -> xr.Dataset:
     return ds
 
 
-def find_config_file(path):
+def find_config_file(path: str | Path) -> Path | None:
     """
     Find caldip configuration file in directory or use provided file.
 
@@ -234,7 +241,7 @@ def find_config_file(path):
     return None
 
 
-def normalize_serial(value: Union[str, int]) -> str:
+def normalize_serial(value: str | int) -> str:
     """Normalise an instrument serial to its join-key form.
 
     A trailing marker asterisk is stripped, and leading zeros are stripped from
@@ -267,7 +274,7 @@ def normalize_serial(value: Union[str, int]) -> str:
 
 
 def resolve_instrument_class(
-    instrument: Optional[str], file_type: Optional[str] = None
+    instrument: str | None, file_type: str | None = None
 ) -> str:
     """Resolve a cruise-YAML ``instrument`` value to an oceanarray class name.
 
@@ -334,7 +341,7 @@ CRUISE_CONFIG_NAME = "caldip.cruise.yaml"
 _CRUISE_INHERITED = ("cruise", "ship", "year")
 
 
-def find_cruise_config(start: Union[str, Path]) -> Optional[Path]:
+def find_cruise_config(start: str | Path) -> Path | None:
     """Return the nearest ``caldip.cruise.yaml`` at or above ``start``, or ``None``.
 
     Parameters
@@ -355,7 +362,7 @@ def find_cruise_config(start: Union[str, Path]) -> Optional[Path]:
     return None
 
 
-def load_cruise_config(path: Union[str, Path]) -> Dict:
+def load_cruise_config(path: str | Path) -> dict:
     """Parse a cruise-level YAML (``cruise``/``ship``/``year`` + ``cal_dip`` dir).
 
     Parameters
@@ -368,11 +375,11 @@ def load_cruise_config(path: Union[str, Path]) -> Dict:
     dict
         The parsed cruise configuration (empty dict if the file is empty).
     """
-    with open(path, "r") as f:
+    with open(path) as f:
         return yaml.safe_load(f) or {}
 
 
-def discover_cast_configs(cal_dip_dir: Union[str, Path]) -> list:
+def discover_cast_configs(cal_dip_dir: str | Path) -> list:
     """Return the per-cast ``*.caldip.yaml`` configs discovered under a directory.
 
     The cruise sweep discovers casts from the directory rather than a hand-kept
@@ -396,7 +403,7 @@ def discover_cast_configs(cal_dip_dir: Union[str, Path]) -> list:
     return configs
 
 
-def _merge_cruise_defaults(config: Dict, config_path: Path) -> None:
+def _merge_cruise_defaults(config: dict, config_path: Path) -> None:
     """Fill/override ``cruise``/``ship``/``year`` from the nearest cruise YAML.
 
     The cruise YAML is the source of truth for these shared facts (they had drifted
@@ -425,7 +432,7 @@ def _merge_cruise_defaults(config: Dict, config_path: Path) -> None:
         config[key] = cruise[key]
 
 
-def load_config(yaml_file: Union[str, Path]) -> Dict:
+def load_config(yaml_file: str | Path) -> dict:
     """Load caldip configuration from YAML file.
 
     Each instrument's ``instrument:`` field is normalised in place to an
@@ -437,10 +444,10 @@ def load_config(yaml_file: Union[str, Path]) -> Dict:
     instruments share after normalisation is rejected. ``cruise``/``ship``/``year``
     are inherited from the nearest ``caldip.cruise.yaml`` when one is present.
     """
-    with open(yaml_file, "r") as f:
+    with open(yaml_file) as f:
         config = yaml.safe_load(f) or {}
     _merge_cruise_defaults(config, Path(yaml_file))
-    seen_serials: Dict[str, str] = {}
+    seen_serials: dict[str, str] = {}
     for instrument in config.get("instruments", []) or []:
         if instrument.get("instrument"):
             instrument["instrument"] = resolve_instrument_class(
@@ -466,8 +473,8 @@ def load_config(yaml_file: Union[str, Path]) -> Dict:
 
 def resolve_data_dir(
     config_file: Path,
-    config: Dict,
-    override: Optional[str] = None,
+    config: dict,
+    override: str | None = None,
 ) -> Path:
     """Return the data directory for a cast, with optional CLI override.
 
@@ -483,7 +490,7 @@ def resolve_data_dir(
 
 
 def load_instrument_data(
-    file_path: Union[str, Path], file_type: str, **kwargs
+    file_path: str | Path, file_type: str, **kwargs: object
 ) -> xr.Dataset:
     """
     Load instrument data using the appropriate loader based on file_type.
@@ -519,17 +526,16 @@ def load_instrument_data(
     if file_type == "ctd-cnv":
         return load_ctd_data(file_path, **kwargs)
 
-    else:
-        if not SEASENSELIB_AVAILABLE:
-            raise ImportError(f"seasenselib is required for '{file_type}' data loading")
-        sl_format = _SL_FORMAT_MAP.get(file_type, file_type)
-        ds = sl.read(str(file_path), file_format=sl_format, **kwargs)
-        return _normalize_conductivity(ds)
+    if not SEASENSELIB_AVAILABLE:
+        raise ImportError(f"seasenselib is required for '{file_type}' data loading")
+    sl_format = _SL_FORMAT_MAP.get(file_type, file_type)
+    ds = sl.read(str(file_path), file_format=sl_format, **kwargs)
+    return _normalize_conductivity(ds)
 
 
 def load_instruments_from_config(
-    config: Dict, data_dir: Optional[Union[str, Path]] = None
-) -> Dict[str, Dict]:
+    config: dict, data_dir: str | Path | None = None
+) -> dict[str, dict]:
     """
     Load all instruments specified in a caldip configuration.
 
@@ -582,7 +588,7 @@ def load_instruments_from_config(
             nc_use = data_dir / f"caldip_{instr_type}_{serial}_use.nc"
             nc_raw = data_dir / f"caldip_{instr_type}_{serial}_raw.nc"
 
-            def _trim_and_save_use(ds):
+            def _trim_and_save_use(ds: xr.Dataset, nc_use_path: Path = nc_use) -> None:
                 deploy = config.get("deployment_time")
                 recover = config.get("recovery_time")
                 if not (deploy and recover):
@@ -591,7 +597,7 @@ def load_instruments_from_config(
                 rec_np = pd.to_datetime(recover).to_datetime64()
                 mask = (ds.time.values >= dep_np) & (ds.time.values <= rec_np)
                 if mask.any():
-                    save_instrument_nc(ds.sel(time=mask), nc_use, "_use.nc")
+                    save_instrument_nc(ds.sel(time=mask), nc_use_path, "_use.nc")
 
             # Priority: _use.nc → _raw.nc (if newer than source) → source
             if nc_use.exists():
@@ -658,15 +664,15 @@ def load_instruments_from_config(
             else:
                 print(f"  ✅ Loaded: {len(dataset.time)} samples (no data)")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # per-instrument load: skip failures, continue loop
             print(f"  ❌ Failed to load {serial}: {e}")
 
     return instruments
 
 
 def load_reference_data(
-    config: Dict, data_dir: Optional[Union[str, Path]] = None
-) -> Dict[str, Dict]:
+    config: dict, data_dir: str | Path | None = None
+) -> dict[str, dict]:
     """Load CTD reference data from config.
 
     If a pre-processed NetCDF cache (``{ctd_file}.nc``) exists, it is loaded
@@ -753,7 +759,7 @@ def load_reference_data(
 
         except ValueError:
             raise
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # CTD file load: report failure, return what loaded
             print(f"  ❌ Failed to load CTD: {e}")
 
     return reference_data
@@ -788,7 +794,7 @@ def _is_ctdcast_nc(ds: xr.Dataset) -> bool:
     return any(name in ds.data_vars for name in markers)
 
 
-def _ctdcast_sensor_meta(ds: xr.Dataset, var: Optional[str]) -> Tuple[str, str]:
+def _ctdcast_sensor_meta(ds: xr.Dataset, var: str | None) -> tuple[str, str]:
     """Return ``(serial, calibration_date)`` for the sensor behind ``var``.
 
     The data variable links to its ``SENSOR_<TYPE>_<SERIAL>`` catalog entry via a
@@ -819,8 +825,8 @@ def _ctdcast_sensor_meta(ds: xr.Dataset, var: Optional[str]) -> Tuple[str, str]:
 
 
 def read_ctdcast_reference(
-    ds: xr.Dataset, ctd_sensor: int, config: Optional[Dict] = None
-) -> Tuple[xr.Dataset, Dict]:
+    ds: xr.Dataset, ctd_sensor: int, config: dict | None = None
+) -> tuple[xr.Dataset, dict]:
     """Map a ctdcast stage netCDF to caldip's CTD reference, with provenance.
 
     The dual-sensor ctdcast variables (``ctd_temperature_1``/``_2``,
@@ -847,7 +853,7 @@ def read_ctdcast_reference(
         to 1 Hz, and a dict of provenance attributes with ``UNK`` where unsourced.
     """
 
-    def _pick(base: str) -> Tuple[Optional[str], Optional[int]]:
+    def _pick(base: str) -> tuple[str | None, int | None]:
         exact = f"{base}_{ctd_sensor}"
         if exact in ds.data_vars:
             return exact, ctd_sensor
@@ -912,7 +918,7 @@ def read_ctdcast_reference(
             stacklevel=2,
         )
 
-    def _plevel(var: Optional[str]) -> str:
+    def _plevel(var: str | None) -> str:
         if var and var in ds:
             return str(ds[var].attrs.get("processing_level", _CTDCAST_UNK))
         return _CTDCAST_UNK
@@ -977,7 +983,7 @@ _CTD_CANONICAL_S2 = [
     ("oxygen", [("sbeox0ML/L", 1.0), ("sbeox1ML/L", 1.0)]),
 ]
 # Keep _CTD_CANONICAL as an alias used by tests
-_CTD_CANONICAL = _CTD_CANONICAL_S1  # noqa: F841
+_CTD_CANONICAL = _CTD_CANONICAL_S1
 
 
 def _normalize_ctd_vars(ds: "xr.Dataset", ctd_sensor: int = 1) -> "xr.Dataset":
@@ -1035,7 +1041,7 @@ def _normalize_ctd_vars(ds: "xr.Dataset", ctd_sensor: int = 1) -> "xr.Dataset":
     return ds
 
 
-def _wild_edit_ctd(ds: "xr.Dataset", config: Dict) -> "xr.Dataset":
+def _wild_edit_ctd(ds: "xr.Dataset", config: dict) -> "xr.Dataset":
     """
     Apply global range checks to CTD reference data (wild-edit / gross-error removal).
 
@@ -1099,7 +1105,7 @@ def _wild_edit_ctd(ds: "xr.Dataset", config: Dict) -> "xr.Dataset":
     return result
 
 
-def load_ctd_data(file_path: Union[str, Path]) -> xr.Dataset:
+def load_ctd_data(file_path: str | Path) -> xr.Dataset:
     """
     Load CTD 911 data from SeaBird hex/cnv file.
 
@@ -1122,7 +1128,7 @@ def load_ctd_data(file_path: Union[str, Path]) -> xr.Dataset:
             "then update the 'ctd_file' field in your YAML to point to the .cnv output."
         )
 
-    elif file_path.suffix.lower() == ".cnv":
+    if file_path.suffix.lower() == ".cnv":
         # For .cnv files, use seabirdscientific if available
         if not SEABIRD_AVAILABLE:
             raise ImportError("seabirdscientific package required for CNV data loading")
@@ -1148,7 +1154,7 @@ def load_ctd_data(file_path: Union[str, Path]) -> xr.Dataset:
         if pd.Timestamp(ds.time.values[0]).year == 2000:
             # Check the raw file for the actual start time
             actual_start = None
-            with open(file_path, "r", encoding="latin-1") as f:
+            with open(file_path, encoding="latin-1") as f:
                 for line in f:
                     if "* NMEA UTC" in line:
                         # Extract date from line like: * NMEA UTC (Time) = Mar 30 2026 21:06:33
@@ -1160,7 +1166,7 @@ def load_ctd_data(file_path: Union[str, Path]) -> xr.Dataset:
                                 date_str, "%b %d %Y %H:%M:%S"
                             )
                             break
-                        except Exception:
+                        except ValueError:
                             continue
 
             if actual_start and "timeJ" in ds.data_vars:
@@ -1185,7 +1191,7 @@ def load_ctd_data(file_path: Union[str, Path]) -> xr.Dataset:
     return ds
 
 
-def load_microcat_data(file_path: Union[str, Path]) -> xr.Dataset:
+def load_microcat_data(file_path: str | Path) -> xr.Dataset:
     """Load microCAT (SBE37) data from SeaBird hex/asc/cnv file.
 
     Deprecated: load_instrument_data() now routes sbe-cnv/sbe-hex/sbe-asc through
@@ -1217,11 +1223,12 @@ def load_microcat_data(file_path: Union[str, Path]) -> xr.Dataset:
         if "timeJV2" in ds.data_vars:
             # timeJV2 is Julian days: day 1 = Jan 1, so day 0 = Dec 31 of previous year.
             # Parse the year from the CNV header rather than hardcoding it.
-            import pandas as pd
             from datetime import datetime, timedelta
 
+            import pandas as pd
+
             year = None
-            with open(file_path, "r") as _f:
+            with open(file_path) as _f:
                 for _line in _f:
                     if "* System UpLoad Time =" in _line:
                         try:
@@ -1229,7 +1236,7 @@ def load_microcat_data(file_path: Union[str, Path]) -> xr.Dataset:
                             year = datetime.strptime(
                                 _date_str, "%b %d %Y %H:%M:%S"
                             ).year
-                        except Exception:
+                        except ValueError:
                             pass
                         break
 
@@ -1259,8 +1266,9 @@ def load_microcat_data(file_path: Union[str, Path]) -> xr.Dataset:
             # Corrupted timeK values (zeros, wrap-arounds, random) break the uniform
             # increment; we keep only the longest block where consecutive timeK values
             # step by the expected sample interval.
-            import pandas as pd
             from collections import Counter
+
+            import pandas as pd
 
             tq = ds["timeK"].values.astype("float64")
             n = len(tq)
@@ -1328,7 +1336,7 @@ def _parse_microcat_ascii(file_path: Path) -> xr.Dataset:
     This handles the basic ASCII format structure from SeaBird instruments.
     Automatically detects column format based on data structure.
     """
-    with open(file_path, "r") as f:
+    with open(file_path) as f:
         lines = f.readlines()
 
     # Find data start (after header lines starting with * or #)
@@ -1466,12 +1474,10 @@ def _parse_microcat_ascii(file_path: Path) -> xr.Dataset:
     if has_pressure and np.any(data_array[:, 2] != 0):
         data_vars["prdM"] = (["time"], data_array[:, 2])
 
-    ds = xr.Dataset(data_vars, coords={"time": time_index}, attrs=metadata)
-
-    return ds
+    return xr.Dataset(data_vars, coords={"time": time_index}, attrs=metadata)
 
 
-def _parse_nortek_csv_columns(df: pd.DataFrame) -> Dict:
+def _parse_nortek_csv_columns(df: pd.DataFrame) -> dict:
     """
     Extract data variables from Nortek CSV DataFrame.
 
@@ -1571,7 +1577,8 @@ def _add_nortek_variable_attributes(ds: xr.Dataset) -> xr.Dataset:
 
 
 def load_nortek_csv_data(
-    file_path: Union[str, Path], header_file: Optional[str] = None
+    file_path: str | Path,
+    header_file: str | None = None,  # noqa: ARG001  # kept for deprecated API compatibility
 ) -> xr.Dataset:
     """Load Nortek CSV data exported from AquaPro software.
 
@@ -1628,10 +1635,10 @@ def load_nortek_csv_data(
     return ds
 
 
-def sbe37_xmlcon_reader(xmlcon_file: Union[str, Path]) -> Dict:
-    """
-    DEPRECATED
-    Parse SBE37 xmlcon file to extract sensor configuration and calibration coefficients.
+def sbe37_xmlcon_reader(xmlcon_file: str | Path) -> dict:
+    """Parse an SBE37 xmlcon file for sensor configuration and calibration coefficients.
+
+    Deprecated: retained for direct use and testing only.
 
     Parameters
     ----------
@@ -1688,9 +1695,11 @@ def sbe37_xmlcon_reader(xmlcon_file: Union[str, Path]) -> Dict:
     }
 
 
-def _parse_coefficients(sensor_elem, sensor_type: str, sensor_index: int) -> Dict:
+def _parse_coefficients(
+    sensor_elem: "ET.Element", sensor_type: str, sensor_index: int
+) -> dict:
     """
-    Generic function to parse sensor coefficients from XML element.
+    Parse sensor coefficients from an XML element.
 
     Parameters
     ----------
@@ -1739,9 +1748,8 @@ def _parse_coefficients(sensor_elem, sensor_type: str, sensor_index: int) -> Dic
 
         # Also parse direct children (slope, offset, etc.)
         for child in sensor_elem:
-            if child.tag.lower() in ["slope", "offset"]:
-                if child.text:
-                    coef_dict[child.tag.lower()] = float(child.text)
+            if child.tag.lower() in ["slope", "offset"] and child.text:
+                coef_dict[child.tag.lower()] = float(child.text)
 
     else:
         # For temperature and pressure, parse all numeric child elements

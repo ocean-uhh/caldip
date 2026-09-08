@@ -11,7 +11,6 @@ output against the reference file, and the two finality gates.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import xarray as xr
 
@@ -75,7 +74,7 @@ def _config_vs_output(config: dict, attrs: dict, nc_path: Path) -> list[str]:
     return diffs
 
 
-def cast_state(config: dict, nc_path: Optional[Path]) -> tuple[str, str]:
+def cast_state(config: dict, nc_path: Path | None) -> tuple[str, str]:
     """Classify one cast: its output against its config, its reference, and the gates.
 
     Parameters
@@ -122,8 +121,8 @@ def cast_state(config: dict, nc_path: Optional[Path]) -> tuple[str, str]:
 
 
 def _find_output_nc(
-    cast: str, config_path: Path, results_dir: Optional[Path]
-) -> Optional[Path]:
+    cast: str, config_path: Path, results_dir: Path | None
+) -> Path | None:
     """Locate ``{cast}_caldip.nc`` in the results dir, the cast's parent, or its dir."""
     name = f"{cast}_caldip.nc"
     candidates = []
@@ -138,7 +137,7 @@ def _find_output_nc(
 
 
 def check_cruise(
-    path: Path, results_dir: Optional[Path] = None
+    path: Path, results_dir: Path | None = None
 ) -> list[tuple[str, str, str]]:
     """Sweep every cast under a cruise YAML or a directory of per-cast configs.
 

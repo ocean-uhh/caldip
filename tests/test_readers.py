@@ -2,9 +2,10 @@
 Unit tests for readers.py data loading functionality.
 """
 
+from pathlib import Path
+
 import pytest
 import yaml
-from pathlib import Path
 
 from caldip import readers
 
@@ -56,7 +57,7 @@ def test_load_config_invalid_yaml(tmp_path):
     config_file = tmp_path / "invalid.yaml"
     config_file.write_text("invalid: yaml: content: [")
 
-    with pytest.raises(Exception):
+    with pytest.raises(yaml.YAMLError):
         readers.load_config(config_file)
 
 

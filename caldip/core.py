@@ -10,16 +10,15 @@ Primary functions:
 import numpy as np
 import pandas as pd
 import xarray as xr
-from typing import Dict, List, Optional
 
 from caldip.config import parameters as params
 
 
 def find_bottle_stops(
     ctd_data: xr.Dataset,
-    threshold_dbar_per_min: Optional[float] = None,
-    min_duration_seconds: Optional[float] = None,
-) -> List[Dict]:
+    threshold_dbar_per_min: float | None = None,
+    min_duration_seconds: float | None = None,
+) -> list[dict]:
     """
     Find bottle stops in CTD data based on pressure rate of change.
 
@@ -193,21 +192,19 @@ def find_bottle_stops(
                 merged_stops.append(stop)
 
     # Sub-select to only keep bottle stops >= minimum duration
-    final_stops = [
+    return [
         stop
         for stop in merged_stops
         if stop["duration_seconds"] >= min_duration_seconds
     ]
-
-    return final_stops
 
 
 def stats_for_time_period(
     data: xr.Dataset,
     start_time: pd.Timestamp,
     end_time: pd.Timestamp,
-    variables: List[str],
-) -> Dict:
+    variables: list[str],
+) -> dict:
     """
     Calculate statistics for any dataset within a specified time period.  Normally this time period will be 3 minutes long ending 30 seconds before the end of a bottle stop, but this function can be used for any time period and any variables.
 
@@ -261,7 +258,7 @@ def _format_status(diff: float, threshold: float, var_name: str) -> str:
     """Return a human-readable quality flag string for a single variable difference."""
     if np.isnan(diff):
         return f"{var_name} NO DATA"
-    elif abs(diff) <= threshold:
+    if abs(diff) <= threshold:
         return f"{var_name} OK"
     # Pressure reads to 0.1 dbar; temperature and conductivity to 3 dp.
     decimals = 1 if var_name == "P" else 3
@@ -270,11 +267,11 @@ def _format_status(diff: float, threshold: float, var_name: str) -> str:
 
 
 def resolve_quality_thresholds(
-    config: Dict,
-    temp_threshold: Optional[float] = None,
-    cond_threshold: Optional[float] = None,
-    press_threshold: Optional[float] = None,
-) -> Dict[str, float]:
+    config: dict,
+    temp_threshold: float | None = None,
+    cond_threshold: float | None = None,
+    press_threshold: float | None = None,
+) -> dict[str, float]:
     """Return the per-variable quality-flag thresholds for a cast.
 
     Precedence per variable: an explicit argument, then the cast YAML's
@@ -346,14 +343,14 @@ def _usability_flag(diff: float, threshold: float, has_sensor: bool) -> int:
 
 
 def stats(
-    instrument_data: Dict,
-    reference_data: Dict,
-    config: Dict,
-    threshold_dbar_per_min: Optional[float] = None,
-    min_duration_seconds: Optional[float] = None,
-    temp_threshold: Optional[float] = None,
-    cond_threshold: Optional[float] = None,
-    press_threshold: Optional[float] = None,
+    instrument_data: dict,
+    reference_data: dict,
+    config: dict,
+    threshold_dbar_per_min: float | None = None,
+    min_duration_seconds: float | None = None,
+    temp_threshold: float | None = None,
+    cond_threshold: float | None = None,
+    press_threshold: float | None = None,
 ) -> pd.DataFrame:
     """
     Calculate statistics for each bottle stop and each instrument (any type).
@@ -403,7 +400,7 @@ def stats(
     ctd_press = "pressure"
 
     # Validate canonical names exist in the CTD data
-    for var_name, var_label in [(ctd_temp, "temperature"), (ctd_press, "pressure")]:
+    for var_name, _var_label in [(ctd_temp, "temperature"), (ctd_press, "pressure")]:
         if var_name not in ctd_data.data_vars:
             raise KeyError(
                 f"CTD variable '{var_name}' not found. "

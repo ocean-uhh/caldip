@@ -1,9 +1,18 @@
 """caldip stats — per-bottle-stop statistics vs CTD reference."""
 
-import sys
 import argparse
+import sys
 from pathlib import Path
 
+import xarray as xr
+
+import caldip.core as core
+from caldip._writers import (
+    print_stats_report,
+    stats_dataset_to_frame,
+    write_stats_netcdf,
+)
+from caldip.config import parameters as params
 from caldip.readers import (
     find_config_file,
     load_config,
@@ -11,31 +20,37 @@ from caldip.readers import (
     load_reference_data,
     resolve_data_dir,
 )
-import xarray as xr
-
-from caldip.tools import trim_to_deployment, summary_stats
-from caldip._writers import (
-    print_stats_report,
-    stats_dataset_to_frame,
-    write_stats_netcdf,
-)
-from caldip.config import parameters as params
-import caldip.core as core
+from caldip.tools import summary_stats, trim_to_deployment
 
 
-def build_parser(subparsers=None):
-    kwargs = dict(
-        help="per-bottle-stop statistics for instruments vs CTD reference",
-        description="Per-bottle-stop statistics for instruments vs CTD reference",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+def build_parser(
+    subparsers: argparse._SubParsersAction | None = None,
+) -> argparse.ArgumentParser:
+    """Build the argument parser for ``caldip stats``.
+
+    Parameters
+    ----------
+    subparsers : argparse._SubParsersAction or None, optional
+        If given, register ``stats`` on this subparser group; otherwise build a
+        standalone parser.
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        The configured parser.
+    """
+    kwargs = {
+        "help": "per-bottle-stop statistics for instruments vs CTD reference",
+        "description": "Per-bottle-stop statistics for instruments vs CTD reference",
+        "formatter_class": argparse.RawDescriptionHelpFormatter,
+        "epilog": """
 Examples:
   caldip stats data/proc_calib/msm142_2026/cal_dip/castM4/
   caldip stats castM4/castM4.caldip.yaml -o outputs/
   caldip stats castM4/castM4.caldip.yaml --output castM4_rev2 -o outputs/
   caldip stats castM4/castM4.caldip.yaml --ctd-sensor 2
         """,
-    )
+    }
     if subparsers is not None:
         parser = subparsers.add_parser("stats", **kwargs)
     else:
@@ -84,7 +99,7 @@ Examples:
     return parser
 
 
-def run(args):
+def run(args: argparse.Namespace) -> int:
     """Execute the stats subcommand. Returns exit code."""
     config_file = find_config_file(args.config_path)
     if not config_file:
@@ -96,7 +111,7 @@ def run(args):
     try:
         config = load_config(config_file)
         print(f"Loaded config for: {config.get('name', 'Unknown')}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # config parse/read errors are reported and turned into exit code 1
         print(f"Error loading config file: {e}")
         return 1
 
@@ -115,14 +130,14 @@ def run(args):
     print("Loading instrument data...")
     try:
         instruments = load_instruments_from_config(config, data_dir)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # instrument-file read/parse errors are reported and turned into exit code 1
         print(f"Error loading instrument data: {e}")
         return 1
 
     print("\nLoading reference data...")
     try:
         reference_data = load_reference_data(config, data_dir)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # reference-file read/parse errors are reported and turned into exit code 1
         print(f"Error loading reference data: {e}")
         return 1
 
@@ -151,7 +166,7 @@ def run(args):
         )
         summary_df = summary_stats(detailed_df, config)
         print_stats_report(summary_df, config)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # statistics-computation errors are reported and turned into exit code 1
         print(f"Error calculating statistics: {e}")
         return 1
 
@@ -265,7 +280,8 @@ def run(args):
     return 0
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
+    """Run ``caldip stats`` as a standalone command."""
     args = build_parser().parse_args(argv)
     return run(args)
 

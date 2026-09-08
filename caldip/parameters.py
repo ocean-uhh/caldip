@@ -1,3 +1,5 @@
+"""Canonical variable-name mappings and CF metadata for caldip readers."""
+
 TEMPERATURE = "temperature"
 OXYGEN = "oxygen"
 PRESSURE = "pressure"
@@ -330,8 +332,14 @@ rename_list = {
 }
 
 
-def allowed_parameters():
-    """Returns a dictionary of allowed parameter names with their descriptions."""
+def allowed_parameters() -> dict[str, str]:
+    """Return a dictionary of allowed parameter names with their descriptions.
+
+    Returns
+    -------
+    dict[str, str]
+        Mapping of canonical parameter name to a human-readable description.
+    """
     return {
         TEMPERATURE: "Temperature in degrees Celsius",
         SALINITY: "Salinity in PSU",

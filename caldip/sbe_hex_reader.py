@@ -1,14 +1,21 @@
-from typing import Union, Dict
+"""Readers for SBE37 xmlcon and hex files, including calibration-coefficient parsing."""
+
 from pathlib import Path
-import pandas as pd
+from typing import TYPE_CHECKING
+
 import numpy as np
+import pandas as pd
 import xarray as xr
 
+if TYPE_CHECKING:
+    import xml.etree.ElementTree as ET
 
-def sbe37_xmlcon_reader(xmlcon_file: Union[str, Path]) -> Dict:
+
+def sbe37_xmlcon_reader(xmlcon_file: str | Path) -> dict:
     """
-    DEPRECATED
-    Parse SBE37 xmlcon file to extract sensor configuration and calibration coefficients.
+    Parse an SBE37 xmlcon file for sensor configuration and calibration coefficients.
+
+    Deprecated: retained for direct use and testing only.
 
     Parameters
     ----------
@@ -65,9 +72,11 @@ def sbe37_xmlcon_reader(xmlcon_file: Union[str, Path]) -> Dict:
     }
 
 
-def _parse_coefficients(sensor_elem, sensor_type: str, sensor_index: int) -> Dict:
+def _parse_coefficients(
+    sensor_elem: "ET.Element", sensor_type: str, sensor_index: int
+) -> dict:
     """
-    Generic function to parse sensor coefficients from XML element.
+    Parse sensor coefficients from an XML element.
 
     Parameters
     ----------
@@ -116,9 +125,8 @@ def _parse_coefficients(sensor_elem, sensor_type: str, sensor_index: int) -> Dic
 
         # Also parse direct children (slope, offset, etc.)
         for child in sensor_elem:
-            if child.tag.lower() in ["slope", "offset"]:
-                if child.text:
-                    coef_dict[child.tag.lower()] = float(child.text)
+            if child.tag.lower() in ["slope", "offset"] and child.text:
+                coef_dict[child.tag.lower()] = float(child.text)
 
     else:
         # For temperature and pressure, parse all numeric child elements
@@ -174,7 +182,7 @@ def _parse_coefficients(sensor_elem, sensor_type: str, sensor_index: int) -> Dic
     }
 
 
-def parse_hex_header_sensors(hex_file: Union[str, Path]) -> Dict:
+def parse_hex_header_sensors(hex_file: str | Path) -> dict:
     """
     Parse SBE37 hex file header to extract enabled sensors and calibration coefficients.
 
@@ -196,7 +204,7 @@ def parse_hex_header_sensors(hex_file: Union[str, Path]) -> Dict:
 
     # Read the header and extract XML content
     header_lines = []
-    with open(hex_path, "r") as f:
+    with open(hex_path) as f:
         for line in f:
             if line.startswith("*"):
                 header_lines.append(line[1:].strip())  # Remove * prefix
@@ -260,16 +268,17 @@ def parse_hex_header_sensors(hex_file: Union[str, Path]) -> Dict:
                             }
                             key = key_map.get(child.tag, child.tag.lower())
                             sensor_coeffs[key] = float(child.text)
-                        elif child.tag.startswith("PA"):  # Pressure coeffs
-                            sensor_coeffs[child.tag.lower()] = float(child.text)
-                        elif child.tag.startswith("PTC"):  # Pressure temp compensation
-                            sensor_coeffs[child.tag.lower()] = float(child.text)
-                        elif child.tag.startswith("PTEMP"):  # Pressure temp coeffs
-                            sensor_coeffs[child.tag.lower()] = float(child.text)
-                        elif child.tag.startswith("OX") or child.tag in [
-                            "TAU20",
-                            "NTAU",
-                        ]:  # Oxygen coeffs
+                        elif (
+                            child.tag.startswith("PA")
+                            or child.tag.startswith("PTC")
+                            or child.tag.startswith("PTEMP")
+                            or child.tag.startswith("OX")
+                            or child.tag
+                            in [
+                                "TAU20",
+                                "NTAU",
+                            ]
+                        ):  # Pressure coeffs
                             sensor_coeffs[child.tag.lower()] = float(child.text)
                         elif child.tag in ["SerialNum", "CalDate"]:
                             sensor_coeffs[child.tag.lower()] = child.text
@@ -280,7 +289,7 @@ def parse_hex_header_sensors(hex_file: Union[str, Path]) -> Dict:
                         "type": sensor_id,
                     }
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # xmlcon parse: warn and return partial coefficients
         print(f"Warning: Could not parse calibration coefficients: {e}")
 
     return {
@@ -289,7 +298,7 @@ def parse_hex_header_sensors(hex_file: Union[str, Path]) -> Dict:
     }
 
 
-def sbe37_hex_reader(hex_file: Union[str, Path]) -> xr.Dataset:
+def sbe37_hex_reader(hex_file: str | Path) -> xr.Dataset:
     """
     Read SBE37 hex file using seabirdscientific library.
 
@@ -334,10 +343,10 @@ def sbe37_hex_reader(hex_file: Union[str, Path]) -> xr.Dataset:
 
     try:
         import seabirdscientific.instrument_data as id
-    except ImportError:
+    except ImportError as err:
         raise ImportError(
             "seabirdscientific package required for SBE37 hex file reading"
-        )
+        ) from err
 
     # Build enabled sensors list following the example format
     enabled_sensors = []
@@ -372,14 +381,14 @@ def sbe37_hex_reader(hex_file: Union[str, Path]) -> xr.Dataset:
     try:
         import seabirdscientific.conversion as conv
         from seabirdscientific.cal_coefficients import (
-            TemperatureCoefficients,
             ConductivityCoefficients,
             PressureCoefficients,
+            TemperatureCoefficients,
         )
-    except ImportError:
+    except ImportError as err:
         raise ImportError(
             "seabirdscientific conversion module required for calibration"
-        )
+        ) from err
 
     # Convert to xarray Dataset
     data_vars = {}
@@ -393,13 +402,10 @@ def sbe37_hex_reader(hex_file: Union[str, Path]) -> xr.Dataset:
         print("Applying calibration coefficients to convert raw data")
 
         # Use header calibration coefficients if available, otherwise fall back to xmlcon
-        if calibration_coeffs:
-            sensor_configs = calibration_coeffs
-        else:
-            sensor_configs = xmlcon_info["sensors"]
+        sensor_configs = calibration_coeffs or xmlcon_info["sensors"]
 
         # Process each sensor type and apply calibrations
-        for sensor_id, sensor_info in sensor_configs.items():
+        for sensor_info in sensor_configs.values():
             sensor_type = sensor_info["type"]
             coeffs = sensor_info["coefficients"]
 
@@ -550,7 +556,7 @@ def sbe37_hex_reader(hex_file: Union[str, Path]) -> xr.Dataset:
                         data_vars["oxygen_phase"] = ("time", oxygen_phase)
                         data_vars["oxygen_temp"] = ("time", oxygen_temp)
 
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001  # oxygen calibration: warn and fall back to raw
                     print(f"Warning: Could not apply oxygen calibration: {e}")
                     # Fallback to raw data
                     data_vars["oxygen_phase"] = (

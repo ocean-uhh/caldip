@@ -6,13 +6,12 @@ This module provides plotting functions that work with any instrument type.
 
 import numpy as np
 import pandas as pd
-from typing import Dict, Optional
 
 # Import plotting libraries
 try:
+    import plotly.colors as pc
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
-    import plotly.colors as pc
 
     PLOTLY_AVAILABLE = True
 except ImportError:
@@ -26,7 +25,7 @@ from caldip.config import parameters as params
 # sbe16) draw solid; temperature loggers draw dashed. instrument_type is a
 # resolved class after load_config, so the class alone drives the style; an
 # unmapped class (or a CTD) falls back to the bare serial and a solid line.
-_CLASS_STYLE: Dict[str, tuple] = {
+_CLASS_STYLE: dict[str, tuple] = {
     "microcat": ("MC", "solid"),
     "sbe16": ("MC", "solid"),
     "sbe56": ("SBE56", "dash"),
@@ -37,13 +36,13 @@ _CLASS_STYLE: Dict[str, tuple] = {
 
 
 def plot(
-    instrument_data: Dict[str, Dict],
-    reference_data: Dict[str, Dict],
-    config: Optional[Dict] = None,
+    instrument_data: dict[str, dict],
+    reference_data: dict[str, dict],
+    config: dict | None = None,
     title: str = "Caldip Data Comparison",
     show_bottle_stops: bool = True,
-    bottle_stop_params: Optional[Dict] = None,
-) -> Optional[object]:
+    bottle_stop_params: dict | None = None,
+) -> object | None:
     """
     Create interactive caldip comparison plot for any instrument types.
 
@@ -110,7 +109,7 @@ def plot(
     has_oxygen = False
 
     # Collect instrument values and determine plot structure
-    for serial, info in instrument_data.items():
+    for info in instrument_data.values():
         ds = info["data"]
 
         # Canonical names after _normalize_instrument_vars; oxygen_phase kept as fallback
@@ -140,7 +139,7 @@ def plot(
                 break
 
     # Collect reference data values
-    for name, info in reference_data.items():
+    for info in reference_data.values():
         ds = info["data"]
 
         # CTD pressure (canonical name)
@@ -166,7 +165,7 @@ def plot(
         if has_oxygen and "oxygen" in ds.data_vars:
             oxygen_values.extend(ds["oxygen"].values[~np.isnan(ds["oxygen"].values)])
 
-    def smart_range(values, padding=0.05):
+    def smart_range(values: list[float], padding: float = 0.05) -> list[float]:
         """Return [min, max] axis range with fractional padding; defaults to [0,1] for empty input."""
         if not values:
             return [0, 1]
@@ -249,7 +248,7 @@ def plot(
                     y=ds["pressure"].values,
                     mode="lines",
                     name=legend_name,
-                    line=dict(color=color, width=2, dash=line_dash),
+                    line={"color": color, "width": 2, "dash": line_dash},
                     hoverinfo="skip",
                     legendgroup=serial,
                     showlegend=show_legend_on_first_plot,
@@ -267,7 +266,7 @@ def plot(
                     y=ds["temperature"].values,
                     mode="lines",
                     name=legend_name,
-                    line=dict(color=color, width=2, dash=line_dash),
+                    line={"color": color, "width": 2, "dash": line_dash},
                     hoverinfo="skip",
                     legendgroup=serial,
                     showlegend=show_legend_on_first_plot,
@@ -285,7 +284,7 @@ def plot(
                     y=ds["conductivity"].values,
                     mode="lines",
                     name=legend_name,
-                    line=dict(color=color, width=2, dash=line_dash),
+                    line={"color": color, "width": 2, "dash": line_dash},
                     hoverinfo="skip",
                     legendgroup=serial,
                     showlegend=False,
@@ -304,7 +303,7 @@ def plot(
                             y=ds[oxy_var].values,
                             mode="lines",
                             name=legend_name,
-                            line=dict(color=color, width=2, dash=line_dash),
+                            line={"color": color, "width": 2, "dash": line_dash},
                             hoverinfo="skip",
                             legendgroup=serial,
                             showlegend=False,
@@ -328,7 +327,7 @@ def plot(
                     y=ds["pressure"].values,
                     mode="lines",
                     name=f"CTD {name}",
-                    line=dict(color=ref_color, width=3),
+                    line={"color": ref_color, "width": 3},
                     hoverinfo="skip",
                     legendgroup=f"ctd_{name}",
                     showlegend=False,
@@ -349,7 +348,7 @@ def plot(
                         y=ds[tvar].values,
                         mode="lines",
                         name=tlabel,
-                        line=dict(color=tcolor, width=twidth),
+                        line={"color": tcolor, "width": twidth},
                         hoverinfo="skip",
                         legendgroup=f"ctd_{tvar}",
                         showlegend=True,
@@ -370,7 +369,7 @@ def plot(
                             y=ds[cvar].values,
                             mode="lines",
                             name=clabel,
-                            line=dict(color=ccolor, width=cwidth),
+                            line={"color": ccolor, "width": cwidth},
                             hoverinfo="skip",
                             legendgroup=f"ctd_{cvar}",
                             showlegend=True,
@@ -387,7 +386,7 @@ def plot(
                     y=ds["oxygen"].values,
                     mode="lines",
                     name="CTD O2",
-                    line=dict(color="black", width=3),
+                    line={"color": "black", "width": 3},
                     hoverinfo="skip",
                     legendgroup="ctd_o",
                     showlegend=False,
@@ -431,7 +430,13 @@ def plot(
         height=300 * n_rows + 100,  # Scale height based on number of subplots
         hovermode=False,
         showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "center",
+            "x": 0.5,
+        },
     )
 
     # Add gridlines
@@ -492,7 +497,7 @@ def plot(
                             x=[stop["start_time"], stop["start_time"]],
                             y=y_range,
                             mode="lines",
-                            line=dict(color="blue", width=2),
+                            line={"color": "blue", "width": 2},
                             showlegend=False,
                             hoverinfo="skip",
                         ),
@@ -506,7 +511,7 @@ def plot(
                             x=[stop["end_time"], stop["end_time"]],
                             y=y_range,
                             mode="lines",
-                            line=dict(color="red", width=2),
+                            line={"color": "red", "width": 2},
                             showlegend=False,
                             hoverinfo="skip",
                         ),
@@ -520,7 +525,7 @@ def plot(
                             x=[comp_start, comp_start],
                             y=y_range,
                             mode="lines",
-                            line=dict(color="black", width=1, dash="dot"),
+                            line={"color": "black", "width": 1, "dash": "dot"},
                             showlegend=False,
                             hoverinfo="skip",
                         ),
@@ -533,7 +538,7 @@ def plot(
                             x=[comp_end, comp_end],
                             y=y_range,
                             mode="lines",
-                            line=dict(color="black", width=1, dash="dot"),
+                            line={"color": "black", "width": 1, "dash": "dot"},
                             showlegend=False,
                             hoverinfo="skip",
                         ),

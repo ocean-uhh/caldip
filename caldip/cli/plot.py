@@ -1,9 +1,11 @@
 """caldip plot — interactive Plotly plot of instruments vs CTD reference."""
 
-import sys
 import argparse
+import sys
 from pathlib import Path
 
+from caldip._plot import plot
+from caldip.config import parameters as params
 from caldip.readers import (
     find_config_file,
     load_config,
@@ -12,8 +14,6 @@ from caldip.readers import (
     resolve_data_dir,
 )
 from caldip.tools import trim_to_deployment
-from caldip._plot import plot
-from caldip.config import parameters as params
 
 try:
     import plotly.graph_objects as go  # noqa: F401
@@ -23,18 +23,33 @@ except ImportError:
     PLOTLY_AVAILABLE = False
 
 
-def build_parser(subparsers=None):
-    kwargs = dict(
-        help="interactive Plotly plot of instruments vs CTD reference",
-        description="Interactive Plotly plot of instruments vs CTD reference",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+def build_parser(
+    subparsers: argparse._SubParsersAction | None = None,
+) -> argparse.ArgumentParser:
+    """Build the argument parser for ``caldip plot``.
+
+    Parameters
+    ----------
+    subparsers : argparse._SubParsersAction or None, optional
+        If given, register ``plot`` on this subparser group; otherwise build a
+        standalone parser.
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        The configured parser.
+    """
+    kwargs = {
+        "help": "interactive Plotly plot of instruments vs CTD reference",
+        "description": "Interactive Plotly plot of instruments vs CTD reference",
+        "formatter_class": argparse.RawDescriptionHelpFormatter,
+        "epilog": """
 Examples:
   caldip plot data/proc_calib/msm142_2026/cal_dip/castM4/
   caldip plot castM4/castM4.caldip.yaml -o outputs/ --output castM4_rev2
   caldip plot castM4/castM4.caldip.yaml --title "castM4: Instruments vs CTD"
         """,
-    )
+    }
     if subparsers is not None:
         parser = subparsers.add_parser("plot", **kwargs)
     else:
@@ -90,7 +105,7 @@ Examples:
     return parser
 
 
-def run(args):
+def run(args: argparse.Namespace) -> int:
     """Execute the plot subcommand. Returns exit code."""
     config_file = find_config_file(args.config_path)
     if not config_file:
@@ -102,7 +117,7 @@ def run(args):
     try:
         config = load_config(config_file)
         print(f"Loaded config for: {config.get('name', 'Unknown')}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # config parse/read errors are reported and turned into exit code 1
         print(f"Error loading config file: {e}")
         return 1
 
@@ -117,14 +132,14 @@ def run(args):
     print("Loading instrument data...")
     try:
         instruments = load_instruments_from_config(config, data_dir)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # instrument-file read/parse errors are reported and turned into exit code 1
         print(f"Error loading instrument data: {e}")
         return 1
 
     print("\nLoading reference data...")
     try:
         reference_data = load_reference_data(config, data_dir)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # reference-file read/parse errors are reported and turned into exit code 1
         print(f"Error loading reference data: {e}")
         return 1
 
@@ -171,7 +186,7 @@ def run(args):
         if fig is None:
             print("Error: Failed to create plot")
             return 1
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # plot construction errors are reported and turned into exit code 1
         print(f"Error creating plot: {e}")
         return 1
 
@@ -185,21 +200,22 @@ def run(args):
         try:
             fig.write_html(plot_file)
             print(f"Plot saved to: {plot_file}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # HTML write errors are reported and turned into exit code 1
             print(f"Error saving plot: {e}")
             return 1
 
     if args.show or not (args.output or args.output_dir):
         try:
             fig.show()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # browser-display errors are reported and turned into exit code 1
             print(f"Error displaying plot: {e}")
             return 1
 
     return 0
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
+    """Run ``caldip plot`` as a standalone command."""
     args = build_parser().parse_args(argv)
     return run(args)
 

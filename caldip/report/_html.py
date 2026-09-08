@@ -21,7 +21,7 @@ from plotly.offline import get_plotlyjs
 
 from caldip._writers import _caldip_version
 from caldip.report._figure import FigureFragment
-from caldip.report._report_css import CALDIP_LOCAL_CSS, SHARED_CSS, _JS_TOP_LINKS
+from caldip.report._report_css import _JS_TOP_LINKS, CALDIP_LOCAL_CSS, SHARED_CSS
 
 #: Filename of the shared Plotly bundle written into the report root.
 PLOTLY_BUNDLE_FILENAME = "plotly.min.js"
@@ -223,9 +223,9 @@ def dataframe_to_table(
     *,
     row_class: Callable[[pd.Series], str | None] | None = None,
 ) -> str:
-    """Render a stats DataFrame as an HTML table with normalised symbol headers.
+    r"""Render a stats DataFrame as an HTML table with normalised symbol headers.
 
-    Columns are relabelled to compact symbols (``ΔT``, ``σ``\\ :sub:`C`,
+    Columns are relabelled to compact symbols (``ΔT``, ``σ``\ :sub:`C`,
     ``⟨ΔP⟩`` …) with the unit on a second header line, numeric columns are
     right-aligned, and data cells are escaped. Pass the frame read as strings
     (``dtype=str``) so values render exactly as caldip wrote them.

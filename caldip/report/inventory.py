@@ -160,7 +160,7 @@ def read_nc_meta(nc_path: Path) -> dict[str, Any]:
     nc_path = Path(nc_path)
     try:
         ds = xr.open_dataset(nc_path, engine="netcdf4")
-    except (OSError, ValueError) as exc:  # noqa: BLE001 - surfaced on the page
+    except (OSError, ValueError) as exc:
         return {"filename": nc_path.name, "error": str(exc)}
     with ds:
         global_attrs = {str(k): str(v) for k, v in ds.attrs.items()}

@@ -1,14 +1,16 @@
 """caldip report — build a per-cruise HTML calibration report from results."""
 
-import sys
 import argparse
+import sys
 from pathlib import Path
 
 from caldip.report import build_report
 from caldip.report.finality import FINAL, check_cruise
 
 
-def build_parser(subparsers=None):
+def build_parser(
+    subparsers: argparse._SubParsersAction | None = None,
+) -> argparse.ArgumentParser:
     """Build the argument parser for ``caldip report``.
 
     Parameters
@@ -22,17 +24,17 @@ def build_parser(subparsers=None):
     argparse.ArgumentParser
         The configured parser.
     """
-    kwargs = dict(
-        help="build a per-cruise HTML report from caldip stats output",
-        description="Build a per-cruise HTML report from caldip stats output",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+    kwargs = {
+        "help": "build a per-cruise HTML report from caldip stats output",
+        "description": "Build a per-cruise HTML report from caldip stats output",
+        "formatter_class": argparse.RawDescriptionHelpFormatter,
+        "epilog": """
 Examples:
   caldip report data/proc_calib/odb_2026/cal_dip/
   caldip report data/proc_calib/odb_2026/cal_dip/ -o reports/odb_2026
   caldip report outputs/ --cruise msm142_2026
         """,
-    )
+    }
     if subparsers is not None:
         parser = subparsers.add_parser("report", **kwargs)
     else:
@@ -69,7 +71,7 @@ Examples:
     return parser
 
 
-def run(args):
+def run(args: argparse.Namespace) -> int:
     """Execute the report subcommand. Returns exit code."""
     if args.check:
         return _run_check(args)
@@ -91,7 +93,7 @@ def run(args):
     return 0
 
 
-def _run_check(args):
+def _run_check(args: argparse.Namespace) -> int:
     """Run the finality sweep: one line per cast, exit non-zero if any is not final."""
     target = Path(args.results_dir)
     if not target.exists():
@@ -108,7 +110,7 @@ def _run_check(args):
     return 1 if unfinished else 0
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     """Run ``caldip report`` as a standalone command."""
     args = build_parser().parse_args(argv)
     return run(args)

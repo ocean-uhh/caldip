@@ -2,9 +2,9 @@
 Unit tests for caldip/core.py functionality.
 """
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 import xarray as xr
 
 from caldip import core as cf
@@ -28,7 +28,10 @@ def test_find_bottle_stops_basic():
     ctd_data = xr.Dataset(
         {
             "prDM": ("time", pressure),
-            "temp": ("time", np.full(1000, 15.0) + np.random.normal(0, 0.01, 1000)),
+            "temp": (
+                "time",
+                np.full(1000, 15.0) + np.random.default_rng().normal(0, 0.01, 1000),
+            ),
         },
         coords={"time": times},
     )
@@ -90,11 +93,13 @@ def test_stats_workflow():
                 {
                     "temp": (
                         "time",
-                        np.full(1000, 15.0) + np.random.normal(0, 0.01, 1000),
+                        np.full(1000, 15.0)
+                        + np.random.default_rng().normal(0, 0.01, 1000),
                     ),
                     "cond": (
                         "time",
-                        np.full(1000, 35.0) + np.random.normal(0, 0.1, 1000),
+                        np.full(1000, 35.0)
+                        + np.random.default_rng().normal(0, 0.1, 1000),
                     ),
                 },
                 coords={"time": times},
@@ -120,11 +125,13 @@ def test_stats_workflow():
                     "pressure": ("time", pressure),
                     "temperature": (
                         "time",
-                        np.full(1000, 15.05) + np.random.normal(0, 0.005, 1000),
+                        np.full(1000, 15.05)
+                        + np.random.default_rng().normal(0, 0.005, 1000),
                     ),
                     "conductivity": (
                         "time",
-                        np.full(1000, 35.05) + np.random.normal(0, 0.05, 1000),
+                        np.full(1000, 35.05)
+                        + np.random.default_rng().normal(0, 0.05, 1000),
                     ),
                 },
                 coords={"time": times},
@@ -137,21 +144,16 @@ def test_stats_workflow():
     config = {"name": "test_cast"}
 
     # Test the main workflow
-    try:
-        detailed_stats_df = cf.stats(instruments, reference_data, config)
+    detailed_stats_df = cf.stats(instruments, reference_data, config)
 
-        # Should return a DataFrame with results
-        assert not detailed_stats_df.empty
-        assert len(detailed_stats_df) > 0
+    # Should return a DataFrame with results
+    assert not detailed_stats_df.empty
+    assert len(detailed_stats_df) > 0
 
-        # Check expected columns exist
-        expected_cols = ["serial", "instrument_type", "temp_diff", "N"]
-        for col in expected_cols:
-            assert col in detailed_stats_df.columns
-
-    except Exception as e:
-        # If it fails, at least it shouldn't crash completely
-        assert False, f"Function crashed unexpectedly: {e}"
+    # Check expected columns exist
+    expected_cols = ["serial", "instrument_type", "temp_diff", "N"]
+    for col in expected_cols:
+        assert col in detailed_stats_df.columns
 
 
 def test_empty_dataset():

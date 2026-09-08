@@ -11,22 +11,42 @@ Entry point: the `caldip` command dispatches to subcommands.
   caldip inspect    — HTML inventory of a caldip netCDF file
 """
 
-import sys
 import argparse
+import sys
 
-from caldip.cli.ctd import build_parser as _build_ctd, run as _run_ctd
+from caldip.cli.ctd import build_parser as _build_ctd
+from caldip.cli.ctd import run as _run_ctd
+from caldip.cli.init import build_parser as _build_init
+from caldip.cli.init import run as _run_init
+from caldip.cli.inspect import build_parser as _build_inspect
+from caldip.cli.inspect import run as _run_inspect
 from caldip.cli.instrument import (
     build_parser as _build_instrument,
+)
+from caldip.cli.instrument import (
     run as _run_instrument,
 )
-from caldip.cli.plot import build_parser as _build_plot, run as _run_plot
-from caldip.cli.stats import build_parser as _build_stats, run as _run_stats
-from caldip.cli.report import build_parser as _build_report, run as _run_report
-from caldip.cli.inspect import build_parser as _build_inspect, run as _run_inspect
-from caldip.cli.init import build_parser as _build_init, run as _run_init
+from caldip.cli.plot import build_parser as _build_plot
+from caldip.cli.plot import run as _run_plot
+from caldip.cli.report import build_parser as _build_report
+from caldip.cli.report import run as _run_report
+from caldip.cli.stats import build_parser as _build_stats
+from caldip.cli.stats import run as _run_stats
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int | None:
+    """Dispatch the ``caldip`` command to its subcommand.
+
+    Parameters
+    ----------
+    argv : list of str or None, optional
+        Argument vector to parse; when None, ``sys.argv`` is used.
+
+    Returns
+    -------
+    int or None
+        The exit code returned by the dispatched subcommand.
+    """
     parser = argparse.ArgumentParser(
         prog="caldip",
         description="Calibration dip analysis for oceanographic instruments",
@@ -60,6 +80,7 @@ def main(argv=None):
         return _run_report(args)
     if args.command == "inspect":
         return _run_inspect(args)
+    return None
 
 
 if __name__ == "__main__":

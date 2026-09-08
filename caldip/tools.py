@@ -12,22 +12,21 @@ Used by ``caldip.readers``, ``caldip.core``, and the CLI entry points in ``caldi
 import numpy as np
 import pandas as pd
 import xarray as xr
-from typing import Dict
 
 
-def to_xarray(instrument_data) -> xr.Dataset:
+def to_xarray(instrument_data: object) -> xr.Dataset:
     """
     Convert seabirdscientific InstrumentData object to xarray Dataset.
 
     Parameters
     ----------
     instrument_data : seabirdscientific.InstrumentData
-        The InstrumentData object from seabirdscientific
+        The InstrumentData object from seabirdscientific.
 
     Returns
     -------
     xarray.Dataset
-        Dataset with measurements as data variables and time coordinate
+        Dataset with measurements as data variables and time coordinate.
     """
     measurements = instrument_data.measurements
 
@@ -41,7 +40,7 @@ def to_xarray(instrument_data) -> xr.Dataset:
             and instrument_data.sample_count > 1
         ):
             # Use first two timestamps if available in measurements
-            time_keys = [k for k in measurements.keys() if "time" in k.lower()]
+            time_keys = [k for k in measurements if "time" in k.lower()]
             if time_keys and len(measurements[time_keys[0]]) > 1:
                 dt = (
                     measurements[time_keys[0]].iloc[1]
@@ -79,7 +78,7 @@ def to_xarray(instrument_data) -> xr.Dataset:
         data_vars[key] = (["time"], measurement_series.values)
 
     # Create Dataset
-    ds = xr.Dataset(
+    return xr.Dataset(
         data_vars,
         coords={"time": time_index},
         attrs={
@@ -91,11 +90,9 @@ def to_xarray(instrument_data) -> xr.Dataset:
         },
     )
 
-    return ds
-
 
 def trim_to_deployment(
-    instruments: Dict[str, Dict], reference_data: Dict[str, Dict], config: Dict
+    instruments: dict[str, dict], reference_data: dict[str, dict], config: dict
 ) -> tuple:
     """
     Trim instrument and reference data to deployment/recovery times.
@@ -156,10 +153,23 @@ def trim_to_deployment(
     return trimmed_instruments, trimmed_reference
 
 
-def summary_stats(detailed_stats_df: pd.DataFrame, config: Dict) -> pd.DataFrame:
+def summary_stats(detailed_stats_df: pd.DataFrame, config: dict) -> pd.DataFrame:  # noqa: ARG001  # config is unused but part of the public signature
     """
     Extract summary statistics from detailed bottle stop statistics.
+
     Uses the deepest bottle stop data for each instrument.
+
+    Parameters
+    ----------
+    detailed_stats_df : pandas.DataFrame
+        Per-bottle-stop detailed statistics.
+    config : dict
+        Configuration dictionary (unused; retained for call-site compatibility).
+
+    Returns
+    -------
+    pandas.DataFrame
+        One summary row per instrument, using its deepest bottle stop.
     """
     if detailed_stats_df.empty:
         return pd.DataFrame()
@@ -174,7 +184,7 @@ def summary_stats(detailed_stats_df: pd.DataFrame, config: Dict) -> pd.DataFrame
         deepest_row = inst_data.loc[inst_data["bl_press"].idxmax()]
 
         # Convert empty strings to NaN for proper numeric handling
-        def convert_empty_to_nan(value):
+        def convert_empty_to_nan(value: object) -> object:
             """Return NaN for empty-string placeholders, otherwise return value unchanged."""
             return np.nan if value == "" else value
 
