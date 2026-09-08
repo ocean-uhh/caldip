@@ -3,18 +3,19 @@
 Simple test for Nortek CSV reader functions.
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-import tempfile
 import os
+import tempfile
+
+import numpy as np
+import pandas as pd
+import pytest
+import xarray as xr
 
 from caldip.readers import (
-    _parse_nortek_csv_columns,
     _add_nortek_variable_attributes,
+    _parse_nortek_csv_columns,
     load_nortek_csv_data,
 )
-import xarray as xr
 
 
 def test_parse_nortek_csv_columns():

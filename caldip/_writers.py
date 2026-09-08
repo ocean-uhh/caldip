@@ -22,7 +22,7 @@ import uuid
 import warnings
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -98,7 +98,7 @@ def _caldip_version() -> str:
         return UNK
 
 
-def _clean_attrs(attrs: Dict[str, Any]) -> Dict[str, Any]:
+def _clean_attrs(attrs: dict[str, Any]) -> dict[str, Any]:
     """Drop None values and convert datetimes for NetCDF serialization.
 
     Parameters
@@ -112,7 +112,7 @@ def _clean_attrs(attrs: Dict[str, Any]) -> Dict[str, Any]:
         Copy of attrs with None values removed and datetime.datetime values
         converted to ISO 8601 strings.
     """
-    cleaned: Dict[str, Any] = {}
+    cleaned: dict[str, Any] = {}
     for k, v in attrs.items():
         if v is None:
             continue
@@ -123,7 +123,7 @@ def _clean_attrs(attrs: Dict[str, Any]) -> Dict[str, Any]:
     return cleaned
 
 
-def save_instrument_nc(ds: xr.Dataset, path: Union[str, Path], label: str) -> bool:
+def save_instrument_nc(ds: xr.Dataset, path: str | Path, label: str) -> bool:
     """Save instrument Dataset to NetCDF, sanitizing un-serializable attributes.
 
     Drops SBE raw time auxiliary variables (timeS, timeJ, scan) which are
@@ -165,7 +165,7 @@ def _utc_now_iso() -> str:
     return now.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def _units_for(column: str) -> Optional[str]:
+def _units_for(column: str) -> str | None:
     """Return the physical units for a statistics column, or ``None`` if unitless."""
     if column in _TEMP_COLS:
         return "degree_C"
@@ -176,7 +176,7 @@ def _units_for(column: str) -> Optional[str]:
     return None
 
 
-def _config_digest(config: Dict) -> str:
+def _config_digest(config: dict) -> str:
     """Return a short digest over the result-affecting config subset.
 
     Covers the parts that change the numbers but carry no named attribute — the
@@ -214,15 +214,15 @@ def _config_digest(config: Dict) -> str:
 
 def _global_attrs(
     stats_df: pd.DataFrame,
-    config: Dict,
+    config: dict,
     *,
-    ctd_sensor_used: Optional[Union[int, str]],
-    ctd_path: Optional[str],
+    ctd_sensor_used: int | str | None,
+    ctd_path: str | None,
     input_mode: str,
     date_created: str,
     date_modified: str,
-    ctd_provenance: Optional[Dict] = None,
-) -> Dict[str, Any]:
+    ctd_provenance: dict | None = None,
+) -> dict[str, Any]:
     """Build the complete global-attribute block for ``{cast}_caldip.nc``.
 
     The full attribute set is written on every file; fields this branch cannot
@@ -250,6 +250,11 @@ def _global_attrs(
         Creation timestamp (preserved across rewrites).
     date_modified : str
         This-write timestamp.
+    ctd_provenance : dict or None, optional
+        Provenance read from a ctdcast input; overlays the ``ctd_*`` / ``data_mode``
+        / ``cruise`` / ``source_tracking_id`` slots this branch otherwise leaves
+        ``UNK``. Only keys already in the block are applied, and a ``UNK`` value
+        never overwrites a known one.
 
     Returns
     -------
@@ -274,7 +279,7 @@ def _global_attrs(
     ]
     source_instrument_files = " ".join(instrument_files) if instrument_files else UNK
 
-    attrs: Dict[str, Any] = {
+    attrs: dict[str, Any] = {
         "Conventions": "CF-1.8, ACDD-1.3",
         "title": f"caldip calibration-dip statistics for {config.get('name', UNK)}",
         "source": "caldip calibration-dip analysis",
@@ -357,15 +362,15 @@ def _global_attrs(
 
 def stats_to_dataset(
     stats_df: pd.DataFrame,
-    config: Dict,
+    config: dict,
     *,
-    thresholds: Optional[Dict[str, float]] = None,
-    ctd_sensor_used: Optional[Union[int, str]] = None,
-    ctd_path: Optional[str] = None,
+    thresholds: dict[str, float] | None = None,
+    ctd_sensor_used: int | str | None = None,
+    ctd_path: str | None = None,
     input_mode: str = "cnv",
-    date_created: Optional[str] = None,
-    date_modified: Optional[str] = None,
-    ctd_provenance: Optional[Dict] = None,
+    date_created: str | None = None,
+    date_modified: str | None = None,
+    ctd_provenance: dict | None = None,
 ) -> xr.Dataset:
     """Build the machine-readable per-cast statistics Dataset.
 
@@ -391,6 +396,9 @@ def stats_to_dataset(
         Per-stop statistics as returned by :func:`caldip.core.stats`.
     config : dict
         Cast configuration.
+    thresholds : dict of str to float or None, optional
+        Quality thresholds carried into the per-variable flag variables; empty
+        when ``None``.
     ctd_sensor_used : int or str or None, optional
         Reference CTD sensor caldip used; resolved from the frame or config when
         ``None``.
@@ -402,6 +410,10 @@ def stats_to_dataset(
         Creation timestamp to preserve across a rewrite; defaults to now.
     date_modified : str or None, optional
         This-write timestamp; defaults to now.
+    ctd_provenance : dict or None, optional
+        Provenance read from a ctdcast input, passed through to
+        :func:`_global_attrs` to fill the ``ctd_*`` / ``data_mode`` / ``cruise``
+        slots.
 
     Returns
     -------
@@ -438,7 +450,12 @@ def stats_to_dataset(
             repeats = df[df.duplicated(subset=["serial", "bl_press"], keep=False)]
             if not repeats.empty:
                 pairs = sorted(
-                    {(s, p) for s, p in zip(repeats["serial"], repeats["bl_press"])}
+                    {
+                        (s, p)
+                        for s, p in zip(
+                            repeats["serial"], repeats["bl_press"], strict=True
+                        )
+                    }
                 )
                 raise ValueError(
                     f"{config.get('name', UNK)}: cannot derive a stop index from "
@@ -468,7 +485,10 @@ def stats_to_dataset(
             # "cannot reshape" surface.
             repeats = df[df.duplicated(subset=["serial", "stop"], keep=False)]
             pairs = sorted(
-                {(s, st) for s, st in zip(repeats["serial"], repeats["stop"])}
+                {
+                    (s, st)
+                    for s, st in zip(repeats["serial"], repeats["stop"], strict=True)
+                }
             )
             raise ValueError(
                 f"{config.get('name', UNK)}: duplicate (serial, stop) keys {pairs} — "
@@ -477,20 +497,20 @@ def stats_to_dataset(
             ) from exc
         return pivot.reindex(index=instruments, columns=stops).to_numpy(dtype="float64")
 
-    def _per_stop(col: str):
+    def _per_stop(col: str) -> pd.Series | None:
         """Return the per-stop value series, or ``None`` if the column is absent."""
         if col not in df.columns:
             return None
         return df.groupby("stop")[col].first().reindex(stops)
 
-    def _per_instrument(col: str):
+    def _per_instrument(col: str) -> pd.Series | None:
         """Return the per-instrument value series, or ``None`` if absent."""
         if col not in df.columns:
             return None
         return df.groupby("serial")[col].first().reindex(instruments)
 
-    def _float_attrs(name: str) -> Dict[str, Any]:
-        attrs: Dict[str, Any] = {}
+    def _float_attrs(name: str) -> dict[str, Any]:
+        attrs: dict[str, Any] = {}
         units = _units_for(name)
         if units is not None:
             attrs["units"] = units
@@ -498,7 +518,7 @@ def stats_to_dataset(
             attrs["comment"] = _DIFF_COMMENT
         return attrs
 
-    data_vars: Dict[str, Any] = {}
+    data_vars: dict[str, Any] = {}
 
     # Grid (instrument, stop): the differences, scatter, instrument means.
     for name in _GRID_FLOAT_VARS:
@@ -520,7 +540,7 @@ def stats_to_dataset(
             flags = np.where(np.isnan(grid), _FLAG_NO_DATA, grid).astype("int8")
         else:
             flags = np.full(shape, _FLAG_UNKNOWN, dtype="int8")
-        flag_attrs: Dict[str, Any] = {
+        flag_attrs: dict[str, Any] = {
             "long_name": f"{var} usability flag",
             "flag_values": _FLAG_VALUES,
             "flag_meanings": _FLAG_MEANINGS,
@@ -572,7 +592,7 @@ def stats_to_dataset(
         if bl_series is not None
         else np.zeros(len(stops), dtype="int16")
     )
-    coords: Dict[str, Any] = {
+    coords: dict[str, Any] = {
         "serial": (
             _DIM_INSTRUMENT,
             np.array(instruments),
@@ -616,14 +636,14 @@ def stats_to_dataset(
 
 def write_stats_netcdf(
     stats_df: pd.DataFrame,
-    config: Dict,
-    path: Union[str, Path],
+    config: dict,
+    path: str | Path,
     *,
-    thresholds: Optional[Dict[str, float]] = None,
-    ctd_sensor_used: Optional[Union[int, str]] = None,
-    ctd_path: Optional[str] = None,
+    thresholds: dict[str, float] | None = None,
+    ctd_sensor_used: int | str | None = None,
+    ctd_path: str | None = None,
     input_mode: str = "cnv",
-    ctd_provenance: Optional[Dict] = None,
+    ctd_provenance: dict | None = None,
 ) -> Path:
     """Write the per-cast ``{cast}_caldip.nc`` statistics file.
 
@@ -852,9 +872,8 @@ def stats_dataset_to_frame(ds: xr.Dataset) -> pd.DataFrame:
     return frame[_CSV_COLUMNS + _CSV_PROVENANCE_COLUMNS]
 
 
-def print_stats_report(stats_df: pd.DataFrame, config: Dict):
+def print_stats_report(stats_df: pd.DataFrame, config: dict) -> None:
     """Print formatted statistics report for universal instrument types."""
-
     print("\n" + "=" * 80)
     print(f"UNIVERSAL CALDIP CHECK REPORT - {config['name']}")
     print("=" * 80)

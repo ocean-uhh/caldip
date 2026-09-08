@@ -7,26 +7,54 @@ requires = [
 
 [project]
 name = "caldip"
-version = "0.2.0"
+version = "0.2.1"
 description = "Calibration dip analysis for oceanographic instruments"
 readme = "README.md"
 license = { file = "LICENSE" }
 maintainers = [
   { name = "Eleanor Frajka-Williams", email = "eleanorfrajka@gmail.com" },
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10,<3.14"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering :: Oceanography",
   "Topic :: Scientific/Engineering :: Atmospheric Science",
   "Intended Audience :: Science/Research",
 ]
-dynamic = [
-  "dependencies",
+dependencies = [
+  "numpy>=1.23",
+  "pandas>=2.0",
+  "xarray>=2023.12.0",
+  "scipy>=1.15.3",
+  "netcdf4>=1.7.4",
+  "pyyaml>=6.0.3",
+  "plotly>=6.8.0",
+  "matplotlib>=3.9",
+  "seabirdscientific>=1.2.0",
+  "seasenselib",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0",
+  "pytest-cov>=7.1.0",
+]
+docs = [
+  "sphinx>=8.1.3",
+  "sphinx-rtd-theme>=3.1.0",
+  "myst-parser>=4.0.1",
+  "nbsphinx>=0.9.8",
+  "nbconvert>=7.17.1",
+  "pypandoc>=1.17",
+]
+dev = [
+  "caldip[test,docs]",
+  "ruff>=0.15",
+  "jupyterlab>=4.6.1",
 ]
 
 [project.urls]
@@ -42,11 +70,43 @@ caldip = "caldip.cli:main"
 where = ["."]
 include = ["caldip", "caldip.*"]
 
-[tool.setuptools.dynamic]
-dependencies = { file = [
-  "requirements.txt",
-] }
-
-[tool.black]
+[tool.ruff]
 line-length = 88
-target-version = ['py39']
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",          # pycodestyle + pyflakes
+    "B", "BLE",             # bugbear, blind-except
+    "ARG",                  # unused arguments
+    "D", "ANN",             # docstrings (numpy convention) + annotations
+    "I",                    # import sorting
+    "UP",                   # pyupgrade — modern syntax
+    "C4",                   # comprehensions
+    "RET",                  # return-statement hygiene
+    "PIE", "SIM",           # misc lint + simplifications
+    "NPY",                  # numpy-specific
+    "RUF100",               # unused noqa
+]
+ignore = [
+    "E501",   # line too long — the formatter handles this
+    "C901",   # complexity — ignored per CLAUDE.md
+]
+# D417 (undocumented-param) is switched off by the numpy convention below; it is the
+# only check that enforces the "numpy sections with full type information" half of the
+# convention, so put it back.
+extend-select = ["D417"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+# tests are not public API: no docstring rules (D), no annotations (ANN), no
+# unused-argument rule (pytest fixtures look unused).
+"tests/*" = ["ARG", "ANN", "D"]
+"scripts/*" = ["D", "ANN", "E402"]   # one-off utility scripts; late imports allowed
+# Vendored from the shared report design system (source: oceanarray; see CLAUDE.md).
+# The linter must not drive divergence — any change belongs in the shared source,
+# re-vendored to all packages together, not hand-edited here.
+"caldip/config/report_tokens.py" = ["RUF100", "D", "ANN"]
+"caldip/report/_css.py" = ["RUF100", "D", "ANN"]

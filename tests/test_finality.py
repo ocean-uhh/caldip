@@ -15,8 +15,8 @@ from caldip import _writers as writers
 from caldip.readers import read_ctdcast_reference
 from caldip.report.finality import (
     FINAL,
-    NOT_RUN,
     NO_REFERENCE,
+    NOT_RUN,
     RERUN,
     WAITING,
     cast_state,

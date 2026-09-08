@@ -24,8 +24,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from caldip.config import parameters as params
 from caldip._writers import flatten_stats_grid
+from caldip.config import parameters as params
 
 _DETAILED_SUFFIX = "_detailed_statistics.csv"
 _SUMMARY_SUFFIX = "_summary_statistics.csv"

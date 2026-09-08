@@ -43,8 +43,7 @@ To test the installation, you'll want a fresh environment.
 ```
 virtualenv venv
 source venv/bin/activate && micromamba deactivate
-pip install -r requirements.txt
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 Then check and troubleshoot any errors.  When this runs, you are probably ready to try it with the GitHub Actions (where the workflows are in your repository in `.github/workflows/*.yml`)

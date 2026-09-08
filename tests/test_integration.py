@@ -2,11 +2,13 @@
 Integration tests using real test fixture data.
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
 import yaml
 
-from caldip import readers, core as cf, tools
+from caldip import core as cf
+from caldip import readers, tools
 
 
 # Helper functions
@@ -73,7 +75,7 @@ def test_load_reference_data():
 
     assert len(reference_data) > 0
 
-    for ref_name, ref_info in reference_data.items():
+    for ref_info in reference_data.values():
         assert "data" in ref_info
         assert "config" in ref_info or "file" in ref_info
         assert hasattr(ref_info["data"], "coords")

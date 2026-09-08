@@ -2,7 +2,8 @@
 
 [![Tests](https://github.com/ocean-uhh/caldip/actions/workflows/tests.yml/badge.svg)](https://github.com/ocean-uhh/caldip/actions/workflows/tests.yml)
 [![Docs](https://github.com/ocean-uhh/caldip/actions/workflows/docs.yml/badge.svg)](https://github.com/ocean-uhh/caldip/actions/workflows/docs.yml)
-[![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org)
+[![PyPI](https://img.shields.io/pypi/v/caldip)](https://pypi.org/project/caldip/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/github/license/ocean-uhh/caldip)](https://github.com/ocean-uhh/caldip)
 
 **Calibration dip analysis for oceanographic instruments**
@@ -14,10 +15,20 @@ Caldip provides tools for processing, analyzing, and visualizing data from calib
 ### Installation
 
 ```bash
+pip install caldip
+# or, with uv:
+uv pip install caldip     # into the active environment
+uv tool install caldip    # as a standalone command-line tool
+```
+
+For development (editable install with the docs and test tooling):
+
+```bash
 git clone https://github.com/ocean-uhh/caldip.git
 cd caldip
-pip install -r requirements.txt
-pip install -e .
+pip install -e ".[dev]"
+# or, with uv:
+uv pip install -e ".[dev]"
 ```
 
 ### Basic Usage
@@ -62,9 +73,8 @@ caldip/
 │       ├── plot.py            # `caldip plot` subcommand
 │       ├── stats.py           # `caldip stats` subcommand
 │       └── report.py          # `caldip report` subcommand
-├── generate_all_caldip_plots.sh  # Batch processing script
-├── pyproject.toml             # Package configuration
-└── requirements.txt           # Package dependencies
+├── scripts/                   # Batch and utility scripts
+└── pyproject.toml             # Package configuration and dependencies
 ```
 
 ## 🏗️ Workflow
@@ -255,12 +265,12 @@ import caldip
 from pathlib import Path
 
 # 1. Load configuration
-config   = caldip.load_config("castM4/castM4.caldip.yaml")
+config = caldip.load_config("castM4/castM4.caldip.yaml")
 data_dir = Path("castM4/")
 
 # 2. Load instrument and CTD data
 instruments = caldip.load_instruments_from_config(config, data_dir)
-reference   = caldip.load_reference_data(config, data_dir)
+reference = caldip.load_reference_data(config, data_dir)
 
 # 3. Trim to deployment window (optional — uses deployment_time/recovery_time from YAML)
 instruments, reference = caldip.trim_to_deployment(instruments, reference, config)
@@ -281,11 +291,11 @@ import caldip
 
 # Detect bottle stops from a CTD xarray Dataset
 reference = caldip.load_reference_data(config, data_dir)
-ctd_ds    = list(reference.values())[0]["data"]
-stops     = caldip.find_bottle_stops(ctd_ds)
+ctd_ds = list(reference.values())[0]["data"]
+stops = caldip.find_bottle_stops(ctd_ds)
 
 for stop in stops:
-    print(f"  {stop['pressure']:.0f} dbar — {stop['duration_seconds']/60:.1f} min")
+    print(f"  {stop['pressure']:.0f} dbar — {stop['duration_seconds'] / 60:.1f} min")
 ```
 
 See the [API documentation](https://ocean-uhh.github.io/caldip) for full details.
@@ -316,7 +326,7 @@ caldip stats config.yaml --ctd-sensor 2
 
 ### Batch processing
 ```bash
-bash generate_all_caldip_plots.sh
+bash scripts/generate_all_caldip_plots.sh
 ```
 
 ---

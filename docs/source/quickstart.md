@@ -7,8 +7,7 @@ This guide walks through setting up and running caldip for one calibration dip c
 Install the package (see [Installation](installation.md)):
 
 ```bash
-pip install -r requirements-dev.txt
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 ---

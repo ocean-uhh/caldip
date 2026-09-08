@@ -149,7 +149,7 @@ A **cruise YAML** (`caldip.cruise.yaml`, placed at the cruise directory) holds t
 
 ## Batch processing a cruise
 
-`generate_all_caldip_plots.sh` is a shell script that runs both commands for every cast in a cruise.
+`scripts/generate_all_caldip_plots.sh` is a shell script that runs both commands for every cast in a cruise.
 Copy and edit it for each cruise, uncommenting casts as their data become available.
 
 ### Template

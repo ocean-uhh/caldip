@@ -7,16 +7,17 @@ Usage:
     python compare_hex_cnv.py data/proc_calib/msm142_2026/cal_dip/castM4/14626_cal_dip_data.hex data/proc_calib/msm142_2026/cal_dip/castM4/14626_cal_dip_data_time.cnv
 """
 
-import sys
 import argparse
+import sys
 from pathlib import Path
+
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 # Add current directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from caldip.readers import sbe37_hex_reader, load_microcat_data
+from caldip.readers import load_microcat_data, sbe37_hex_reader
 
 
 def main():
@@ -64,7 +65,7 @@ Examples:
                 x=ds_hex.time.values,
                 y=ds_hex.temp.values,
                 name="Hex Temperature",
-                line=dict(color="red", width=2),
+                line={"color": "red", "width": 2},
                 mode="lines",
             ),
             row=1,
@@ -84,7 +85,7 @@ Examples:
                     x=ds_cnv.time.values,
                     y=ds_cnv[temp_var].values,
                     name="CNV Temperature",
-                    line=dict(color="black", width=2, dash="dash"),
+                    line={"color": "black", "width": 2, "dash": "dash"},
                     mode="lines",
                 ),
                 row=1,
@@ -97,7 +98,7 @@ Examples:
                 x=ds_hex.time.values,
                 y=ds_hex.cond.values,
                 name="Hex Conductivity",
-                line=dict(color="blue", width=2),
+                line={"color": "blue", "width": 2},
                 mode="lines",
                 showlegend=False,
             ),
@@ -118,7 +119,7 @@ Examples:
                     x=ds_cnv.time.values,
                     y=ds_cnv[cond_var].values,
                     name="CNV Conductivity",
-                    line=dict(color="black", width=2, dash="dash"),
+                    line={"color": "black", "width": 2, "dash": "dash"},
                     mode="lines",
                     showlegend=False,
                 ),
@@ -132,7 +133,7 @@ Examples:
                 x=ds_hex.time.values,
                 y=ds_hex.press.values,
                 name="Hex Pressure",
-                line=dict(color="green", width=2),
+                line={"color": "green", "width": 2},
                 mode="lines",
                 showlegend=False,
             ),
@@ -153,7 +154,7 @@ Examples:
                     x=ds_cnv.time.values,
                     y=ds_cnv[press_var].values,
                     name="CNV Pressure",
-                    line=dict(color="black", width=2, dash="dash"),
+                    line={"color": "black", "width": 2, "dash": "dash"},
                     mode="lines",
                     showlegend=False,
                 ),
@@ -166,7 +167,7 @@ Examples:
             title=f"SBE37 Hex vs CNV Comparison<br><sub>{Path(args.hex_file).name} vs {Path(args.cnv_file).name}</sub>",
             height=800,
             showlegend=True,
-            legend=dict(x=0.7, y=0.98),
+            legend={"x": 0.7, "y": 0.98},
             hovermode="x unified",
         )
 
@@ -199,7 +200,7 @@ Examples:
         print(f"Conductivity - Hex: 'cond', CNV: '{cond_var}'")
         print(f"Pressure - Hex: 'press', CNV: '{press_var}'")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # top-level script guard: report any failure and exit
         print(f"Error: {e}")
         import traceback
 

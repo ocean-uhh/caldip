@@ -1,38 +1,59 @@
 """caldip instrument — process a single instrument to NetCDF and/or HTML plot."""
 
-import sys
 import argparse
-import pandas as pd
+import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+import pandas as pd
+
+from caldip._writers import save_instrument_nc
+
+if TYPE_CHECKING:
+    import plotly.graph_objects as go
+    import xarray as xr
 from caldip.readers import (
+    _normalize_instrument_vars,
     find_config_file,
     load_config,
     load_instrument_data,
     normalize_serial,
     resolve_data_dir,
-    _normalize_instrument_vars,
 )
-from caldip._writers import save_instrument_nc
 
 
-def build_parser(subparsers=None):
-    kwargs = dict(
-        help="load and save one instrument to _raw.nc and/or _use.nc",
-        description=(
+def build_parser(
+    subparsers: argparse._SubParsersAction | None = None,
+) -> argparse.ArgumentParser:
+    """Build the argument parser for ``caldip instrument``.
+
+    Parameters
+    ----------
+    subparsers : argparse._SubParsersAction or None, optional
+        If given, register ``instrument`` on this subparser group; otherwise build
+        a standalone parser.
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        The configured parser.
+    """
+    kwargs = {
+        "help": "load and save one instrument to _raw.nc and/or _use.nc",
+        "description": (
             "Load, normalize, and save one instrument from a cast config to NetCDF.\n\n"
             "Produces:\n"
             "  caldip_{type}_{serial}_raw.nc  — full normalized data (clock offset applied)\n"
             "  caldip_{type}_{serial}_use.nc  — trimmed to deployment_time / recovery_time"
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+        "formatter_class": argparse.RawDescriptionHelpFormatter,
+        "epilog": """
 Examples:
   caldip instrument castB1/castB1.caldip.yaml --serial 7507
   caldip instrument castB1/castB1.caldip.yaml --serial 240230 --output use
   caldip instrument castB1/castB1.caldip.yaml --serial 26202 --output raw -o exports/
         """,
-    )
+    }
     if subparsers is not None:
         parser = subparsers.add_parser("instrument", **kwargs)
     else:
@@ -85,11 +106,32 @@ _PLOT_VAR_LABELS = {
 _PLOT_VARS = ["pressure", "temperature", "conductivity"]
 
 
-def _make_instrument_plot(dataset, deploy_ds, config, label, serial):
+def _make_instrument_plot(
+    dataset: "xr.Dataset",
+    deploy_ds: "xr.Dataset | None",
+    _config: dict,
+    label: str,
+    serial: str,
+) -> "go.Figure | None":
     """Return a Plotly figure of the instrument time series.
 
-    dataset    — full normalized dataset (raw, clock-offset applied)
-    deploy_ds  — deployment-window subset (or None if unavailable)
+    Parameters
+    ----------
+    dataset : xarray.Dataset
+        Full normalized dataset (raw, clock-offset applied).
+    deploy_ds : xarray.Dataset or None
+        Deployment-window subset, or ``None`` if unavailable.
+    _config : dict
+        Cast configuration (unused; kept for a uniform call signature).
+    label : str
+        Instrument label for the plot title.
+    serial : str
+        Instrument serial for the plot title.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure or None
+        The figure, or ``None`` if none of the plot variables are present.
     """
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
@@ -121,7 +163,7 @@ def _make_instrument_plot(dataset, deploy_ds, config, label, serial):
                 name="full record",
                 legendgroup="full",
                 showlegend=(i == 1),
-                line=dict(color="lightgray", width=1),
+                line={"color": "lightgray", "width": 1},
             ),
             row=i,
             col=1,
@@ -136,7 +178,7 @@ def _make_instrument_plot(dataset, deploy_ds, config, label, serial):
                     name="deployment window",
                     legendgroup="deploy",
                     showlegend=(i == 1),
-                    line=dict(color="steelblue", width=1.5),
+                    line={"color": "steelblue", "width": 1.5},
                 ),
                 row=i,
                 col=1,
@@ -151,12 +193,12 @@ def _make_instrument_plot(dataset, deploy_ds, config, label, serial):
     fig.update_layout(
         title=f"{label} {serial} — {n} samples | {start_str} – {end_str}",
         height=max(300, 200 * n_rows + 80),
-        legend=dict(orientation="v", x=1.01, xanchor="left"),
+        legend={"orientation": "v", "x": 1.01, "xanchor": "left"},
     )
     return fig
 
 
-def run(args):
+def run(args: argparse.Namespace) -> int:
     """Execute the instrument subcommand. Returns exit code."""
     config_file = find_config_file(args.config_path)
     if not config_file:
@@ -168,7 +210,7 @@ def run(args):
     try:
         config = load_config(config_file)
         print(f"Loaded config for: {config.get('name', 'Unknown')}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # config parse/read errors are reported and turned into exit code 1
         print(f"Error loading config file: {e}")
         return 1
 
@@ -218,7 +260,7 @@ def run(args):
         dataset = _normalize_instrument_vars(dataset)
         print(f"  Loaded: {len(dataset.time)} samples")
         print(f"  Variables: {sorted(dataset.data_vars)}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # instrument-file read/normalize errors are reported and turned into exit code 1
         print(f"  Error loading: {e}")
         return 1
 
@@ -278,7 +320,7 @@ def run(args):
                 print(f"  Plot saved: {plot_path}")
         except ImportError:
             print("  plotly not available — skipping plot")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # plot build/write is best-effort; failure is reported without aborting the run
             print(f"  Failed to generate plot: {e}")
             import traceback
 
@@ -288,7 +330,8 @@ def run(args):
     return 0
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
+    """Run ``caldip instrument`` as a standalone command."""
     args = build_parser().parse_args(argv)
     return run(args)
 
