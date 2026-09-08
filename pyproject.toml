@@ -14,7 +14,7 @@ license = { file = "LICENSE" }
 maintainers = [
   { name = "Eleanor Frajka-Williams", email = "eleanorfrajka@gmail.com" },
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
@@ -70,6 +70,43 @@ caldip = "caldip.cli:main"
 where = ["."]
 include = ["caldip", "caldip.*"]
 
-[tool.black]
+[tool.ruff]
 line-length = 88
-target-version = ['py310']
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",          # pycodestyle + pyflakes
+    "B", "BLE",             # bugbear, blind-except
+    "ARG",                  # unused arguments
+    "D", "ANN",             # docstrings (numpy convention) + annotations
+    "I",                    # import sorting
+    "UP",                   # pyupgrade — modern syntax
+    "C4",                   # comprehensions
+    "RET",                  # return-statement hygiene
+    "PIE", "SIM",           # misc lint + simplifications
+    "NPY",                  # numpy-specific
+    "RUF100",               # unused noqa
+]
+ignore = [
+    "E501",   # line too long — the formatter handles this
+    "C901",   # complexity — ignored per CLAUDE.md
+]
+# D417 (undocumented-param) is switched off by the numpy convention below; it is the
+# only check that enforces the "numpy sections with full type information" half of the
+# convention, so put it back.
+extend-select = ["D417"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+# tests are not public API: no docstring rules (D), no annotations (ANN), no
+# unused-argument rule (pytest fixtures look unused).
+"tests/*" = ["ARG", "ANN", "D"]
+"scripts/*" = ["D", "ANN", "E402"]   # one-off utility scripts; late imports allowed
+# Vendored from the shared report design system (source: oceanarray; see CLAUDE.md).
+# The linter must not drive divergence — any change belongs in the shared source,
+# re-vendored to all packages together, not hand-edited here.
+"caldip/config/report_tokens.py" = ["RUF100", "D", "ANN"]
+"caldip/report/_css.py" = ["RUF100", "D", "ANN"]
