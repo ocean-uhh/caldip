@@ -278,7 +278,7 @@ def parse_hex_header_sensors(hex_file: str | Path) -> dict:
                                 "TAU20",
                                 "NTAU",
                             ]
-                        ):  # Pressure coeffs
+                        ):  # pressure and oxygen coeffs
                             sensor_coeffs[child.tag.lower()] = float(child.text)
                         elif child.tag in ["SerialNum", "CalDate"]:
                             sensor_coeffs[child.tag.lower()] = child.text

@@ -30,7 +30,7 @@ def test_find_bottle_stops_basic():
             "prDM": ("time", pressure),
             "temp": (
                 "time",
-                np.full(1000, 15.0) + np.random.default_rng().normal(0, 0.01, 1000),
+                np.full(1000, 15.0) + np.random.default_rng(0).normal(0, 0.01, 1000),
             ),
         },
         coords={"time": times},
@@ -94,12 +94,12 @@ def test_stats_workflow():
                     "temp": (
                         "time",
                         np.full(1000, 15.0)
-                        + np.random.default_rng().normal(0, 0.01, 1000),
+                        + np.random.default_rng(0).normal(0, 0.01, 1000),
                     ),
                     "cond": (
                         "time",
                         np.full(1000, 35.0)
-                        + np.random.default_rng().normal(0, 0.1, 1000),
+                        + np.random.default_rng(0).normal(0, 0.1, 1000),
                     ),
                 },
                 coords={"time": times},
@@ -126,12 +126,12 @@ def test_stats_workflow():
                     "temperature": (
                         "time",
                         np.full(1000, 15.05)
-                        + np.random.default_rng().normal(0, 0.005, 1000),
+                        + np.random.default_rng(0).normal(0, 0.005, 1000),
                     ),
                     "conductivity": (
                         "time",
                         np.full(1000, 35.05)
-                        + np.random.default_rng().normal(0, 0.05, 1000),
+                        + np.random.default_rng(0).normal(0, 0.05, 1000),
                     ),
                 },
                 coords={"time": times},

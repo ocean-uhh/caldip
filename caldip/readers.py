@@ -1578,7 +1578,7 @@ def _add_nortek_variable_attributes(ds: xr.Dataset) -> xr.Dataset:
 
 def load_nortek_csv_data(
     file_path: str | Path,
-    header_file: str | None = None,  # noqa: ARG001  # kept for deprecated API compatibility
+    header_file: str | None = None,  # noqa: ARG001  # unused here; the live path forwards it to seasenselib
 ) -> xr.Dataset:
     """Load Nortek CSV data exported from AquaPro software.
 

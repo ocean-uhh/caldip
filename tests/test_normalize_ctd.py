@@ -193,7 +193,9 @@ class TestWildEditCTD:
 class TestResample1Hz:
     def test_24hz_downsampled(self):
         n = 24 * 60  # 1 minute at 24 Hz
-        ds = _make_ds({"temperature": np.random.default_rng().random(n)}, freq_s=1 / 24)
+        ds = _make_ds(
+            {"temperature": np.random.default_rng(0).random(n)}, freq_s=1 / 24
+        )
         out = _resample_1hz(ds)
         assert len(out.time) == 60
 
