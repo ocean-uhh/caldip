@@ -67,6 +67,16 @@ from .sbe_hex_reader import sbe37_hex_reader
 # Conductivity source names that are in S/m and require ×10 to reach mS/cm
 _CONDUCTIVITY_S_PER_M = frozenset({"c0S/m", "c1S/m", "cond0S/m", "cond1S/m"})
 
+# Conductivity *unit strings*, normalised (stripped, lowercased, whitespace
+# collapsed) for a units-driven S/m→mS/cm conversion. Anything non-empty that is
+# in neither set is an unrecognised unit and must warn, not be assumed mS/cm.
+_CONDUCTIVITY_SPM_UNITS = frozenset(
+    {"s/m", "s m-1", "s m^-1", "siemens/m", "siemens/meter", "s·m-1"}
+)
+_CONDUCTIVITY_MSCM_UNITS = frozenset(
+    {"ms/cm", "ms cm-1", "ms cm^-1", "ms·cm-1", "millisiemens/cm"}
+)
+
 # Map caldip YAML file_type keys to seasenselib format keys where they differ.
 # 'sbe-asc' is a deprecated caldip alias for the seasenselib 'sbe-ascii' key;
 # kept here so existing YAML configs don't break. Use 'sbe-ascii' in new configs.
@@ -80,33 +90,41 @@ _CALDIP_SUPPLEMENT = {
 
 
 def _normalize_conductivity(ds: xr.Dataset) -> xr.Dataset:
-    """Convert conductivity to mS/cm where sl.read() returns S/m units.
+    """Convert conductivity to mS/cm, units-driven, warning on an unknown unit.
 
-    sl.read() always renames conductivity columns (cond0S/m, cond0mS/cm, etc.)
-    to 'conductivity' via its mapping pipeline (parameters.py default_mappings
-    and format_mappings) before returning. The resulting variable retains the
-    original S/m unit attribute, so this function checks and converts.
+    The ``conductivity`` variable's ``units`` attribute is normalised (stripped,
+    lowercased, whitespace collapsed) and matched against the known S/m and
+    mS/cm unit strings. S/m is multiplied by ten; mS/cm is left as is; any other
+    **non-empty** unit warns loudly and is left unconverted (rather than silently
+    assumed to be mS/cm — a 10× error). An empty unit is left unconverted without
+    a warning, since it carries no claim to check.
 
     Parameters
     ----------
     ds : xr.Dataset
-        Dataset as returned by sl.read().
+        Dataset with a ``conductivity`` variable (e.g. from ``sl.read()`` or a
+        ctdcast stage file), or without one.
 
     Returns
     -------
     xr.Dataset
-        Dataset with conductivity in mS/cm, or unchanged if no conductivity
-        variable is present.
+        Dataset with conductivity in mS/cm where the unit was S/m, otherwise
+        unchanged.
     """
-    # sl.read() renames all conductivity columns to 'conductivity' but keeps
-    # the original S/m unit attribute. Unit strings observed: 'S m-1', 'S/m',
-    # 'Siemens/m'.
-    if "conductivity" in ds.data_vars:
-        units = ds["conductivity"].attrs.get("units", "")
-        if units.lower() in ("s/m", "siemens/m", "s m-1", "s·m-1"):
-            ds["conductivity"] = ds["conductivity"] * 10.0
-            ds["conductivity"].attrs["units"] = "mS/cm"
-
+    if "conductivity" not in ds.data_vars:
+        return ds
+    raw = ds["conductivity"].attrs.get("units", "")
+    unit = " ".join(str(raw).strip().lower().split())
+    if unit in _CONDUCTIVITY_SPM_UNITS:
+        ds["conductivity"] = ds["conductivity"] * 10.0
+        ds["conductivity"].attrs["units"] = "mS/cm"
+    elif unit and unit not in _CONDUCTIVITY_MSCM_UNITS:
+        warnings.warn(
+            f"conductivity has unrecognised units {raw!r}; leaving it unconverted "
+            f"and assuming mS/cm. Confirm the file's conductivity unit.",
+            UserWarning,
+            stacklevel=2,
+        )
     return ds
 
 
@@ -641,6 +659,9 @@ def load_reference_data(
 
 _CTDCAST_UNK = "UNK"
 
+# QARTOD "fail" flag value; a compared reference sample carrying it is masked.
+_QARTOD_FAIL = 4
+
 
 def _is_ctdcast_nc(ds: xr.Dataset) -> bool:
     """Return ``True`` if ``ds`` is a ctdcast per-cast stage netCDF.
@@ -724,15 +745,28 @@ def read_ctdcast_reference(
         to 1 Hz, and a dict of provenance attributes with ``UNK`` where unsourced.
     """
 
-    def _pick(base: str) -> Optional[str]:
-        for name in (f"{base}_{ctd_sensor}", base):
-            if name in ds.data_vars:
-                return name
-        return None
+    def _pick(base: str) -> Tuple[Optional[str], Optional[int]]:
+        exact = f"{base}_{ctd_sensor}"
+        if exact in ds.data_vars:
+            return exact, ctd_sensor
+        if base in ds.data_vars:  # single-sensor file (stage 1 strips the _1)
+            return base, 1
+        return None, None
 
-    temp_var = _pick("ctd_temperature")
-    cond_var = _pick("conductivity")
+    temp_var, temp_sensor = _pick("ctd_temperature")
+    cond_var, _cond_sensor = _pick("conductivity")
     press_var = "pressure" if "pressure" in ds.data_vars else None
+
+    # Record the sensor actually used, not the one requested; warn on a fallback
+    # so the serials recorded below are not silently attributed to the wrong sensor.
+    sensor_used = temp_sensor if temp_sensor is not None else ctd_sensor
+    if temp_var is not None and temp_sensor != ctd_sensor:
+        warnings.warn(
+            f"ctd_sensor={ctd_sensor} requested but only a single-sensor "
+            f"temperature is present; recording ctd_sensor_used={sensor_used}.",
+            UserWarning,
+            stacklevel=2,
+        )
 
     data_vars = {}
     if temp_var is not None:
@@ -743,14 +777,20 @@ def read_ctdcast_reference(
         data_vars["pressure"] = ds[press_var]
     out = xr.Dataset(data_vars)
 
-    # Honour QARTOD on the compared reference variables: a `fail` (4) masks the
+    # Honour QARTOD on the compared reference variables: a `fail` masks the
     # sample. Pressure is left intact so bottle-stop detection is not broken by
     # gaps; temperature/conductivity are the values compared against instruments.
+    qc_applied = False
     for canonical, src in (("temperature", temp_var), ("conductivity", cond_var)):
         qc_name = f"{src}_qc" if src else None
         if canonical in out and qc_name and qc_name in ds:
-            out[canonical] = out[canonical].where(ds[qc_name].values != 4)
+            out[canonical] = out[canonical].where(ds[qc_name] != _QARTOD_FAIL)
+            qc_applied = True
 
+    # Conductivity to mS/cm is units-driven and lives in one place; a ctdcast file
+    # may write either unit under the same variable name, so the name-driven cnv
+    # scaling is not applicable here.
+    out = _normalize_conductivity(out)
     out = _resample_1hz(out)
 
     temp_serial, temp_caldate = _ctdcast_sensor_meta(ds, temp_var)
@@ -770,17 +810,27 @@ def read_ctdcast_reference(
                 stacklevel=2,
             )
 
+    def _plevel(var: Optional[str]) -> str:
+        if var and var in ds:
+            return str(ds[var].attrs.get("processing_level", _CTDCAST_UNK))
+        return _CTDCAST_UNK
+
     provenance = {
         "source_tracking_id": str(ds.attrs.get("tracking_id", _CTDCAST_UNK)),
         "ctd_stage": str(ds.attrs.get("processing_stage", _CTDCAST_UNK)),
         "data_mode": "D" if str(ds.attrs.get("data_mode", "")).upper() == "D" else "P",
-        "qc_flags_honoured": "true",
+        "ctd_sensor_used": str(sensor_used),
+        "qc_flags_honoured": "true" if qc_applied else "false",
+        "qc_masked_flag_values": str(_QARTOD_FAIL) if qc_applied else _CTDCAST_UNK,
         "ctd_temp_sensor_serial": temp_serial,
         "ctd_temp_sensor_caldate": temp_caldate,
         "ctd_cond_sensor_serial": cond_serial,
         "ctd_cond_sensor_caldate": cond_caldate,
         "ctd_conductivity_slope": (str(slope) if slope is not None else _CTDCAST_UNK),
         "ctd_cond_slope_adjusted": "true" if slope is not None else "false",
+        "ctd_temp_processing_level": _plevel(temp_var),
+        "ctd_cond_processing_level": _plevel(cond_var),
+        "ctd_press_processing_level": _plevel(press_var),
         "cruise": file_cruise,
     }
     return out, provenance

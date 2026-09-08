@@ -18,10 +18,31 @@ import xarray as xr
 from caldip import _writers as writers
 from caldip.readers import (
     _is_ctdcast_nc,
+    _normalize_conductivity,
     read_ctdcast_reference,
 )
 
 _THRESHOLDS = {"temp": 0.005, "cond": 0.02, "press": 5.0}
+_CFG = {"name": "castM4", "cruise": "msm142", "ctd_sensor": 2, "instruments": [{}]}
+
+
+def _stats_frame():
+    """A one-instrument, one-stop stats frame for write_stats_netcdf."""
+    t0 = pd.Timestamp("2026-04-03 12:00:00")
+    return pd.DataFrame(
+        {
+            "serial": ["13874"], "instrument_type": ["tr1050"], "bl_press": [1000],
+            "stop": [1], "time": [t0], "t_start": [t0],
+            "t_end": [t0 + pd.Timedelta(minutes=2)],
+            "temp_diff": [0.006], "temp_std": [0.001], "cond_diff": [np.nan],
+            "cond_std": [np.nan], "press_diff": [np.nan], "press_std": [np.nan],
+            "ctd_temp": [6.0], "ctd_cond": [np.nan], "ctd_press": [1000.0],
+            "inst_temp": [6.006], "inst_cond": [np.nan], "inst_press": [np.nan],
+            "N": [100], "label": ["TR1050"], "temp_flag": [1], "cond_flag": [2],
+            "press_flag": [2], "date": ["2026-04-03"], "time_start": ["12:00:00"],
+            "time_end": ["12:02:00"],
+        }
+    )
 
 
 def _ctdcast_ds(stage=3, data_mode="P", cruise="MSM142", slope=None, temp2_qc=None):
@@ -188,3 +209,81 @@ def test_provenance_fills_netcdf_attributes(tmp_path):
     assert ds.attrs["ctd_cond_sensor_serial"] == "2452"
     assert ds.attrs["source_tracking_id"] != "UNK"
     assert ds.attrs["cast_id"] == "castM4"  # unchanged in this branch
+
+
+def test_data_mode_meaning_is_derived_not_stale():
+    """data_mode_meaning tracks data_mode after the provenance overlay."""
+    df = _stats_frame()
+    for mode, meaning in (("P", "provisional"), ("D", "delayed-mode")):
+        _, prov = read_ctdcast_reference(_ctdcast_ds(data_mode=mode), ctd_sensor=2)
+        out = writers.write_stats_netcdf(
+            df, _CFG, __import__("tempfile").mktemp(suffix=".nc"),
+            thresholds=_THRESHOLDS, input_mode="netcdf", ctd_provenance=prov,
+        )
+        ds = xr.open_dataset(out, engine="netcdf4")
+        assert ds.attrs["data_mode"] == mode
+        assert ds.attrs["data_mode_meaning"] == meaning
+
+
+def test_unk_provenance_does_not_clobber_config_cruise(tmp_path):
+    """A ctdcast file with no cruise attr must not blank the config's cruise."""
+    ds_no_cruise = _ctdcast_ds()
+    del ds_no_cruise.attrs["cruise"]
+    _, prov = read_ctdcast_reference(ds_no_cruise, ctd_sensor=2)
+    assert prov["cruise"] == "UNK"  # nothing to source from the file
+    out = writers.write_stats_netcdf(
+        _stats_frame(), {"name": "castM4", "cruise": "msm142", "ctd_sensor": 2,
+                         "instruments": [{}]},
+        tmp_path / "castM4_caldip.nc", thresholds=_THRESHOLDS,
+        input_mode="netcdf", ctd_provenance=prov,
+    )
+    ds = xr.open_dataset(out, engine="netcdf4")
+    assert ds.attrs["cruise"] == "msm142"  # config value survived, not UNK
+
+
+def test_single_sensor_fallback_records_actual_sensor_and_warns():
+    """Requesting sensor 2 on a single-sensor file warns and records sensor 1."""
+    time = pd.date_range("2026-04-03T12:00:00", periods=3, freq="1s")
+    ds = xr.Dataset(
+        {"ctd_temperature": ("time", [5.0, 5.0, 5.0]),
+         "conductivity": ("time", [30.0, 30.0, 30.0]),
+         "pressure": ("time", [1000.0, 1000.0, 1000.0])},
+        coords={"time": time},
+    )
+    ds.attrs.update({"processing_stage": 1, "data_mode": "P", "cruise": "MSM142"})
+    with pytest.warns(UserWarning, match="single-sensor"):
+        _, prov = read_ctdcast_reference(ds, ctd_sensor=2)
+    assert prov["ctd_sensor_used"] == "1"  # what was used, not what was requested
+
+
+def test_qc_flags_honoured_false_when_no_qc_companion():
+    """qc_flags_honoured reflects whether any masking actually ran."""
+    ds = _ctdcast_ds()
+    del ds["ctd_temperature_2_qc"]  # no qc companion for the selected sensor
+    _, prov = read_ctdcast_reference(ds, ctd_sensor=2)
+    assert prov["qc_flags_honoured"] == "false"
+    assert prov["qc_masked_flag_values"] == "UNK"
+
+
+@pytest.mark.parametrize(
+    ("unit", "expect_scaled"),
+    [("S m-1", True), (" Siemens/meter ", True), ("mS cm-1", False), ("mS/cm", False)],
+)
+def test_normalize_conductivity_units_driven(unit, expect_scaled):
+    """S/m variants convert x10; mS/cm variants are left as is, both silently."""
+    ds = xr.Dataset({"conductivity": ("t", np.array([3.0]))})
+    ds["conductivity"].attrs["units"] = unit
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # recognised units must not warn
+        out = _normalize_conductivity(ds)
+    expected = 30.0 if expect_scaled else 3.0
+    assert float(out["conductivity"][0]) == pytest.approx(expected)
+
+
+def test_normalize_conductivity_warns_on_unknown_unit():
+    """A non-empty unrecognised unit warns rather than silently assuming mS/cm."""
+    ds = xr.Dataset({"conductivity": ("t", np.array([3.0]))})
+    ds["conductivity"].attrs["units"] = "microS/cm"
+    with pytest.warns(UserWarning, match="unrecognised units"):
+        out = _normalize_conductivity(ds)
+    assert float(out["conductivity"][0]) == pytest.approx(3.0)  # left unconverted

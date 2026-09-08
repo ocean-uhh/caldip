@@ -250,10 +250,12 @@ def _global_attrs(
         "cruise": str(config.get("cruise") or UNK),
         "input_mode": input_mode,
         # No QARTOD flags travel on the .cnv path, so none were excluded; the
-        # ctdcast-input branch honours real stage-2/3 flags and sets this true.
+        # ctdcast-input branch sets these from the flags it actually honoured.
         "qc_flags_honoured": "false",
+        "qc_masked_flag_values": "none",
         "data_mode": "P",
-        "data_mode_meaning": "provisional",
+        # data_mode_meaning is derived from data_mode after the provenance overlay
+        # (below), so the two can never disagree.
         # Lineage. source_tracking_id is the *reference* root the staleness
         # protocol tracks (the ctdcast file's tracking_id, once ctdcast-input
         # lands); source_instrument_files is the *instrument* root.
@@ -280,9 +282,19 @@ def _global_attrs(
     # Overlay provenance read from a ctdcast input (see readers.read_ctdcast_reference),
     # filling the ctd_* / data_mode / cruise / source_tracking_id slots this branch
     # otherwise leaves UNK. Only keys already in the block are applied, so a stray
-    # provenance key cannot inject an attribute.
+    # provenance key cannot inject an attribute; and a UNK provenance value never
+    # overwrites a known one (a ctdcast file with no cruise must not blank the
+    # config's cruise), while a known file value does win over config.
     if ctd_provenance:
-        attrs.update({k: v for k, v in ctd_provenance.items() if k in attrs})
+        attrs.update(
+            {k: v for k, v in ctd_provenance.items() if k in attrs and v != UNK}
+        )
+
+    # Derived from the final data_mode, never independently set, so the pair
+    # (data_mode, data_mode_meaning) can never disagree.
+    attrs["data_mode_meaning"] = (
+        "delayed-mode" if attrs["data_mode"] == "D" else "provisional"
+    )
 
     unsourced = sorted(k for k, v in attrs.items() if v == UNK)
     if unsourced:
