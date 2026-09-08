@@ -7,7 +7,7 @@ requires = [
 
 [project]
 name = "caldip"
-version = "0.2.0"
+version = "0.2.1"
 description = "Calibration dip analysis for oceanographic instruments"
 readme = "README.md"
 license = { file = "LICENSE" }

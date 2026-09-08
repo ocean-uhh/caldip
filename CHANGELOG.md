@@ -6,7 +6,7 @@ All notable changes to caldip are recorded here. The format follows
 package: before 1.0, a minor bump may change output files or public calls, and
 those changes are listed under **Breaking changes**).
 
-## [Unreleased]
+## [0.2.1] - 2026-09-08
 
 ### Changed
 
@@ -95,5 +95,6 @@ those changes are listed under **Breaking changes**).
 - Initial release: `caldip init`, `caldip ctd`, `caldip plot` and `caldip stats`
   for calibration-dip analysis of CTD, MicroCAT and RBR data.
 
+[0.2.1]: https://github.com/ocean-uhh/caldip/releases/tag/v0.2.1
 [0.2.0]: https://github.com/ocean-uhh/caldip/releases/tag/v0.2.0
 [0.1.0]: https://github.com/ocean-uhh/caldip/releases/tag/v0.1.0
