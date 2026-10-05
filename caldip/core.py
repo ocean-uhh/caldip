@@ -74,8 +74,13 @@ def find_bottle_stops(
     # Calculate pressure rate of change (dbar/min)
     window_seconds = params.BOTTLE_STOP_WINDOW_SECONDS
 
-    # Find max pressure point
-    max_pressure_idx = np.argmax(pressure)
+    # Find max pressure point. Use nanargmax, not argmax: a trailing NaN (e.g. from
+    # wild-edit masking a genuine negative-pressure sample near surface recovery) would
+    # otherwise make argmax return that NaN's own index as the "deepest" point, which
+    # collapses deep_enough_mask below to all-False and breaks stop detection entirely.
+    if np.all(np.isnan(pressure)):
+        return bottle_stops
+    max_pressure_idx = np.nanargmax(pressure)
     max_pressure = pressure[max_pressure_idx]
 
     # Start looking once within the search margin of max pressure, so stops at or
