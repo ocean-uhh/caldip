@@ -203,6 +203,45 @@ def test_find_bottle_stops_multiple_stops():
     assert min(pressures) == pytest.approx(60, abs=5)
 
 
+def test_find_bottle_stops_trailing_nan_pressure():
+    """A trailing NaN pressure sample (e.g. from wild-edit masking a genuine
+    negative-pressure reading near surface recovery) must not break detection of
+    the real bottle stops earlier in the cast. Regression test for a bug where
+    np.argmax picked the NaN's own index as the "deepest" point (since any
+    comparison against NaN is False, argmax still returns an index - here, the
+    last one before it, by np.argmax's left-to-right tie-breaking once every
+    other comparison evaluates False), collapsing the deep-enough search window
+    to empty and silently returning zero stops for an otherwise normal cast.
+    """
+    times = pd.date_range("2024-01-01 12:00:00", periods=1001, freq="1s")
+
+    pressure = np.concatenate(
+        [
+            np.linspace(0, 90, 300),  # descent to 90m
+            np.full(400, 100),  # stop at 100m for 6+ minutes
+            np.linspace(100, 0, 300),  # ascent
+            [np.nan],  # trailing NaN, e.g. a wild-edited negative-pressure sample
+        ]
+    )
+
+    ctd_data = xr.Dataset({"prDM": ("time", pressure)}, coords={"time": times})
+
+    bottle_stops = cf.find_bottle_stops(ctd_data)
+
+    assert len(bottle_stops) >= 1
+    assert bottle_stops[0]["pressure"] == pytest.approx(100, abs=5)
+
+
+def test_find_bottle_stops_all_nan_pressure():
+    """All-NaN pressure must return an empty list, not raise."""
+    times = pd.date_range("2024-01-01 12:00:00", periods=100, freq="1s")
+    pressure = np.full(100, np.nan)
+    ctd_data = xr.Dataset({"prDM": ("time", pressure)}, coords={"time": times})
+
+    bottle_stops = cf.find_bottle_stops(ctd_data)
+    assert bottle_stops == []
+
+
 def test_stats_for_time_period_basic():
     """Stats are calculated correctly over a simple time window."""
     times = pd.date_range("2024-01-01 12:00:00", periods=300, freq="1s")
