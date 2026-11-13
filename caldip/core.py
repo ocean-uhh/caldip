@@ -74,8 +74,13 @@ def find_bottle_stops(
     # Calculate pressure rate of change (dbar/min)
     window_seconds = params.BOTTLE_STOP_WINDOW_SECONDS
 
-    # Find max pressure point
-    max_pressure_idx = np.argmax(pressure)
+    # Find max pressure point. Use nanargmax, not argmax: a trailing NaN (e.g. from
+    # wild-edit masking a genuine negative-pressure sample near surface recovery) would
+    # otherwise make argmax return that NaN's own index as the "deepest" point, which
+    # collapses deep_enough_mask below to all-False and breaks stop detection entirely.
+    if np.all(np.isnan(pressure)):
+        return bottle_stops
+    max_pressure_idx = np.nanargmax(pressure)
     max_pressure = pressure[max_pressure_idx]
 
     # Start looking once within the search margin of max pressure, so stops at or
@@ -342,6 +347,197 @@ def _usability_flag(diff: float, threshold: float, has_sensor: bool) -> int:
     return params.USABILITY_FLAG_FLAGGED
 
 
+def _estimate_sample_interval(times: np.ndarray) -> float:
+    """Estimate a series' own sample interval (seconds) from its timestamps.
+
+    Parameters
+    ----------
+    times : np.ndarray
+        Timestamps (seconds, e.g. from ``.timestamp()``) from one series'
+        full record.
+
+    Returns
+    -------
+    float
+        The median interval between consecutive samples, in seconds.
+
+    Raises
+    ------
+    ValueError
+        If fewer than 2 timestamps are given.
+    """
+    if len(times) < 2:
+        raise ValueError(
+            f"cannot estimate a sample interval from {len(times)} timestamp(s) - "
+            "need at least 2 to measure a gap between them."
+        )
+    diffs = np.diff(np.sort(times))
+    return float(np.median(diffs))
+
+
+def _check_sample_coverage(
+    times: np.ndarray,
+    values: np.ndarray,
+    window_start: float,
+    window_end: float,
+    dt: float,
+    min_coverage_fraction: float = 0.5,
+    min_absolute_samples: int = 4,
+) -> dict:
+    """Check whether a series has enough valid samples inside
+    ``[window_start, window_end]`` to trust for paired-diff statistics.
+
+    Parameters
+    ----------
+    times : np.ndarray
+        Timestamps (seconds) for this series' full record.
+    values : np.ndarray
+        This series' values for one variable, same length/order as ``times``.
+        A sample counts as invalid (and is excluded) if its value is NaN.
+    window_start, window_end : float
+        Comparison-window bounds (seconds), e.g. ``comp_start``/``comp_end``
+        from :func:`stats`.
+    dt : float
+        This series' own sample interval (seconds) - see
+        :func:`_estimate_sample_interval`.
+    min_coverage_fraction : float, default 0.5
+        Minimum fraction of ``expected_n`` that must actually be present.
+    min_absolute_samples : int, default 4
+        Minimum absolute sample count, regardless of fraction.
+
+    Returns
+    -------
+    dict
+        ``observed_n`` (int): valid samples actually found in the window.
+        ``actual_span`` (float): seconds between the first and last valid
+        sample (0.0 if fewer than 2).
+        ``expected_n`` (float): samples a gap-free series at ``dt`` would
+        have over ``actual_span``.
+        ``sufficient`` (bool): whether both thresholds are met.
+        ``mask`` (np.ndarray[bool]): True where a sample is in-window AND
+        valid.
+    """
+    in_window = (times >= window_start) & (times <= window_end)
+    valid = in_window & ~np.isnan(values)
+
+    observed_n = int(np.sum(valid))
+    if observed_n < 2:
+        actual_span = 0.0
+    else:
+        valid_times = times[valid]
+        actual_span = float(valid_times[-1] - valid_times[0])
+
+    expected_n = actual_span / dt + 1 if dt > 0 else float(observed_n)
+
+    sufficient = (
+        observed_n >= min_absolute_samples
+        and observed_n >= min_coverage_fraction * expected_n
+    )
+
+    return {
+        "observed_n": observed_n,
+        "actual_span": actual_span,
+        "expected_n": expected_n,
+        "sufficient": sufficient,
+        "mask": valid,
+    }
+
+
+def _match_resolution(
+    fine_times: np.ndarray,
+    fine_values: np.ndarray,
+    coarse_times: np.ndarray,
+    coarse_values: np.ndarray,
+    coarse_dt: float,
+    min_sub_window_samples: int = 2,
+) -> dict:
+    """Pair each coarse-series sample with the average of the fine series'
+    samples in a sub-window the width of the coarse series' own ``dt``,
+    centered on its timestamp.
+
+    Parameters
+    ----------
+    fine_times, fine_values : np.ndarray
+        The finer-resolution series (e.g. the 1 Hz CTD reference).
+    coarse_times, coarse_values : np.ndarray
+        The coarser-resolution series (e.g. the moored instrument) -
+        already filtered to its own valid, in-window samples (see
+        :func:`_check_sample_coverage`).
+    coarse_dt : float
+        The coarse series' own sample interval (see
+        :func:`_estimate_sample_interval`).
+    min_sub_window_samples : int, default 2
+        Minimum fine-series samples required within a sub-window to
+        average it; a pair is dropped if its sub-window has fewer.
+
+    Returns
+    -------
+    dict
+        ``coarse_matched`` (np.ndarray): the coarse series' values for
+        pairs that were kept.
+        ``fine_matched`` (np.ndarray): the fine series' sub-window average
+        for each kept pair, same order/length as ``coarse_matched``.
+        ``n_dropped`` (int): how many coarse samples were dropped for lack
+        of fine-series coverage in their own sub-window.
+    """
+    half = coarse_dt / 2.0
+    fine_matched = []
+    coarse_matched = []
+    n_dropped = 0
+
+    for t, v in zip(coarse_times, coarse_values):
+        sub_mask = (fine_times >= t - half) & (fine_times < t + half)
+        sub_values = fine_values[sub_mask]
+        sub_values = sub_values[~np.isnan(sub_values)]
+        if len(sub_values) < min_sub_window_samples:
+            n_dropped += 1
+            continue
+        fine_matched.append(np.mean(sub_values))
+        coarse_matched.append(v)
+
+    return {
+        "coarse_matched": np.array(coarse_matched),
+        "fine_matched": np.array(fine_matched),
+        "n_dropped": n_dropped,
+    }
+
+
+def _paired_offset_stats(coarse_matched: np.ndarray, fine_matched: np.ndarray) -> dict:
+    """Compute the offset and its spread from a resolution-matched pair
+    (see :func:`_match_resolution`).
+
+    ``diff_i = coarse_i - fine_i`` per matched sample (coarse = instrument,
+    fine = CTD, matching the ``offset = inst - ctd`` convention used
+    throughout this module).
+
+    Parameters
+    ----------
+    coarse_matched, fine_matched : np.ndarray
+        Equal-length, order-matched arrays from :func:`_match_resolution`.
+
+    Returns
+    -------
+    dict
+        ``mean_offset`` (float): mean of the paired differences.
+        ``std_offset`` (float): sample standard deviation (``ddof=1``) of
+        the paired differences; ``nan`` if fewer than 2 pairs.
+        ``n`` (int): number of matched pairs actually used.
+    """
+    diff = coarse_matched - fine_matched
+    n = len(diff)
+    if n < 2:
+        return {
+            "mean_offset": float(diff[0]) if n == 1 else float("nan"),
+            "std_offset": float("nan"),
+            "n": n,
+        }
+    return {
+        "mean_offset": float(np.mean(diff)),
+        "std_offset": float(np.std(diff, ddof=1)),
+        "n": n,
+    }
+
+
 def stats(
     instrument_data: dict,
     reference_data: dict,
@@ -412,6 +608,16 @@ def stats(
     ctd_time_dt = pd.to_datetime(ctd_data.time.values)
     ctd_time_numeric = np.array([t.timestamp() for t in ctd_time_dt])
 
+    # Empirical CTD sample interval, for the covariance-corrected paired-diff
+    # stats below (temp_diff_paired/temp_std_paired) - computed once per cast,
+    # not per stop, since it is the same CTD series throughout. None if the
+    # CTD record is too short to measure an interval from (see
+    # _estimate_sample_interval); the paired stats are then left as NaN.
+    try:
+        ctd_dt = _estimate_sample_interval(ctd_time_numeric)
+    except ValueError:
+        ctd_dt = None
+
     results = []
 
     # Loop through each bottle stop
@@ -446,6 +652,21 @@ def stats(
         else:
             ctd_cond_comp = np.nan
 
+        # CTD-side coverage check for this stop's window, reused by every
+        # instrument below (the CTD side of the pairing does not change
+        # per-instrument) - see _check_sample_coverage.
+        ctd_temp_cov = (
+            _check_sample_coverage(
+                ctd_time_numeric,
+                ctd_data[ctd_temp].values.astype(float),
+                comp_start_ts,
+                comp_end_ts,
+                ctd_dt,
+            )
+            if ctd_dt is not None
+            else None
+        )
+
         # Loop through each instrument
         for serial, inst_info in instrument_data.items():
             inst_data = inst_info["data"]
@@ -455,6 +676,14 @@ def stats(
             # Convert instrument time to numeric
             inst_time_dt = pd.to_datetime(inst_data.time.values)
             inst_time_numeric = np.array([t.timestamp() for t in inst_time_dt])
+
+            # Empirical instrument sample interval (see ctd_dt above) - not
+            # assumed, since MicroCAT/RBR TR1050/RBR Solo intervals differ and
+            # are not all declared anywhere (see caldip_uncertainties branch).
+            try:
+                inst_dt = _estimate_sample_interval(inst_time_numeric)
+            except ValueError:
+                inst_dt = None
 
             # Find instrument data during comparison period
             inst_comp_mask = (inst_time_numeric >= comp_start_ts) & (
@@ -470,13 +699,46 @@ def stats(
             inst_temp = np.nan
             inst_temp_std = np.nan
             has_temp_var = False
+            # Covariance-corrected paired-diff stats (caldip_uncertainties branch).
+            # Left as NaN/0 unless both series have sufficient coverage in this
+            # window - see _check_sample_coverage/_match_resolution/_paired_offset_stats.
+            temp_diff_paired = np.nan
+            temp_std_paired = np.nan
+            temp_n_matched = 0
+            temp_n_dropped = 0
             temp_vars = ["tv290C", "temperature", "temp", "TEMP"]
             for var in temp_vars:
                 if var in inst_data.data_vars:
                     has_temp_var = True
                     inst_temp_values = inst_data[var].values[inst_comp_mask]
                     inst_temp = np.nanmean(inst_temp_values)
-                    inst_temp_std = np.nanstd(inst_temp_values)
+                    # ddof=1: these samples estimate the sensor's true variability,
+                    # not just describe themselves - see _paired_offset_stats.
+                    inst_temp_std = np.nanstd(inst_temp_values, ddof=1)
+
+                    if inst_dt is not None and ctd_temp_cov is not None:
+                        inst_temp_cov = _check_sample_coverage(
+                            inst_time_numeric,
+                            inst_data[var].values.astype(float),
+                            comp_start_ts,
+                            comp_end_ts,
+                            inst_dt,
+                        )
+                        if inst_temp_cov["sufficient"] and ctd_temp_cov["sufficient"]:
+                            match = _match_resolution(
+                                ctd_time_numeric[ctd_temp_cov["mask"]],
+                                ctd_data[ctd_temp].values.astype(float)[ctd_temp_cov["mask"]],
+                                inst_time_numeric[inst_temp_cov["mask"]],
+                                inst_data[var].values.astype(float)[inst_temp_cov["mask"]],
+                                coarse_dt=inst_dt,
+                            )
+                            paired = _paired_offset_stats(
+                                match["coarse_matched"], match["fine_matched"]
+                            )
+                            temp_diff_paired = paired["mean_offset"]
+                            temp_std_paired = paired["std_offset"]
+                            temp_n_matched = paired["n"]
+                            temp_n_dropped = match["n_dropped"]
                     break
 
             # Conductivity (only if instrument has it)
@@ -491,7 +753,7 @@ def stats(
                     # Only use if not all NaN
                     if not np.all(np.isnan(inst_cond_values)):
                         inst_cond = np.nanmean(inst_cond_values)
-                        inst_cond_std = np.nanstd(inst_cond_values)
+                        inst_cond_std = np.nanstd(inst_cond_values, ddof=1)
                     break
 
             # Pressure (only if instrument has it)
@@ -504,7 +766,7 @@ def stats(
                     has_press_var = True
                     inst_press_values = inst_data[var].values[inst_comp_mask]
                     inst_press = np.nanmean(inst_press_values)
-                    inst_press_std = np.nanstd(inst_press_values)
+                    inst_press_std = np.nanstd(inst_press_values, ddof=1)
                     break
 
             # Calculate differences
@@ -550,6 +812,10 @@ def stats(
                     # from these same values, so the two never drift.
                     "temp_diff": temp_diff,
                     "temp_std": inst_temp_std,
+                    "temp_diff_paired": temp_diff_paired,
+                    "temp_std_paired": temp_std_paired,
+                    "temp_n_matched": temp_n_matched,
+                    "temp_n_dropped": temp_n_dropped,
                     "cond_diff": cond_diff,
                     "cond_std": inst_cond_std,
                     "press_diff": press_diff,

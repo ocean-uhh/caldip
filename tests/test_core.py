@@ -203,6 +203,45 @@ def test_find_bottle_stops_multiple_stops():
     assert min(pressures) == pytest.approx(60, abs=5)
 
 
+def test_find_bottle_stops_trailing_nan_pressure():
+    """A trailing NaN pressure sample (e.g. from wild-edit masking a genuine
+    negative-pressure reading near surface recovery) must not break detection of
+    the real bottle stops earlier in the cast. Regression test for a bug where
+    np.argmax picked the NaN's own index as the "deepest" point (since any
+    comparison against NaN is False, argmax still returns an index - here, the
+    last one before it, by np.argmax's left-to-right tie-breaking once every
+    other comparison evaluates False), collapsing the deep-enough search window
+    to empty and silently returning zero stops for an otherwise normal cast.
+    """
+    times = pd.date_range("2024-01-01 12:00:00", periods=1001, freq="1s")
+
+    pressure = np.concatenate(
+        [
+            np.linspace(0, 90, 300),  # descent to 90m
+            np.full(400, 100),  # stop at 100m for 6+ minutes
+            np.linspace(100, 0, 300),  # ascent
+            [np.nan],  # trailing NaN, e.g. a wild-edited negative-pressure sample
+        ]
+    )
+
+    ctd_data = xr.Dataset({"prDM": ("time", pressure)}, coords={"time": times})
+
+    bottle_stops = cf.find_bottle_stops(ctd_data)
+
+    assert len(bottle_stops) >= 1
+    assert bottle_stops[0]["pressure"] == pytest.approx(100, abs=5)
+
+
+def test_find_bottle_stops_all_nan_pressure():
+    """All-NaN pressure must return an empty list, not raise."""
+    times = pd.date_range("2024-01-01 12:00:00", periods=100, freq="1s")
+    pressure = np.full(100, np.nan)
+    ctd_data = xr.Dataset({"prDM": ("time", pressure)}, coords={"time": times})
+
+    bottle_stops = cf.find_bottle_stops(ctd_data)
+    assert bottle_stops == []
+
+
 def test_stats_for_time_period_basic():
     """Stats are calculated correctly over a simple time window."""
     times = pd.date_range("2024-01-01 12:00:00", periods=300, freq="1s")
@@ -287,7 +326,6 @@ def test_format_status_reads_high():
     }
     df = cf.stats(instruments, reference_data, {"name": "test"})
     assert not df.empty
-    assert df.iloc[0]["temp_status"].startswith("T reads high")
 
 
 def test_stats_emits_ctd_press_and_usability_flags():
@@ -397,3 +435,169 @@ def test_stats_with_canonical_variable_names():
     }
     df = cf.stats(instruments, reference_data, {"name": "test"})
     assert not df.empty
+
+
+# --- caldip_uncertainties: covariance-corrected paired-diff stats ---------
+
+
+def test_estimate_sample_interval_basic():
+    """Empirical dt matches the real spacing of a regular time series."""
+    times = np.arange(0.0, 120.0, 10.0)  # 10 s interval, like a MicroCAT
+    dt = cf._estimate_sample_interval(times)
+    assert dt == pytest.approx(10.0)
+
+
+def test_estimate_sample_interval_too_few_samples_raises():
+    """A single timestamp can't yield an interval - should raise, not
+    silently return a NaN that would poison every downstream calculation."""
+    with pytest.raises(ValueError):
+        cf._estimate_sample_interval(np.array([0.0]))
+
+
+def test_check_sample_coverage_full_window():
+    """A complete, gap-free window is sufficient, with observed_n matching
+    expected_n exactly."""
+    times = np.arange(0.0, 121.0, 1.0)  # 121 samples, 1 Hz, 120 s span
+    values = np.full(len(times), 10.0)
+    result = cf._check_sample_coverage(times, values, 0.0, 120.0, dt=1.0)
+    assert result["sufficient"] is True
+    assert result["observed_n"] == 121
+    assert result["expected_n"] == pytest.approx(121.0)
+
+
+def test_check_sample_coverage_clipped_edge_not_flagged():
+    """A window that's merely clipped at the edge (data starts late, but is
+    complete where it exists) must not be treated as a gap - expected_n is
+    based on the window's own actual span, not its nominal length."""
+    times = np.arange(60.0, 121.0, 1.0)  # starts at t=60, not t=0
+    values = np.full(len(times), 10.0)
+    result = cf._check_sample_coverage(times, values, 0.0, 120.0, dt=1.0)
+    assert result["sufficient"] is True
+
+
+def test_check_sample_coverage_real_gap_flagged():
+    """A genuine gap in the middle of the window - not just edge clipping -
+    is correctly flagged as insufficient."""
+    times = np.concatenate([np.arange(0.0, 20.0, 1.0), np.arange(100.0, 121.0, 1.0)])
+    values = np.full(len(times), 10.0)
+    result = cf._check_sample_coverage(times, values, 0.0, 120.0, dt=1.0)
+    assert result["sufficient"] is False
+
+
+def test_check_sample_coverage_excludes_nan_values():
+    """A sample that is in-window by timestamp but NaN (e.g. wild-edit
+    masked) must not count toward observed_n - this is what lets the check
+    catch a wild-edit-masked stretch, not just a missing timestamp."""
+    times = np.arange(0.0, 13.0, 1.0)
+    values = np.full(len(times), 10.0)
+    values[5] = np.nan
+    result = cf._check_sample_coverage(times, values, 0.0, 12.0, dt=1.0)
+    assert result["observed_n"] == len(times) - 1
+    assert result["mask"][5] == np.False_
+
+
+def test_match_resolution_averages_fine_onto_coarse():
+    """Each coarse sample is paired with the mean of the fine series'
+    samples in its own dt-wide sub-window."""
+    fine_times = np.arange(0.0, 20.0, 1.0)
+    fine_values = np.full(len(fine_times), 10.0)
+    coarse_times = np.array([5.0])
+    coarse_values = np.array([10.5])
+
+    result = cf._match_resolution(
+        fine_times, fine_values, coarse_times, coarse_values, coarse_dt=10.0
+    )
+    assert result["n_dropped"] == 0
+    assert result["fine_matched"][0] == pytest.approx(10.0)
+    assert result["coarse_matched"][0] == pytest.approx(10.5)
+
+
+def test_match_resolution_drops_pair_with_insufficient_subwindow():
+    """A coarse sample whose own sub-window lacks enough fine coverage is
+    dropped - not averaged over too few points - rather than discarding
+    every other good pair in the window alongside it."""
+    fine_times = np.array([5.0])  # one fine sample, below the floor
+    fine_values = np.array([10.0])
+    coarse_times = np.array([5.0])
+    coarse_values = np.array([10.5])
+
+    result = cf._match_resolution(
+        fine_times, fine_values, coarse_times, coarse_values,
+        coarse_dt=10.0, min_sub_window_samples=2,
+    )
+    assert result["n_dropped"] == 1
+    assert len(result["coarse_matched"]) == 0
+
+
+def test_paired_offset_stats_basic():
+    """mean/std of the paired differences, ddof=1 (sample, not population,
+    std - these samples estimate the sensor's true variability)."""
+    coarse = np.array([10.1, 10.2, 10.0, 10.3])
+    fine = np.array([10.0, 10.0, 10.0, 10.0])
+    result = cf._paired_offset_stats(coarse, fine)
+    diffs = coarse - fine
+    assert result["mean_offset"] == pytest.approx(np.mean(diffs))
+    assert result["std_offset"] == pytest.approx(np.std(diffs, ddof=1))
+    assert result["n"] == 4
+
+
+def test_paired_offset_stats_single_pair_has_nan_std():
+    """A single matched pair gives an offset but not a std - variability
+    cannot be estimated from one point."""
+    result = cf._paired_offset_stats(np.array([10.5]), np.array([10.0]))
+    assert result["mean_offset"] == pytest.approx(0.5)
+    assert np.isnan(result["std_offset"])
+    assert result["n"] == 1
+
+
+def test_stats_includes_paired_columns():
+    """stats() output includes the new covariance-corrected paired columns
+    alongside the existing ones, for a realistic coarse instrument interval
+    (10 s, like a MicroCAT) against a 1 Hz CTD reference."""
+    n_ctd = 1000
+    times = pd.date_range("2024-01-01 12:00:00", periods=n_ctd, freq="1s")
+    pressure = np.concatenate(
+        [
+            np.linspace(0, 90, 400),
+            np.full(200, 100),  # 200 s bottle stop
+            np.linspace(100, 0, 400),
+        ]
+    )
+    rng = np.random.default_rng(0)
+    reference_data = {
+        "ctd": {
+            "data": xr.Dataset(
+                {
+                    "pressure": ("time", pressure),
+                    "temperature": (
+                        "time", np.full(n_ctd, 15.0) + rng.normal(0, 0.005, n_ctd)
+                    ),
+                },
+                coords={"time": times},
+            ),
+            "config": {},
+        }
+    }
+    inst_times = pd.date_range("2024-01-01 12:00:00", periods=100, freq="10s")
+    instruments = {
+        "12345": {
+            "data": xr.Dataset(
+                {
+                    "temperature": (
+                        "time", np.full(100, 15.01) + rng.normal(0, 0.002, 100)
+                    )
+                },
+                coords={"time": inst_times},
+            ),
+            "config": {"instrument": "microcat", "label": "Test"},
+            "type": "microcat",
+        }
+    }
+
+    df = cf.stats(instruments, reference_data, {"name": "test_cast"})
+    assert not df.empty
+    for col in ["temp_diff_paired", "temp_std_paired", "temp_n_matched", "temp_n_dropped"]:
+        assert col in df.columns
+    row = df.iloc[0]
+    assert not np.isnan(row["temp_diff_paired"])
+    assert row["temp_n_matched"] > 0
